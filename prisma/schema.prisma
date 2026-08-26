@@ -1,0 +1,456 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Which portal a user lands on after signing in, and what they're allowed
+// to see. Every new account defaults to `student` (see User.role below) —
+// promoting someone to faculty/admin/super_admin is a manual step for now,
+// there's no self-service upgrade path yet.
+enum Role {
+  student
+  faculty
+  admin
+  super_admin
+}
+
+model User {
+  id              String           @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String           @unique
+  password        String
+  role            Role             @default(student)
+  location        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  businesses      Business[]
+  cartItems       CartItem[]
+  emailConnection EmailConnection?
+  orders          Order[]
+  schedules       Schedule[]
+  skills          Skill[]
+  skillOffers     SkillOffer[]     @relation("BuyerOffers")
+  skillReviews    SkillReview[]    @relation("BuyerReviews")
+  suggestions     Suggestion[]
+  tasks           Task[]
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+model EmailConnection {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  email        String
+  accessToken  String    @db.Text
+  refreshToken String    @db.Text
+  tokenExpiry  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Suggestion {
+  id              String   @id @default(uuid())
+  userId          String
+  category        String
+  message         String   @db.Text
+  hasAttachments  Boolean  @default(false)
+  attachmentCount Int      @default(0)
+  attachmentNames Json?
+  source          String   @default("studashboard/essentials/suggestions")
+  status          String   @default("new")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Business {
+  id                    String    @id @default(uuid())
+  name                  String
+  industry              String
+  description           String    @db.Text
+  paymentMethod         String
+  bankName              String?
+  accountNumber         String?
+  accountHolderName     String?
+  paystackRecipientCode String?
+  location              String
+  serviceDays           String
+  serviceTimes          String
+  instagram             String?
+  linkedin              String?
+  website               String?
+  userId                String
+  visitors              Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders                Order[]
+  products              Product[]
+
+  @@index([userId])
+  @@index([industry])
+  @@index([createdAt])
+  @@index([visitors])
+}
+
+model Product {
+  id            String           @id @default(uuid())
+  name          String
+  description   String           @db.Text
+  price         Float
+  cost          Float
+  image         String?
+  public_id     String?
+  secure_url    String?
+  stock         Int              @default(0)
+  rating        Float            @default(0)
+  ratingCount   Int              @default(0)
+  businessId    String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  business      Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  variants      ProductVariant[]
+  variantFields VariantField[]
+
+  @@index([businessId])
+  @@index([createdAt])
+  @@index([rating])
+}
+
+model VariantField {
+  id        String         @id @default(uuid())
+  name      String
+  productId String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  values    VariantValue[]
+
+  @@unique([productId, name])
+}
+
+model VariantValue {
+  id            String                         @id @default(uuid())
+  value         String
+  fieldId       String
+  createdAt     DateTime                       @default(now())
+  updatedAt     DateTime                       @updatedAt
+  field         VariantField                   @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  variantValues VariantValueOnProductVariant[]
+
+  @@unique([fieldId, value])
+}
+
+model ProductVariant {
+  id            String                         @id @default(uuid())
+  productId     String
+  price         Float
+  isCustomPrice Boolean                        @default(false)
+  stock         Int                            @default(0)
+  createdAt     DateTime                       @default(now())
+  updatedAt     DateTime                       @updatedAt
+  cartItems     CartItem[]
+  product       Product                        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantValues VariantValueOnProductVariant[]
+
+  @@index([productId])
+}
+
+model VariantValueOnProductVariant {
+  id        String         @id @default(uuid())
+  variantId String
+  valueId   String
+  value     VariantValue   @relation(fields: [valueId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, valueId])
+  @@index([valueId])
+}
+
+model Order {
+  id                      String      @id @default(uuid())
+  status                  String      @default("pending")
+  totalAmount             Float
+  userId                  String
+  businessId              String
+  shipOtp                 String?
+  shipOtpExpiry           DateTime?
+  deliveryOtp             String?
+  deliveryOtpExpiry       DateTime?
+  deliveryOtpAttempts     Int         @default(0)
+  isDisputed              Boolean     @default(false)
+  disputeReason           String?     @db.Text
+  disputeCreatedAt        DateTime?
+  disputeResolvedAt       DateTime?
+  disputeResolvedBy       String?
+  disputeResolution       String?     @db.Text
+  expectedDeliveryDate    DateTime?
+  paystackReference       String?     @unique
+  escrowReleaseAt         DateTime?
+  escrowReleased          Boolean     @default(false)
+  escrowReleasedAt        DateTime?
+  escrowTransferReference String?
+  escrowTransferCode      String?
+  escrowReleaseStatus     String      @default("pending")
+  escrowFailureReason     String?     @db.Text
+  paymentStatus           String      @default("pending")
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+  business                Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user                    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items                   OrderItem[]
+
+  @@index([userId])
+  @@index([businessId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([businessId, status, createdAt])
+  @@index([escrowReleased, escrowReleaseAt])
+}
+
+model OrderItem {
+  id               String  @id @default(uuid())
+  quantity         Int
+  price            Float
+  orderId          String
+  productId        String
+  selectedVariants String? @db.Text
+  order            Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  rating     Int
+  comment    String?  @db.Text
+  businessId String
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String
+  message    String
+  read       Boolean  @default(false)
+  businessId String?
+  link       String?
+  createdAt  DateTime @default(now())
+}
+
+model Skill {
+  id                     String              @id @default(uuid())
+  name                   String
+  description            String              @db.Text
+  displayName            String
+  yearsOfExperience      Int
+  expertiseLevel         String
+  paymentMethod          String
+  profilePicture         String?
+  profilePicturePublicId String?
+  startingPrice          Float
+  serviceDays            String
+  serviceTimes           String
+  mostActiveSocial       String?
+  instagram              String?
+  linkedin               String?
+  twitter                String?
+  website                String?
+  achievements           String?             @db.Text
+  visitors               Int                 @default(0)
+  userId                 String
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notifications          SkillNotification[]
+  offers                 SkillOffer[]
+  reviews                SkillReview[]
+
+  @@index([userId])
+  @@index([visitors])
+  @@index([createdAt])
+}
+
+model SkillOffer {
+  id                      String              @id @default(uuid())
+  status                  String              @default("pending")
+  offerFrom               DateTime
+  offerTo                 DateTime
+  description             String?             @db.Text
+  originalPrice           Float
+  currentPrice            Float?
+  skillOwnerAcceptedPrice Float?
+  buyerAcceptedPrice      Float?
+  skillId                 String
+  buyerId                 String
+  fulfillmentOtp          String?
+  fulfillmentOtpExpiry    DateTime?
+  fulfillmentOtpAttempts  Int                 @default(0)
+  completedAt             DateTime?
+  cancelledAt             DateTime?
+  cancelledBy             String?
+  cancellationReason      String?             @db.Text
+  rejectedAt              DateTime?
+  rejectedBy              String?
+  disputedAt              DateTime?
+  disputedBy              String?
+  disputeReason           String?             @db.Text
+  ignoredAt               DateTime?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  counterOffers           SkillCounterOffer[]
+  buyer                   User                @relation("BuyerOffers", fields: [buyerId], references: [id], onDelete: Cascade)
+  skill                   Skill               @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([skillId])
+  @@index([buyerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SkillCounterOffer {
+  id           String     @id @default(uuid())
+  offerId      String
+  counterPrice Float
+  madeBy       String     @default("buyer")
+  reason       String     @db.Text
+  createdAt    DateTime   @default(now())
+  offer        SkillOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([offerId])
+}
+
+model SkillReview {
+  id        String   @id @default(uuid())
+  skillId   String
+  buyerId   String
+  rating    Int
+  comment   String?  @db.Text
+  sentiment String
+  createdAt DateTime @default(now())
+  buyer     User     @relation("BuyerReviews", fields: [buyerId], references: [id], onDelete: Cascade)
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([buyerId])
+  @@index([skillId])
+}
+
+model SkillNotification {
+  id        String   @id @default(uuid())
+  skillId   String
+  message   String   @db.Text
+  type      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([skillId])
+}
+
+model CartItem {
+  id               String          @id @default(uuid())
+  quantity         Int             @default(1)
+  userId           String
+  productId        String
+  selectedVariants String?         @db.Text
+  variantId        String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variant          ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([userId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model SkillType {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Schedule {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  color     String   @default("#3498db")
+  focus     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Task {
+  id         String    @id @default(uuid())
+  userId     String
+  scheduleId String?
+  title      String
+  category   String
+  details    String?   @db.Text
+  date       String
+  startTime  String
+  duration   Int
+  color      String    @default("#3498db")
+  completed  Boolean   @default(false)
+  ignored    Boolean   @default(false)
+  ignoredAt  DateTime?
+  focus      Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  schedule   Schedule? @relation(fields: [scheduleId], references: [id])
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([scheduleId])
+  @@index([date])
+  @@index([completed])
+  @@index([ignored])
+  @@index([createdAt])
+}
+
+model student_playlists {
+  id              Int     @id @default(autoincrement())
+  student_id      String  @db.VarChar(255)
+  context         String  @db.Text
+  recommendations String  @db.Text
+  trigger_event   String? @db.VarChar(255)
+
+  @@index([id])
+}
