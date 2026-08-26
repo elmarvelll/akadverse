@@ -1,0 +1,17 @@
+name: ai-studio CI
+
+on:
+  push:
+    paths:
+      - "services/ai-studio/**"
+  pull_request:
+    paths:
+      - "services/ai-studio/**"
+
+jobs:
+  security-scan:
+    uses: ./.github/workflows/shared/snyk-scan-template.yml
+    with:
+      working-directory: services/ai-studio
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
