@@ -44,7 +44,11 @@ export async function listProductsForAdmin(searchParams: URLSearchParams): Promi
   const where: Prisma.BusinessWhereInput = {
     products: { some: {} },
     ...(businessId ? { id: businessId } : {}),
-    ...(q ? { OR: [{ name: { contains: q } }, { products: { some: { name: { contains: q } } } }] } : {}),
+    // mode: "insensitive" — see the identical comment in
+    // services/marketplace/product/search-products.ts.
+    ...(q
+      ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { products: { some: { name: { contains: q, mode: "insensitive" } } } }] }
+      : {}),
   };
 
   const [businesses, total] = await Promise.all([
