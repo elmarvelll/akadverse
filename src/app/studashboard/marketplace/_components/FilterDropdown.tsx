@@ -16,7 +16,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { productCategories, skillCategories } from "@/services/marketplace/shared/categories";
 import type { MarketplaceSide } from "@/services/marketplace/shared/types";
 
@@ -49,19 +49,21 @@ export default function FilterDropdown({ selectedSide, selectedCategoryIds, onTo
     >
       <button
         type="button"
-        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-sm font-medium transition ${
+        aria-label="Filter"
+        className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl border text-sm font-medium transition ${
           selectedCategoryIds.length > 0
             ? "border-blue-500 bg-blue-50 text-blue-600"
             : "border-gray-200 text-gray-700 hover:bg-gray-50"
         }`}
       >
-        Filter
+        <SlidersHorizontal size={16} className="sm:hidden" />
+        <span className="hidden sm:inline">Filter</span>
         {selectedCategoryIds.length > 0 && (
           <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center">
             {selectedCategoryIds.length}
           </span>
         )}
-        <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown size={14} className={`hidden sm:block transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       <AnimatePresence>
@@ -71,16 +73,19 @@ export default function FilterDropdown({ selectedSide, selectedCategoryIds, onTo
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute left-0 top-full mt-2 flex bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-40"
+            className="fixed left-4 right-4 top-36 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 flex flex-col sm:flex-row bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-40 max-h-[75vh] sm:max-h-none"
           >
-            {/* Level 1: Products / Skills (hover preview only) */}
-            <div className="w-40 border-r border-gray-100 py-2">
+            {/* Level 1: Products / Skills (hover preview only) — a
+                horizontal pill row on mobile, stacked above level 2;
+                the original left-column layout returns at sm: */}
+            <div className="flex sm:block sm:w-40 border-b sm:border-b-0 sm:border-r border-gray-100 py-2">
               {(["products", "skills"] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
+                  onClick={() => setPreviewSide(option)}
                   onMouseEnter={() => setPreviewSide(option)}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium capitalize transition ${
+                  className={`flex-1 sm:w-full text-center sm:text-left px-4 py-2.5 text-sm font-medium capitalize transition ${
                     previewSide === option ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
                   }`}
                 >
@@ -100,7 +105,7 @@ export default function FilterDropdown({ selectedSide, selectedCategoryIds, onTo
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -6 }}
                 transition={{ duration: 0.12 }}
-                className="w-64 py-2 max-h-80 overflow-y-auto"
+                className="w-full sm:w-64 py-2 max-h-60 sm:max-h-80 overflow-y-auto"
               >
                 {atMax && (
                   <p className="px-4 pb-2 text-xs text-amber-600">Up to {MAX_FILTERS} filters — remove one to add another.</p>

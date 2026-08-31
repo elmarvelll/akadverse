@@ -84,8 +84,8 @@ export default function CartDrawer({ open, onClose, items, subtotal, onUpdateQua
                           <Trash2 size={14} />
                         </button>
                       </div>
-                      <p className="text-xs text-gray-500">by {item.sellerName}</p>
-                      {item.variantName && <p className="text-xs text-gray-400 mt-0.5">{item.variantName}</p>}
+                      <p className="text-xs text-gray-500 truncate">by {item.sellerName}</p>
+                      {item.variantName && <p className="text-xs text-gray-400 mt-0.5 truncate">{item.variantName}</p>}
                       <div className="mt-2 flex items-center justify-between">
                         <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-1.5 py-0.5">
                           <button

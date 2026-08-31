@@ -5,28 +5,31 @@
 // src/app/studashboard/page.tsx (a sibling of "Main Menu", not nested
 // under it).
 //
-// "Popular Products" and "Top Businesses" are real data now (fetched from
+// "Popular Products" and "Top Businesses" are real data (fetched from
 // GET /api/marketplace/search/products?limit=8 and
 // GET /api/marketplace/businesses/featured — see those routes). "Popular
-// Skills" and "Best Services" are still mock (services/marketplace/) since
-// there's no Skill creation flow or real order data to rank by yet — same
-// "haven't worked on the logic" caveat as My Trade's Skills side.
+// Skills" and "Best Services" show a "Coming Soon" placeholder instead of
+// data — there's no Skill/service-provider API, service, or listing flow
+// anywhere in the app (the Skill/SkillOffer models exist in the schema,
+// but nothing is wired to them), so there's genuinely nothing real to
+// show, and services/marketplace/skills-market/data.ts's mock arrays are
+// no longer used here.
 
 "use client";
 
 import { useEffect, useState } from "react";
+import { Sparkles, Wrench } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import MarketplaceNavbar from "./_components/MarketplaceNavbar";
 import Hero from "./_components/Hero";
 import ProductCard from "./_components/ProductCard";
-import SkillCard from "./_components/SkillCard";
 import SpotlightCard from "./_components/SpotlightCard";
+import MarketplaceComingSoon from "./_components/MarketplaceComingSoon";
 import CartDrawer from "./_components/CartDrawer";
 import ProductDetailModal from "./_components/ProductDetailModal";
 import MarketplaceFooter from "./_components/MarketplaceFooter";
 import { useCart } from "./_components/useCart";
 import api from "@/lib/axios";
-import { getPopularSkills, getBestServices } from "@/services/marketplace/skills-market/data";
 import type { ProductSearchResult } from "@/types/search";
 import type { FeaturedBusiness } from "@/types/marketplace-browse";
 
@@ -41,9 +44,6 @@ export default function MarketplacePage() {
 
   const [popularProducts, setPopularProducts] = useState<ProductSearchResult[]>([]);
   const [topBusinesses, setTopBusinesses] = useState<FeaturedBusiness[]>([]);
-
-  const popularSkills = getPopularSkills();
-  const bestServices = getBestServices();
 
   useEffect(() => {
     api
@@ -94,11 +94,7 @@ export default function MarketplacePage() {
 
           <section>
             <SectionHeading>Popular Skills</SectionHeading>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {popularSkills.map((skill) => (
-                <SkillCard key={skill.id} skill={skill} />
-              ))}
-            </div>
+            <MarketplaceComingSoon label="Skills" icon={Sparkles} />
           </section>
 
           <section className="grid sm:grid-cols-2 gap-10">
@@ -122,17 +118,7 @@ export default function MarketplacePage() {
             </div>
             <div>
               <SectionHeading>Best Services</SectionHeading>
-              <div className="space-y-3">
-                {bestServices.map((provider) => (
-                  <SpotlightCard
-                    key={provider.id}
-                    image={provider.image}
-                    name={provider.name}
-                    subtitle={provider.skillName}
-                    ordersFulfilled={provider.ordersFulfilled}
-                  />
-                ))}
-              </div>
+              <MarketplaceComingSoon label="Services" icon={Wrench} />
             </div>
           </section>
         </div>

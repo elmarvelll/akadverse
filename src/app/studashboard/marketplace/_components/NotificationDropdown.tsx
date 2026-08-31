@@ -48,7 +48,7 @@ export default function NotificationDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-xl p-4 z-40"
+            className="fixed left-4 right-4 top-36 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 max-h-[75vh] sm:max-h-96 overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-xl p-4 z-40"
           >
             <p className="font-semibold text-gray-900 text-sm mb-2">Notifications</p>
             {notifications.length === 0 ? (

@@ -235,11 +235,11 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
 
               <ul className="text-sm text-gray-600 space-y-1 mb-3">
                 {order.items.map((item) => (
-                  <li key={item.id} className="flex justify-between">
-                    <span>
+                  <li key={item.id} className="flex justify-between gap-2">
+                    <span className="min-w-0 truncate">
                       {item.quantity} x {item.productName}
                     </span>
-                    <span className="text-gray-400">{item.deliveryStatus ?? (item.rejectedAt ? "Rejected" : "—")}</span>
+                    <span className="text-gray-400 shrink-0">{item.deliveryStatus ?? (item.rejectedAt ? "Rejected" : "—")}</span>
                   </li>
                 ))}
               </ul>

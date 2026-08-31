@@ -125,10 +125,10 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ p
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words mt-1">{product.name}</h1>
           <Link
             href={`/studashboard/admin/marketplace/businesses/${product.business.id}`}
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition mt-1"
+            className="flex flex-wrap items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition mt-1"
           >
-            <Store size={14} />
-            {product.business.name}
+            <Store size={14} className="shrink-0" />
+            <span className="truncate max-w-[16rem]">{product.business.name}</span>
             {product.business.approvalStatus !== "APPROVED" && (
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
                 {product.business.approvalStatus.replace("_", " ")}

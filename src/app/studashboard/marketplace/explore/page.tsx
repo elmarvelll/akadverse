@@ -4,73 +4,99 @@
 // a search (text query submitted, and/or FilterDropdown category filters
 // staged at the time of submitting) lands. With no active search this
 // renders the original category browse view (a heading + grid per
-// category, still backed by the mock product-market/skills-market data —
-// only the homepage's sections were asked to become real); with one
-// active it renders matching results instead — real products via
-// GET /api/marketplace/search/products, mock skills via
-// services/marketplace/skills-market/data.ts's searchSkills().
+// category) — products are real (fetched once from
+// GET /api/marketplace/search/products and grouped client-side by
+// category, same endpoint SearchResultsView already uses); skills show a
+// single "Coming Soon" block instead of the old per-category mock loop,
+// since there's no Skill API/service/listing flow anywhere in the app —
+// see MarketplaceComingSoon.tsx. With an active search, products still hit
+// the real API; skills show the same "Coming Soon" treatment instead of
+// the old mock searchSkills().
 
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowLeft, Loader2, SearchX, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, SearchX, Sparkles, X } from "lucide-react";
 import api from "@/lib/axios";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import MarketplaceNavbar from "../_components/MarketplaceNavbar";
 import CartDrawer from "../_components/CartDrawer";
 import ProductCard from "../_components/ProductCard";
-import SkillCard from "../_components/SkillCard";
 import ProductDetailModal from "../_components/ProductDetailModal";
+import MarketplaceComingSoon from "../_components/MarketplaceComingSoon";
 import { buildExploreHref } from "../_components/search-params";
 import { useCart } from "../_components/useCart";
 import { productCategories, skillCategories } from "@/services/marketplace/shared/categories";
-import { getProductsByCategory } from "@/services/marketplace/product-market/data";
-import { getSkillsByCategory, searchSkills } from "@/services/marketplace/skills-market/data";
-import type { MarketplaceSide, MarketplaceSkill } from "@/services/marketplace/shared/types";
+import type { MarketplaceSide } from "@/services/marketplace/shared/types";
 import type { ProductSearchResult } from "@/types/search";
 
 const allCategories = [...productCategories, ...skillCategories];
 
 function CategoryBrowseView({ onShowDetails }: { onShowDetails: (id: string) => void }) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [products, setProducts] = useState<ProductSearchResult[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ products: ProductSearchResult[] }>("/marketplace/search/products", { params: { limit: 40 } })
+      .then((res) => {
+        if (cancelled) return;
+        setProducts(res.data.products);
+        setStatus("loaded");
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="space-y-14">
-      {productCategories.map((category) => {
-        const items = getProductsByCategory(category.id);
-        return (
-          <section key={category.id}>
-            <h2 className="text-xl font-bold text-gray-900 mb-5">{category.name}</h2>
-            {items.length === 0 ? (
-              <p className="text-sm text-gray-400">No listings yet.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                {items.map((product) => (
-                  <ProductCard key={product.id} product={product} onShowDetails={onShowDetails} />
-                ))}
-              </div>
-            )}
-          </section>
-        );
-      })}
+      {status === "loading" && (
+        <div className="flex justify-center py-24">
+          <Loader2 size={28} className="animate-spin text-gray-400" />
+        </div>
+      )}
 
-      {skillCategories.map((category) => {
-        const items = getSkillsByCategory(category.id);
-        return (
-          <section key={category.id}>
-            <h2 className="text-xl font-bold text-gray-900 mb-5">{category.name}</h2>
-            {items.length === 0 ? (
-              <p className="text-sm text-gray-400">No listings yet.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                {items.map((skill) => (
-                  <SkillCard key={skill.id} skill={skill} />
-                ))}
-              </div>
-            )}
-          </section>
-        );
-      })}
+      {status === "error" && (
+        <div className="flex flex-col items-center text-center py-24">
+          <AlertCircle size={28} className="text-gray-400 mb-3" />
+          <p className="text-gray-500">Couldn&apos;t load products. Please try again.</p>
+        </div>
+      )}
+
+      {status === "loaded" &&
+        productCategories.map((category) => {
+          const items = products.filter((product) => product.category === category.name);
+          return (
+            <section key={category.id}>
+              <h2 className="text-xl font-bold text-gray-900 mb-5">{category.name}</h2>
+              {items.length === 0 ? (
+                <p className="text-sm text-gray-400">No listings yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                  {items.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={{ id: product.id, name: product.name, sellerName: product.sellerName, price: product.price, image: product.secureUrl }}
+                      onShowDetails={onShowDetails}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+
+      <section>
+        <h2 className="text-xl font-bold text-gray-900 mb-5">Skills</h2>
+        <MarketplaceComingSoon label="Skills" icon={Sparkles} />
+      </section>
     </div>
   );
 }
@@ -88,25 +114,18 @@ function SearchResultsView({
 }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
   const [productResults, setProductResults] = useState<ProductSearchResult[]>([]);
-  const [skillResults, setSkillResults] = useState<MarketplaceSkill[]>([]);
 
   useEffect(() => {
+    // Skills has no real search backend — see MarketplaceComingSoon.tsx —
+    // so there's nothing to fetch for that side at all. `status` is never
+    // read for this side (the render branches on `side` before it), so
+    // this just skips the fetch without touching state.
+    if (side === "skills") return;
+
     let cancelled = false;
 
     const load = async () => {
       setStatus("loading");
-
-      if (side === "skills") {
-        // Mock data — filtering is synchronous, but kept inside the same
-        // async shape as the products branch so the loading state behaves
-        // identically either way.
-        if (!cancelled) {
-          setSkillResults(searchSkills(query, categoryIds));
-          setStatus("loaded");
-        }
-        return;
-      }
-
       try {
         const res = await api.get<{ products: ProductSearchResult[] }>("/marketplace/search/products", {
           params: { q: query || undefined, categories: categoryIds.length > 0 ? categoryIds.join(",") : undefined },
@@ -124,8 +143,6 @@ function SearchResultsView({
       cancelled = true;
     };
   }, [query, side, categoryIds]);
-
-  const results = side === "products" ? productResults : skillResults;
 
   return (
     <div>
@@ -158,38 +175,42 @@ function SearchResultsView({
         })}
       </div>
 
-      {status === "loading" && (
-        <div className="flex justify-center py-24">
-          <Loader2 size={28} className="animate-spin text-gray-400" />
-        </div>
-      )}
+      {side === "skills" ? (
+        <MarketplaceComingSoon label="Skills" icon={Sparkles} />
+      ) : (
+        <>
+          {status === "loading" && (
+            <div className="flex justify-center py-24">
+              <Loader2 size={28} className="animate-spin text-gray-400" />
+            </div>
+          )}
 
-      {status === "error" && (
-        <div className="flex flex-col items-center text-center py-24">
-          <AlertCircle size={28} className="text-gray-400 mb-3" />
-          <p className="text-gray-500">Couldn&apos;t load results. Please try again.</p>
-        </div>
-      )}
+          {status === "error" && (
+            <div className="flex flex-col items-center text-center py-24">
+              <AlertCircle size={28} className="text-gray-400 mb-3" />
+              <p className="text-gray-500">Couldn&apos;t load results. Please try again.</p>
+            </div>
+          )}
 
-      {status === "loaded" && results.length === 0 && (
-        <div className="flex flex-col items-center text-center py-24">
-          <SearchX size={28} className="text-gray-300 mb-3" />
-          <p className="text-gray-500">No {side} match your search.</p>
-        </div>
-      )}
+          {status === "loaded" && productResults.length === 0 && (
+            <div className="flex flex-col items-center text-center py-24">
+              <SearchX size={28} className="text-gray-300 mb-3" />
+              <p className="text-gray-500">No products match your search.</p>
+            </div>
+          )}
 
-      {status === "loaded" && results.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-          {side === "products"
-            ? productResults.map((product) => (
+          {status === "loaded" && productResults.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              {productResults.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={{ id: product.id, name: product.name, sellerName: product.sellerName, price: product.price, image: product.secureUrl }}
                   onShowDetails={onShowDetails}
                 />
-              ))
-            : skillResults.map((skill) => <SkillCard key={skill.id} skill={skill} />)}
-        </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

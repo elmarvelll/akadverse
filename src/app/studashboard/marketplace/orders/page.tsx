@@ -139,11 +139,11 @@ export default function BuyerOrdersPage() {
 
                 <ul className="space-y-1.5">
                   {order.items.map((item) => (
-                    <li key={item.id} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700">
+                    <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-gray-700 min-w-0 truncate">
                         {item.quantity} x {item.productName}
                       </span>
-                      <span className="text-gray-500">{itemStatusLabel(item)}</span>
+                      <span className="text-gray-500 shrink-0">{itemStatusLabel(item)}</span>
                     </li>
                   ))}
                 </ul>

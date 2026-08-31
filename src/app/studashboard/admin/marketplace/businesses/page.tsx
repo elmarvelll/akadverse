@@ -197,9 +197,9 @@ export default function AdminBusinessesPage() {
             <div className="space-y-2">
               {result.items.map((business) => (
                 <div key={business.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-gray-900">{business.name}</p>
-                    <p className="text-xs text-gray-500">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 break-words">{business.name}</p>
+                    <p className="text-xs text-gray-500 break-words">
                       {business.industry} · {business.ownerEmail} · created {dateFormatter.format(new Date(business.createdAt))}
                     </p>
                     {business.approvalStatus === "REJECTED" && business.rejectionReason && (

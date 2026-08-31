@@ -158,9 +158,9 @@ export default function DelivererDashboardPage() {
           ) : (
             <div className="space-y-2">
               {pendingHandoffs.map((h) => (
-                <div key={h.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-gray-900">{h.businessName}</p>
+                <div key={h.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 break-words">{h.businessName}</p>
                     <p className="text-xs text-gray-500">{h.businessLocation || "No location set."}</p>
                   </div>
                   <button

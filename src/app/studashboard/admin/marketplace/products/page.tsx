@@ -108,11 +108,11 @@ export default function AdminProductsPage() {
             <div className="space-y-6">
               {result.items.map((group) => (
                 <div key={group.businessId}>
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <Store size={14} className="text-gray-400" />
+                  <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                    <Store size={14} className="text-gray-400 shrink-0" />
                     <Link
                       href={`/studashboard/admin/marketplace/businesses/${group.businessId}`}
-                      className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition"
+                      className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition truncate max-w-[16rem]"
                     >
                       {group.businessName}
                     </Link>

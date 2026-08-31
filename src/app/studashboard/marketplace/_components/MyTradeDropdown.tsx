@@ -43,10 +43,14 @@ export default function MyTradeDropdown() {
 
   return (
     <div className="relative" onMouseEnter={handleOpen} onMouseLeave={() => setOpen(false)}>
-      <button type="button" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition">
-        <Briefcase size={16} />
-        My Trade
-        <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      <button
+        type="button"
+        aria-label="My Trade"
+        className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition p-2 sm:p-0 -m-2 sm:m-0"
+      >
+        <Briefcase size={18} className="sm:hidden" />
+        <span className="hidden sm:inline">My Trade</span>
+        <ChevronDown size={14} className={`hidden sm:block transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       <AnimatePresence>
@@ -56,16 +60,19 @@ export default function MyTradeDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 top-full mt-2 flex bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-40"
+            className="fixed left-4 right-4 top-36 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 flex flex-col sm:flex-row bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-40 max-h-[75vh] sm:max-h-none"
           >
-            {/* Level 1: Business / Skills */}
-            <div className="w-36 border-r border-gray-100 py-2 shrink-0">
+            {/* Level 1: Business / Skills — a horizontal pill row on
+                mobile, stacked above level 2; the original left-column
+                layout returns at sm: */}
+            <div className="flex sm:block sm:w-36 border-b sm:border-b-0 sm:border-r border-gray-100 py-2 shrink-0">
               {(["business", "skills"] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
+                  onClick={() => setSide(option)}
                   onMouseEnter={() => setSide(option)}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium capitalize transition ${
+                  className={`flex-1 sm:w-full text-center sm:text-left px-4 py-2.5 text-sm font-medium capitalize transition ${
                     side === option ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
                   }`}
                 >
@@ -82,7 +89,7 @@ export default function MyTradeDropdown() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -6 }}
                 transition={{ duration: 0.12 }}
-                className="w-72 p-4"
+                className="w-full sm:w-72 p-4 overflow-y-auto"
               >
                 {side === "business" ? (
                   <>

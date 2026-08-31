@@ -127,8 +127,8 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4 min-w-0">
           <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl font-bold shrink-0 overflow-hidden">
             {business.secureUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL, not worth a remotePatterns entry for a small avatar
@@ -137,8 +137,8 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
               business.name.slice(0, 1).toUpperCase()
             )}
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{business.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{business.name}</h1>
             <p className="text-sm text-gray-500">{business.industry}</p>
           </div>
         </div>

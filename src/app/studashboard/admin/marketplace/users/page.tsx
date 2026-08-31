@@ -140,11 +140,11 @@ export default function AdminUsersPage() {
             <div className="space-y-2">
               {result.items.map((user) => (
                 <div key={user.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-gray-900">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 break-words">
                       {user.firstName} {user.lastName}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 break-words">
                       {user.email} · joined {dateFormatter.format(new Date(user.createdAt))}
                     </p>
                   </div>
