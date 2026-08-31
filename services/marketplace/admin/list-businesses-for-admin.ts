@@ -32,7 +32,9 @@ export async function listBusinessesForAdmin(searchParams: URLSearchParams): Pro
   const filter = (searchParams.get("filter") as BusinessAdminFilter | null) ?? "all";
 
   const where: Prisma.BusinessWhereInput = {
-    ...(q ? { OR: [{ name: { contains: q } }, { industry: { contains: q } }] } : {}),
+    // mode: "insensitive" — see the identical comment in
+    // services/marketplace/product/search-products.ts.
+    ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { industry: { contains: q, mode: "insensitive" } }] } : {}),
     ...(filter === "pending_approval" ? { approvalStatus: "PENDING_APPROVAL" } : {}),
     ...(filter === "pending_verification" ? { verificationRequests: { some: { status: "PENDING" } } } : {}),
     ...(filter === "verified" ? { verified: true } : {}),

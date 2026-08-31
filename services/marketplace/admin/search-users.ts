@@ -21,8 +21,16 @@ export async function searchUsers(searchParams: URLSearchParams): Promise<PageRe
   const pageParams = parsePageParams(searchParams);
   const q = searchParams.get("q")?.trim();
 
+  // mode: "insensitive" — see the identical comment in
+  // services/marketplace/product/search-products.ts.
   const where: Prisma.UserWhereInput = q
-    ? { OR: [{ firstName: { contains: q } }, { lastName: { contains: q } }, { email: { contains: q } }] }
+    ? {
+        OR: [
+          { firstName: { contains: q, mode: "insensitive" } },
+          { lastName: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+        ],
+      }
     : {};
 
   const [users, total] = await Promise.all([

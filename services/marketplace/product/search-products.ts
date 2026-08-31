@@ -27,7 +27,11 @@ export async function searchProducts(params: { q?: string; categoryIds?: string[
     // buyer-visible — see BusinessApprovalStatus's doc comment in
     // prisma/schema.prisma.
     business: { approvalStatus: "APPROVED" },
-    ...(q ? { OR: [{ name: { contains: q } }, { description: { contains: q } }] } : {}),
+    // mode: "insensitive" — Postgres' `contains` is case-sensitive by
+    // default (unlike MySQL's default collation, which this search relied
+    // on being case-insensitive for free); explicit here so search
+    // behavior doesn't silently change with the database engine.
+    ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }] } : {}),
     ...(categoryNames.length > 0 ? { category: { in: categoryNames } } : {}),
   };
 
