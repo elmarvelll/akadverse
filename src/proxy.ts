@@ -40,17 +40,31 @@ import type { Role } from "@prisma/client";
 const PUBLIC_PAGE_PATHS = ["/login", "/signup"];
 
 // API path prefixes that must stay reachable without being signed in.
-const PUBLIC_API_PREFIXES = ["/api/auth", "/api/register"];
+// /api/webhooks is Paystack calling us directly (see
+// src/app/api/webhooks/paystack/route.ts) — no session cookie to send, it
+// authenticates itself via a signature header instead. /api/cron is Vercel
+// Cron calling us on schedule (see vercel.json) — same situation, no
+// session cookie, authenticated instead via a shared secret checked in
+// src/lib/cron-auth.ts.
+const PUBLIC_API_PREFIXES = ["/api/auth", "/api/register", "/api/webhooks", "/api/cron"];
 
-// Where a signed-in user's role sends them when they land on "/". Faculty,
-// admin, and super_admin routes are simple "coming soon" pages for now —
-// see src/app/facultydashboard, src/app/admindashboard,
-// src/app/superadmindashboard.
+// Where a signed-in user's role sends them when they land on "/". Faculty
+// and admin routes are simple "coming soon" pages for now — see
+// src/app/facultydashboard, src/app/admindashboard.
+//
+// super_admin has no distinct portal of its own — there used to be one
+// (src/app/superadmindashboard, now removed) but Marketplace admin access
+// is no longer tied to `role` at all: it's the independent `User.isAdmin`
+// flag (see prisma/schema.prisma's comment on that field and
+// docs/admin/decisions/admin-flag-replaces-role-check.md). A super_admin
+// account lands on the same home as everyone else and, if `isAdmin` is
+// also true, sees the Admin card there
+// (src/app/studashboard/page.tsx) like any other admin-flagged user.
 const ROLE_HOME_PATHS: Record<Role, string> = {
   student: "/studashboard",
   faculty: "/facultydashboard",
   admin: "/admindashboard",
-  super_admin: "/superadmindashboard",
+  super_admin: "/studashboard",
 };
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {

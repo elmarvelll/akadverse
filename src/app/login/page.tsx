@@ -1,29 +1,32 @@
 // src/app/login/page.tsx
 //
-// The "sign in" page, reachable at /login.
+// The "sign in" page, reachable at /login. Visual design matches the
+// dark/light split-screen mockup you provided; the functional wiring is
+// unchanged from before:
+//   - Email + password calls NextAuth's `signIn("credentials", ...)`,
+//     which runs the `authorize` function in src/lib/auth.ts.
+//   - "Continue with Google" uses NextAuth's Google OAuth flow.
+//   - Honors ?callbackUrl=... appended by src/proxy.ts when it redirects
+//     an unauthenticated visitor here, and is also where src/lib/auth.ts's
+//     `pages.signIn` points.
 //
-// Two ways to sign in here:
-//   1. Email + password -> calls NextAuth's `signIn("credentials", ...)`,
-//      which internally POSTs to /api/auth/callback/credentials and runs
-//      the `authorize` function in src/lib/auth.ts.
-//   2. "Continue with Google" -> NextAuth's Google OAuth flow.
-//
-// This is also where the middleware (middleware.ts) sends unauthenticated
-// visitors who tried to access a protected route, since `pages.signIn` in
-// src/lib/auth.ts points here.
+// The mockup's role selector was commented out on the login page in the
+// version you sent (i.e. not visually present there), so it's left out of
+// this page too — see src/app/signup/page.tsx for the (cosmetic-only)
+// version of that selector.
 
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Mail } from "lucide-react";
 import { signIn } from "next-auth/react";
-import { Fraunces, Inter } from "next/font/google";
-import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { LoginFormValues } from "@/types/auth";
-
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["300", "500", "600"] });
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"] });
+import { PasswordInput } from "../components/password-input";
+import { ThemeToggle } from "../components/theme-toggle";
+import { AuthVisualPanel } from "../components/auth-visual-panel";
+import { useThemePreference } from "@/hooks/use-theme-preference";
 
 // Small inline Google "G" logo used on the "Continue with Google" button.
 function GoogleMark() {
@@ -53,38 +56,25 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // If src/proxy.ts bounced the user here from a specific page (e.g. they
-  // tried /studashboard/e-learning while signed out), it appends
+  // If src/proxy.ts bounced the user here from a specific page, it appends
   // ?callbackUrl=<that path>. Falling back to "/" lets src/proxy.ts's
   // role-based dispatch decide where a fresh sign-in should land instead.
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
-  // Controlled form state for the email + password fields.
+  const { isDarkMode, setIsDarkMode } = useThemePreference();
+
   const [form, setForm] = useState<LoginFormValues>({ email: "", password: "" });
-
-  // Whether the password field shows plaintext or dots.
-  const [showPassword, setShowPassword] = useState(false);
-
-  // Tracks the credentials-form submit lifecycle so we can disable the
-  // button and show a spinner while the request is in flight.
   const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [error, setError] = useState("");
-
-  // Tracks the "Continue with Google" button separately from the
-  // credentials form, since they're independent actions.
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Generic change handler shared by both text inputs: reads the input's
-  // `name` attribute and updates the matching key in `form` state.
-  const update = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const key = e.target.name as keyof LoginFormValues;
+  const updateField = (key: keyof LoginFormValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((current) => ({ ...current, [key]: e.target.value }));
   };
 
-  // Handles submitting the login form: hands email/password to NextAuth's
-  // CredentialsProvider. `redirect: false` means NextAuth returns a result
-  // object instead of doing a full-page redirect itself, so we can show our
-  // own error message inline and control navigation ourselves.
+  // `redirect: false` means NextAuth returns a result object instead of
+  // doing a full-page redirect itself, so we can show our own error
+  // message inline and control navigation ourselves.
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus("loading");
@@ -98,8 +88,7 @@ function LoginForm() {
 
     if (res?.error) {
       // `authorize()` in src/lib/auth.ts returned null (no matching user,
-      // wrong password, or a Google-only account with no password set) —
-      // NextAuth surfaces that as a generic error string here.
+      // wrong password, or a Google-only account with no password set).
       setError("That email and password don't match.");
       setStatus("idle");
       return;
@@ -110,67 +99,98 @@ function LoginForm() {
     router.push(callbackUrl);
   };
 
-  // Handles the "Continue with Google" button: kicks off NextAuth's Google
-  // OAuth redirect flow. If this email already has an account (whether
-  // created via credentials or a previous Google sign-in), it just logs
-  // them in; the `signIn` callback in src/lib/auth.ts only creates a new
-  // User row when the email is unrecognized.
   const handleGoogle = async () => {
     setGoogleLoading(true);
     await signIn("google", { callbackUrl });
   };
 
   return (
-    <div className={`${inter.className} min-h-screen w-full flex`}>
-      <div className="flex-1 flex items-center justify-center px-6 py-16" style={{ backgroundColor: "#FDFCFA" }}>
-        <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <div className="text-xs tracking-[0.3em] uppercase mb-2 lg:hidden" style={{ color: "#8C7A4E" }}>Akadverse - Access</div>
-            <h2 className={`${fraunces.className} text-2xl font-medium mb-1`} style={{ color: "#22261F" }}>Sign in</h2>
-            <p className="text-sm" style={{ color: "#8A8D7F" }}>
-              New here?{" "}
-              <Link href="/signup" className="underline underline-offset-2" style={{ color: "#22261F" }}>Create an account</Link>
+    <div className={`min-h-screen font-sans relative overflow-hidden transition-colors ${isDarkMode ? "bg-black" : "bg-gray-100"}`}>
+      <ThemeToggle isDarkMode={isDarkMode} onToggle={() => setIsDarkMode((prev) => !prev)} />
+
+      <div
+        className={`w-full lg:w-[52%] flex flex-col justify-center items-center px-5 sm:px-12 lg:px-16 xl:px-20 relative z-10 min-h-screen transition-colors ${
+          isDarkMode ? "bg-black" : "bg-gray-100"
+        }`}
+      >
+        <div className="max-w-[430px] w-full mx-auto lg:mx-0 py-16 sm:py-10 lg:py-0 lg:-mt-20 flex flex-col items-center">
+          <div className="mb-8 sm:mb-12 text-left flex flex-col items-center">
+            <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 leading-tight text-center ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+              Welcome to AkadVerse
+            </h1>
+            <p className={`text-sm sm:text-base ${isDarkMode ? "text-[#9CA3AF]" : "text-gray-600"}`}>
+              Sign in to access your academic workspace.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5 mb-8">
+            <div className="relative">
+              <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
+              <input
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={updateField("email")}
+                required
+                className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
+                  isDarkMode
+                    ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
+                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                }`}
+              />
+            </div>
+
+            <PasswordInput
+              value={form.password}
+              onChange={updateField("password")}
+              placeholder="Password"
+              isDarkMode={isDarkMode}
+            />
+
             {error && (
-              <div className="text-xs rounded-md px-3 py-2" style={{ backgroundColor: "#F5E6E0", color: "#8C3B22" }}>{error}</div>
+              <div className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-400 bg-red-900/20" : "text-red-700 bg-red-100"}`}>
+                {error}
+              </div>
             )}
 
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "#5C6152" }}>Email</label>
-              <input type="email" required name="email" value={form.email} onChange={update} placeholder="ada@akadverse.co"
-                className="w-full rounded-md px-3 py-2.5 text-sm outline-none" style={{ border: "1px solid #DEDBCE", backgroundColor: "#FFFFFF", color: "#22261F" }} />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "#5C6152" }}>Password</label>
-              <div className="relative">
-                <input type={showPassword ? "text" : "password"} name="password" required value={form.password} onChange={update} placeholder="Your passphrase"
-                  className="w-full rounded-md px-3 py-2.5 pr-10 text-sm outline-none" style={{ border: "1px solid #DEDBCE", backgroundColor: "#FFFFFF", color: "#22261F" }} />
-                <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#8A8D7F" }} aria-label={showPassword ? "Hide password" : "Show password"}>
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" disabled={status === "loading"} className="w-full rounded-md py-2.5 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60" style={{ backgroundColor: "#22261F", color: "#F4F1E8" }}>
-              {status === "loading" ? <Loader2 size={15} className="animate-spin" /> : <>Sign in <ArrowRight size={15} /></>}
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            >
+              {status === "loading" ? "Signing in…" : "Log In"}
             </button>
 
             <div className="flex items-center gap-3 py-1">
-              <div className="flex-1 h-px" style={{ backgroundColor: "#E4E1D5" }} />
-              <span className="text-xs" style={{ color: "#A6A996" }}>or</span>
-              <div className="flex-1 h-px" style={{ backgroundColor: "#E4E1D5" }} />
+              <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
+              <span className={`text-xs ${isDarkMode ? "text-[#737373]" : "text-gray-400"}`}>or</span>
+              <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
             </div>
 
-            <button type="button" onClick={handleGoogle} disabled={googleLoading} className="w-full rounded-md py-2.5 text-sm font-medium flex items-center justify-center gap-2.5 disabled:opacity-60" style={{ border: "1px solid #DEDBCE", backgroundColor: "#FFFFFF", color: "#22261F" }}>
-              {googleLoading ? <Loader2 size={16} className="animate-spin" /> : <><GoogleMark /> Continue with Google</>}
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={googleLoading}
+              className={`w-full py-3 border rounded-full font-semibold text-sm flex items-center justify-center gap-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                isDarkMode
+                  ? "bg-[#171717] border-[#262626] text-white hover:bg-[#1f1f1f]"
+                  : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              {googleLoading ? "Redirecting…" : (<><GoogleMark /> Continue with Google</>)}
             </button>
+
+            <p className={`text-sm text-center pt-1 ${isDarkMode ? "text-[#9CA3AF]" : "text-gray-600"}`}>
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className={`font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                Sign up
+              </Link>
+            </p>
           </form>
         </div>
       </div>
+
+      <AuthVisualPanel isDarkMode={isDarkMode} />
     </div>
   );
 }

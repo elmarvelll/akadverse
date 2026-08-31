@@ -1,0 +1,10 @@
+{
+  "crons": [
+    { "path": "/api/cron/seller-response", "schedule": "0 */5 * * *" },
+    { "path": "/api/cron/seller-payout", "schedule": "0 */5 * * *" },
+    { "path": "/api/cron/deliverer-inventory", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/delivery-schedule", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/delivery-retry", "schedule": "0 * * * *" },
+    { "path": "/api/cron/pickup-deadline-reminder", "schedule": "0 * * * *" }
+  ]
+}

@@ -1,9 +1,16 @@
 // src/app/api/register/route.ts
 //
 // Backend endpoint for the signup form (src/app/signup/page.tsx).
-// The signup page POSTs { firstName, lastName, email, password } as JSON
-// here; this route validates it, hashes the password, and creates a new
-// `User` row via Prisma.
+// The signup page POSTs { firstName, lastName, email, password, location }
+// as JSON here; this route validates it, hashes the password, and creates
+// a new `User` row via Prisma. `location` is optional, matching the
+// nullable `location` column on the Prisma `User` model.
+//
+// Every account created here gets the schema's default role ("student") —
+// we deliberately never accept a `role` field from the client, since
+// letting a signup request choose its own role would let anyone self-assign
+// Faculty/Admin/Super Admin access. The signup UI's role selector is
+// cosmetic for the same reason (see src/app/signup/page.tsx).
 //
 // This is a plain REST-style API route (not part of NextAuth) because
 // account *creation* with a password is our own business logic — NextAuth
@@ -36,6 +43,9 @@ export async function POST(request: NextRequest) {
   const lastName = body.lastName?.trim();
   const email = body.email?.trim().toLowerCase();
   const password = body.password;
+  // Optional — left undefined (rather than an empty string) when not
+  // provided, so it's stored as SQL NULL instead of an empty row value.
+  const location = body.location?.trim() || undefined;
 
   // Basic presence validation — every field on the signup form is required.
   if (!firstName || !lastName || !email || !password) {
@@ -71,13 +81,16 @@ export async function POST(request: NextRequest) {
   // passwords in plain text.
   const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
-  // Create the user record.
+  // Create the user record. `role` is intentionally omitted so Prisma
+  // applies the schema's default (`student`) — see the comment at the top
+  // of this file for why that's not client-controlled.
   const user = await prisma.user.create({
     data: {
       firstName,
       lastName,
       email,
       password: hashedPassword,
+      location,
     },
   });
 

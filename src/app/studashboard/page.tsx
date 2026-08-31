@@ -20,7 +20,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Zap, House, Bot, BookOpen, Loader2 } from "lucide-react";
+import { Zap, House, Bot, BookOpen, ShoppingBag, ShieldCheck, Loader2 } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 
 const workspaces = [
@@ -36,14 +36,23 @@ const workspaces = [
   {
     id: 2,
     title: "Main Menu",
-    description: "Access campus tools, the student dashboard, marketplace, and student essentials.",
+    description: "Access campus tools and the student dashboard.",
     icon: House,
     color: "text-purple-500",
     bgColor: "bg-purple-50",
-    path: "/studashboard/main-menu/student-dashboard",
+    path: "/studashboard/main-menu",
   },
   {
     id: 3,
+    title: "Marketplace",
+    description: "Buy, sell, and hire within your campus community — browse products and skills, list your own, and manage orders.",
+    icon: ShoppingBag,
+    color: "text-orange-500",
+    bgColor: "bg-orange-50",
+    path: "/studashboard/marketplace",
+  },
+  {
+    id: 4,
     title: "E-Learning",
     description: "Access courses, learning materials, and track academic progress. Includes learning dashboard, my learning, and learning resources.",
     icon: BookOpen,
@@ -52,13 +61,29 @@ const workspaces = [
     path: "/studashboard/e-learning",
   },
   {
-    id: 4,
+    id: 5,
     title: "AI Studio",
     description: "Your AI-powered academic assistant for research, writing, and study support. This is the main AI workspace where students interact with AI tools such as chat, research assistance, note summarization, and study planning.",
     icon: Bot,
     color: "text-pink-500",
     bgColor: "bg-pink-50",
     path: "/studashboard/ai-studio",
+  },
+  {
+    id: 6,
+    title: "Admin",
+    description: "Platform oversight: users, business verification/blocking, disputes, order events, fines, and reports — currently covers the Marketplace, with other domains on the way.",
+    icon: ShieldCheck,
+    color: "text-red-500",
+    bgColor: "bg-red-50",
+    path: "/studashboard/admin",
+    // Every admin API call is still gated server-side by requireAdmin()
+    // (User.isAdmin, independent of role — see
+    // docs/admin/decisions/admin-flag-replaces-role-check.md) regardless
+    // of how this URL is reached — this flag only keeps the card from
+    // being shown to users who can't use it, it isn't itself a security
+    // boundary.
+    adminOnly: true,
   },
 ];
 
@@ -115,7 +140,9 @@ const Page = () => {
 
         {/* Workspace Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-          {workspaces.map((workspace) => {
+          {workspaces
+            .filter((workspace) => !workspace.adminOnly || user?.isAdmin)
+            .map((workspace) => {
             const Icon = workspace.icon;
             return (
               <div

@@ -13,6 +13,9 @@ export interface SignupFormValues {
   lastName: string;
   email: string;
   password: string;
+  // Optional — maps directly to the optional `location` column on the
+  // Prisma `User` model.
+  location?: string;
 }
 
 // Fields collected on the login form. Only email + password are needed;
