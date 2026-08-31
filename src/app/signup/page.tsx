@@ -1,36 +1,50 @@
 // src/app/signup/page.tsx
 //
-// The "create account" page, reachable at /signup.
+// The "create account" page, reachable at /signup. Visual design matches
+// the dark/light split-screen mockup you provided; the functional wiring
+// underneath is unchanged from before:
+//   - Credentials signup POSTs to our own /api/register route (via the
+//     shared axios instance), which hashes the password and creates the
+//     User row (always as role "student" — see the comment in
+//     src/app/api/register/route.ts).
+//   - "Sign up with Google" uses NextAuth's Google OAuth flow; if the
+//     email doesn't exist yet, the `signIn` callback in src/lib/auth.ts
+//     creates the User row automatically.
 //
-// Two ways to create an account here:
-//   1. Fill in the form and submit -> POSTs to our own /api/register route
-//      (via the shared axios instance), which hashes the password and
-//      creates the User row.
-//   2. Click "Continue with Google" -> NextAuth's Google OAuth flow; if the
-//      Google account's email doesn't exist yet, the `signIn` callback in
-//      src/lib/auth.ts creates the User row for us automatically.
-//
-// This must be a Client Component ("use client") because it uses React
-// state (useState) and browser-only APIs like NextAuth's `signIn`.
+// About the "Choose View Role" selector below: it's cosmetic. Every
+// account is created as "student" regardless of which pill is selected,
+// and after signup the app always routes through "/" so src/proxy.ts's
+// real role-based dispatch decides the destination — the selector doesn't
+// override that. This was a judgment call made without an explicit
+// answer from you on whether the selector should actually assign roles;
+// letting a signup request self-assign Faculty/Admin would undermine the
+// role system entirely, so this project defaults to the safe reading.
+// Flag it if you'd rather it work differently.
 
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { Fraunces, Inter } from "next/font/google";
-import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
-import { SignupFormValues } from "@/types/auth";
+import { useRouter } from "next/navigation";
+import { MapPin, User, Mail } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { isAxiosError } from "axios";
 import api from "@/lib/axios";
+import { SignupFormValues } from "@/types/auth";
+import { PasswordInput } from "../components/password-input";
+import { ThemeToggle } from "../components/theme-toggle";
+import { AuthVisualPanel } from "../components/auth-visual-panel";
+import { useThemePreference } from "@/hooks/use-theme-preference";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["300", "500", "600"] });
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"] });
+// Purely a display/navigation preference (see the file-level comment
+// above) — NOT the role assigned to the created account.
+const roleOptions = [
+  { id: "student" as const, label: "Student" },
+  { id: "faculty" as const, label: "Faculty" },
+  { id: "admin" as const, label: "Admin" },
+];
 
-// Small inline Google "G" logo used on the "Continue with Google" button.
-// Kept as a local component (rather than an image file) so there's no extra
-// network request just to render the icon.
+// Small inline Google "G" logo used on the "Sign up with Google" button.
 function GoogleMark() {
   return (
     <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
@@ -42,207 +56,244 @@ function GoogleMark() {
   );
 }
 
-export default function SignupPage() {
-  const router = useRouter();
+// Suspense boundary only exists because this page lives under the same
+// route group conventions as /login (which needs one for useSearchParams).
+// This page doesn't read search params itself, but keeping the same shape
+// across both auth pages avoids one silently behaving differently from the
+// other if that changes later.
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignUpForm />
+    </Suspense>
+  );
+}
 
-  // Controlled form state for the four signup fields.
+function SignUpForm() {
+  const router = useRouter();
+  const { isDarkMode, setIsDarkMode } = useThemePreference();
+
   const [form, setForm] = useState<SignupFormValues>({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
+    location: "",
   });
-
-  // Whether the password field shows plaintext or dots.
-  const [showPassword, setShowPassword] = useState(false);
-
-  // Tracks the credentials-form submit lifecycle so we can disable the
-  // button and show a spinner while the request is in flight.
+  const [activeRole, setActiveRole] = useState<(typeof roleOptions)[number]["id"]>("student");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
-
-  // Tracks the "Continue with Google" button separately from the
-  // credentials form, since they're independent actions.
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Generic change handler shared by every text input: reads the input's
-  // `name` attribute and updates the matching key in `form` state.
-  const update = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const key = e.target.name as keyof SignupFormValues;
+  const activeRoleIndex = roleOptions.findIndex((role) => role.id === activeRole);
+
+  // Generic change handler for the plain text inputs (name/location/email).
+  const updateField = (key: keyof SignupFormValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((current) => ({ ...current, [key]: e.target.value }));
   };
 
-  // Handles submitting the signup form: sends the form values to our
-  // /api/register backend route via the shared axios instance.
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus("loading");
     setError("");
 
     try {
-      // axios's baseURL is "/api" (see src/lib/axios.ts), so this hits
-      // /api/register.
       await api.post("/register", form);
-
       // Account created — send the user to sign in with their new
-      // credentials.
+      // credentials. Deliberately NOT routed by `activeRole`: see the
+      // file-level comment on why the role selector doesn't control
+      // navigation.
       router.push("/login");
     } catch (err) {
-      // Axios throws on non-2xx responses; pull our API's { error } message
-      // out of the response body if present, otherwise show a generic one.
       const message =
         (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) ||
-        "Something went wrong. Please try again.";
+        "Sign up failed. Please try again.";
       setError(message);
       setStatus("error");
     }
   };
 
-  // Handles the "Continue with Google" button: kicks off NextAuth's Google
-  // OAuth redirect flow. On success, Google redirects back and NextAuth's
-  // `signIn` callback (src/lib/auth.ts) creates the User row if this email
-  // hasn't signed up before, then NextAuth redirects to `callbackUrl`.
+  // "Sign up with Google" — same NextAuth flow as login; whether it creates
+  // a new account or logs an existing one in is decided by the `signIn`
+  // callback in src/lib/auth.ts, not by anything on this page.
   const handleGoogle = async () => {
     try {
       setGoogleLoading(true);
       await signIn("google", { callbackUrl: "/" });
     } finally {
-      // If signIn resolves without a full-page redirect having happened
-      // (e.g. it was blocked), reset the loading state so the button isn't
-      // stuck disabled forever.
       setGoogleLoading(false);
     }
   };
 
-  // Drives the 4-bar password-strength indicator: fills one bar per 3
-  // characters typed, capped at 12 characters (4 bars x 3 chars).
-  const passwordStrength = Math.min(form.password.length, 12) / 12;
-
   return (
-    <div className={`${inter.className} min-h-screen w-full flex`}>
-      <div className="flex-1 flex items-center justify-center px-6 py-16" style={{ backgroundColor: "#FDFCFA" }}>
-        <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <div className="text-xs tracking-[0.3em] uppercase mb-2 lg:hidden" style={{ color: "#8C7A4E" }}>Akadverse - Access</div>
-            <h2 className={`${fraunces.className} text-2xl lg:text-2xl font-medium mb-1`} style={{ color: "#22261F" }}>Create your account</h2>
-            <p className="text-sm" style={{ color: "#8A8D7F" }}>
-              Already have one?{" "}
-              <Link href="/login" className="underline underline-offset-2" style={{ color: "#22261F" }}>Sign in instead</Link>
+    <div className={`min-h-screen font-sans relative overflow-hidden transition-colors ${isDarkMode ? "bg-black" : "bg-gray-100"}`}>
+      <ThemeToggle isDarkMode={isDarkMode} onToggle={() => setIsDarkMode((prev) => !prev)} />
+
+      <div
+        className={`w-full lg:w-[52%] flex flex-col justify-center items-center px-5 sm:px-12 lg:px-16 xl:px-20 relative z-10 min-h-screen transition-colors ${
+          isDarkMode ? "bg-black" : "bg-gray-100"
+        }`}
+      >
+        <div className="max-w-[430px] w-full mx-auto lg:mx-0 py-16 sm:py-10 flex flex-col items-center">
+          <div className="mb-8 sm:mb-10 text-left flex flex-col items-center">
+            <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 leading-tight text-center ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+              Join AkadVerse
+            </h1>
+            <p className={`text-sm sm:text-base ${isDarkMode ? "text-[#9CA3AF]" : "text-gray-600"}`}>
+              Create your student marketplace account.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="text-xs rounded-md px-3 py-2" style={{ backgroundColor: "#F5E6E0", color: "#8C3B22" }}>{error}</div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "#5C6152" }}>First name</label>
-                <input
-                  type="text"
-                  name="firstName"
-                  required
-                  value={form.firstName}
-                  onChange={update}
-                  placeholder="Ada"
-                  className="w-full rounded-md px-3 py-2.5 text-sm outline-none"
-                  style={{ border: "1px solid #DEDBCE", backgroundColor: "#FFFFFF", color: "#22261F" }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "#5C6152" }}>Last name</label>
-                <input
-                  type="text"
-                  name="lastName"
-                  required
-                  value={form.lastName}
-                  onChange={update}
-                  placeholder="Lovelace"
-                  className="w-full rounded-md px-3 py-2.5 text-sm outline-none"
-                  style={{ border: "1px solid #DEDBCE", backgroundColor: "#FFFFFF", color: "#22261F" }}
-                />
-              </div>
-            </div>
-
+          <form onSubmit={handleSubmit} className="space-y-4 mb-8">
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "#5C6152" }}>Email</label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={form.email}
-                onChange={update}
-                placeholder="ada@akadverse.co"
-                className="w-full rounded-md px-3 py-2.5 text-sm outline-none"
-                style={{ border: "1px solid #DEDBCE", backgroundColor: "#FFFFFF", color: "#22261F" }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "#5C6152" }}>Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  required
-                  minLength={8}
-                  value={form.password}
-                  onChange={update}
-                  placeholder="At least 8 characters"
-                  className="w-full rounded-md px-3 py-2.5 pr-10 text-sm outline-none"
-                  style={{ border: "1px solid #DEDBCE", backgroundColor: "#FFFFFF", color: "#22261F" }}
+              <p className={`mb-2 text-xs font-semibold uppercase tracking-widest ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`}>
+                Choose View Role
+              </p>
+              <div className={`relative grid grid-cols-3 rounded-xl p-1 ${isDarkMode ? "bg-[#0f0f0f]" : "bg-gray-100"}`}>
+                <span
+                  className={`absolute top-1 bottom-1 w-[calc((100%-0.5rem)/3)] rounded-lg transition-transform duration-300 ease-out ${
+                    isDarkMode ? "bg-blue-500/20 border border-blue-500/30" : "bg-white border border-blue-100 shadow-sm"
+                  }`}
+                  style={{ transform: `translateX(calc(${activeRoleIndex} * 100%))` }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "#8A8D7F" }}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <div className="flex gap-1 mt-2">
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-1 flex-1 rounded-full"
-                    style={{ backgroundColor: passwordStrength * 4 > i ? "#C9A66B" : "#EAE7DB" }}
-                  />
+                {roleOptions.map((role) => (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => setActiveRole(role.id)}
+                    className={`relative z-10 py-2 text-sm font-semibold transition-colors ${
+                      activeRole === role.id
+                        ? isDarkMode
+                          ? "text-white"
+                          : "text-blue-700"
+                        : isDarkMode
+                          ? "text-[#8a8a8a] hover:text-[#c8c8c8]"
+                          : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    {role.label}
+                  </button>
                 ))}
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="relative">
+                <User className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
+                <input
+                  type="text"
+                  placeholder="First Name"
+                  value={form.firstName}
+                  onChange={updateField("firstName")}
+                  required
+                  className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
+                    isDarkMode
+                      ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
+                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                  }`}
+                />
+              </div>
+
+              <div className="relative">
+                <User className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
+                <input
+                  type="text"
+                  placeholder="Last Name"
+                  value={form.lastName}
+                  onChange={updateField("lastName")}
+                  required
+                  className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
+                    isDarkMode
+                      ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
+                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="relative">
+              <MapPin className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
+              <input
+                type="text"
+                placeholder="Location (optional)"
+                value={form.location}
+                onChange={updateField("location")}
+                className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
+                  isDarkMode
+                    ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
+                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                }`}
+              />
+            </div>
+
+            <div className="relative">
+              <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
+              <input
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={updateField("email")}
+                required
+                className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
+                  isDarkMode
+                    ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
+                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                }`}
+              />
+            </div>
+
+            <PasswordInput
+              value={form.password}
+              onChange={updateField("password")}
+              placeholder="Password (at least 8 characters)"
+              isDarkMode={isDarkMode}
+              minLength={8}
+            />
+
+            {error && (
+              <div className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-400 bg-red-900/20" : "text-red-700 bg-red-100"}`}>
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={status === "loading"}
-              className="w-full rounded-md py-2.5 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60"
-              style={{ backgroundColor: "#22261F", color: "#F4F1E8" }}
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
-              {status === "loading" ? <Loader2 size={15} className="animate-spin" /> : <>Create account <ArrowRight size={15} /></>}
+              {status === "loading" ? "Creating account…" : "Sign Up"}
             </button>
 
             <div className="flex items-center gap-3 py-1">
-              <div className="flex-1 h-px" style={{ backgroundColor: "#E4E1D5" }} />
-              <span className="text-xs" style={{ color: "#A6A996" }}>or</span>
-              <div className="flex-1 h-px" style={{ backgroundColor: "#E4E1D5" }} />
+              <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
+              <span className={`text-xs ${isDarkMode ? "text-[#737373]" : "text-gray-400"}`}>or</span>
+              <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
             </div>
 
             <button
               type="button"
               onClick={handleGoogle}
               disabled={googleLoading}
-              className="w-full rounded-md py-2.5 text-sm font-medium flex items-center justify-center gap-2.5 disabled:opacity-60"
-              style={{ border: "1px solid #DEDBCE", backgroundColor: "#FFFFFF", color: "#22261F" }}
+              className={`w-full py-3 border rounded-full font-semibold text-sm flex items-center justify-center gap-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                isDarkMode
+                  ? "bg-[#171717] border-[#262626] text-white hover:bg-[#1f1f1f]"
+                  : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
+              }`}
             >
-              {googleLoading ? <Loader2 size={16} className="animate-spin" /> : <><GoogleMark /> Sign up with Google</>}
+              {googleLoading ? "Redirecting…" : (<><GoogleMark /> Sign up with Google</>)}
             </button>
 
-            <p className="text-xs text-center pt-2" style={{ color: "#A6A996" }}>By continuing you agree to the Terms and Privacy Policy.</p>
+            <p className={`text-sm text-center pt-1 ${isDarkMode ? "text-[#9CA3AF]" : "text-gray-600"}`}>
+              Already have an account?{" "}
+              <Link href="/login" className={`font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                Sign in
+              </Link>
+            </p>
           </form>
         </div>
       </div>
+
+      <AuthVisualPanel isDarkMode={isDarkMode} />
     </div>
   );
 }

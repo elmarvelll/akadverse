@@ -2,9 +2,11 @@
 //
 // NextAuth's built-in `Session` and `JWT` types don't know about the custom
 // fields we attach in the `jwt`/`session` callbacks (src/lib/auth.ts): `id`,
-// `role` (for role-based home-route redirects, see src/proxy.ts), and
+// `role` (for role-based home-route redirects, see src/proxy.ts),
 // `firstName` (so the dashboard can greet the user without a second fetch —
-// see src/context/AuthContext.tsx). This file uses TypeScript's
+// see src/context/AuthContext.tsx), and `isAdmin` (Marketplace admin
+// access, independent of `role` — see prisma/schema.prisma's comment on
+// User.isAdmin and src/lib/admin.ts#requireAdmin). This file uses TypeScript's
 // "declaration merging" to extend those interfaces so all of these
 // type-check everywhere else in the app instead of requiring `as any`
 // casts.
@@ -21,6 +23,7 @@ declare module "next-auth" {
       name: string;
       firstName: string;
       role: Role;
+      isAdmin: boolean;
     };
   }
 }
@@ -30,5 +33,6 @@ declare module "next-auth/jwt" {
     id: string;
     firstName: string;
     role: Role;
+    isAdmin: boolean;
   }
 }

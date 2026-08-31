@@ -139,6 +139,7 @@ export const authOptions: NextAuthOptions = {
             firstName: true,
             lastName: true,
             role: true,
+            isAdmin: true,
           },
         });
 
@@ -151,6 +152,11 @@ export const authOptions: NextAuthOptions = {
           token.firstName = dbUser.firstName;
           // Drives the role-based home-route redirect in src/proxy.ts.
           token.role = dbUser.role;
+          // Marketplace admin access — independent of `role` (see
+          // prisma/schema.prisma's comment on User.isAdmin). Checked by
+          // src/lib/admin.ts#requireAdmin and used to show/hide the Admin
+          // card on the home route (src/app/studashboard/page.tsx).
+          token.isAdmin = dbUser.isAdmin;
         }
       }
       return token;
@@ -167,6 +173,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name as string;
         session.user.firstName = token.firstName as string;
         session.user.role = token.role;
+        session.user.isAdmin = token.isAdmin as boolean;
       }
       return session;
     },

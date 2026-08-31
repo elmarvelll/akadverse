@@ -21,4 +21,22 @@ const api = axios.create({
   },
 });
 
+// A FormData body (image uploads — see ImageUploadField.tsx,
+// ProductImagesField.tsx) needs the browser to set its own
+// "multipart/form-data; boundary=..." header — the instance's default
+// "application/json" above would otherwise win, since it was explicitly
+// set rather than left for axios to infer, and the server's
+// request.formData() call rejects anything that isn't actually
+// multipart/form-data (or urlencoded).
+api.interceptors.request.use((config) => {
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    if (typeof config.headers?.delete === "function") {
+      config.headers.delete("Content-Type");
+    } else if (config.headers) {
+      delete (config.headers as Record<string, unknown>)["Content-Type"];
+    }
+  }
+  return config;
+});
+
 export default api;

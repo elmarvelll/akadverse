@@ -1,11 +1,16 @@
 // src/app/components/dashboard/shared/ComingSoon.tsx
 //
 // Shared placeholder shown as the dashboard home page for roles whose
-// portals haven't been built yet (faculty, admin, super_admin — see
-// src/app/facultydashboard, src/app/admindashboard,
-// src/app/superadmindashboard). Kept as one shared component instead of
-// copy-pasting the same markup three times, so the "coming soon" look only
-// needs updating in one place later.
+// portals haven't been built yet (faculty, admin — see
+// src/app/facultydashboard, src/app/admindashboard). Kept as one shared
+// component instead of copy-pasting the same markup, so the "coming soon"
+// look only needs updating in one place later.
+//
+// super_admin no longer has its own portal (src/app/superadmindashboard
+// was removed) — Marketplace admin access is now the independent
+// `User.isAdmin` flag, not tied to `role`, so a super_admin account just
+// lands on the normal student home route like everyone else. See
+// docs/admin/decisions/admin-flag-replaces-role-check.md.
 
 "use client";
 

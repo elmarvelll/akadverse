@@ -31,6 +31,10 @@ export interface AuthUser {
   name: string;
   firstName: string;
   role: Role;
+  // Marketplace admin access — independent of `role` (a student, faculty,
+  // admin, or super_admin account can independently also be an admin). See
+  // prisma/schema.prisma's comment on User.isAdmin.
+  isAdmin: boolean;
 }
 
 export interface UseAuthResult {

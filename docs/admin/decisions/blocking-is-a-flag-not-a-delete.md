@@ -1,0 +1,9 @@
+# Decision: Blocking a business sets a flag; nothing is ever deleted
+
+- **Date**: 2026-08-28.
+- **Context**: The spec explicitly required that blocking preserve historical orders/payments/events/fines, and explicitly forbade implementing it as deletion.
+- **Problem**: A business with real transaction history needs to be preventable from further activity without destroying the audit trail that history represents — deleting it (or cascading a delete to its products/orders) would also break every buyer's own order history, every `OrderEvent` referencing it, and every `LateDeliveryFine` on record.
+- **Chosen option**: `Business.blocked`/`blockedAt`/`blockedReason`/`blockedBy` — plain fields on the existing `Business` row. `block-business.ts`/`unblock-business.ts` only ever call `prisma.business.update`, never `delete`, and touch no other table.
+- **Reason**: Directly required by the spec, and the only option consistent with `Product`/`Order`'s existing `onDelete: Cascade` relations to `Business` — deleting a `Business` row would cascade-delete its products and orphan/cascade its orders, which is never what "block" should mean.
+- **Consequences**: A blocked business's data remains fully visible everywhere else in the app (its own dashboard, buyer order history, admin Events/Fines tabs) — blocking is purely a flag an admin and, if enforcement is added later, other routes can check. See [`gaps.md`](../security/authorization.md#known-gaps) — that enforcement doesn't exist yet beyond the admin UI itself.
+- **Alternatives rejected**: Soft-delete via a generic `deletedAt` convention — rejected because "blocked" and "deleted" are different concepts (a blocked business is still a real, operating business under review, not a removed one), and no such generic convention exists elsewhere in this schema to reuse.
