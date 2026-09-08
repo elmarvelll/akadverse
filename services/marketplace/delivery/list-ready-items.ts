@@ -14,21 +14,39 @@ export async function listReadyItems() {
       id: true,
       quantity: true,
       price: true,
-      product: { select: { name: true, businessId: true, business: { select: { name: true } } } },
+      // location is included so admin (and, via the deliverer's own
+      // assignment view, the deliverer) can see where to collect a School
+      // Vendor item — the vendor's own address, since there is no central
+      // drop-off for vendor pickups (see
+      // docs/marketplace/decisions/vendor-independent-architecture.md).
+      // Meaningless/unused for a Business item, which still collects from
+      // the central point (MarketplaceSettings.dropoffLocation).
+      product: { select: { name: true, businessId: true, business: { select: { name: true, type: true, location: true } } } },
+      side: { select: { name: true, businessId: true, business: { select: { name: true, type: true, location: true } } } },
       order: { select: { id: true, sellerDroppedOffAt: true, estimatedDeliveryAt: true } },
     },
     orderBy: { order: { sellerDroppedOffAt: "asc" } },
   });
 
-  return items.map((item) => ({
-    id: item.id,
-    orderId: item.order.id,
-    quantity: item.quantity,
-    price: item.price,
-    productName: item.product.name,
-    businessId: item.product.businessId,
-    businessName: item.product.business.name,
-    sellerDroppedOffAt: item.order.sellerDroppedOffAt?.toISOString() ?? null,
-    estimatedDeliveryAt: item.order.estimatedDeliveryAt?.toISOString() ?? null,
-  }));
+  return items.map((item) => {
+    // Either a Product line or a School Vendor Side line — both belong to
+    // exactly one business.
+    const source = (item.product ?? item.side)!;
+    return {
+      id: item.id,
+      orderId: item.order.id,
+      quantity: item.quantity,
+      price: item.price,
+      productName: source.name,
+      businessId: source.businessId,
+      businessName: source.business.name,
+      businessType: source.business.type,
+      // Only meaningful (and only ever populated) for a School Vendor —
+      // the collection point for a Business item is always the central
+      // drop-off location instead.
+      collectionLocation: source.business.type === "SCHOOL_VENDOR" ? source.business.location : null,
+      sellerDroppedOffAt: item.order.sellerDroppedOffAt?.toISOString() ?? null,
+      estimatedDeliveryAt: item.order.estimatedDeliveryAt?.toISOString() ?? null,
+    };
+  });
 }

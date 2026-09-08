@@ -84,9 +84,19 @@ export default function AdminDisputesPage() {
   const resolve = async (orderId: string) => {
     const resolution = window.prompt("How was this dispute resolved?");
     if (!resolution) return;
+    // Only relevant for School Vendor orders with a deliverer assigned —
+    // "DELIVERER" withholds that handoff's payment (spec §54/§56); left
+    // blank for a Business dispute or any resolution that doesn't
+    // implicate the deliverer.
+    const responsiblePartyRaw = window.prompt(
+      "Who is responsible? Leave blank if not applicable, or enter one of: VENDOR, DELIVERER, BUYER, REJECTED"
+    );
+    const responsibleParty = ["VENDOR", "DELIVERER", "BUYER", "REJECTED"].includes(responsiblePartyRaw ?? "")
+      ? (responsiblePartyRaw as "VENDOR" | "DELIVERER" | "BUYER" | "REJECTED")
+      : undefined;
     setBusyId(orderId);
     try {
-      await api.post(`/marketplace/admin/disputes/${orderId}/resolve`, { resolution });
+      await api.post(`/marketplace/admin/disputes/${orderId}/resolve`, { resolution, responsibleParty });
       await load(page);
     } finally {
       setBusyId(null);

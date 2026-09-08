@@ -20,6 +20,10 @@ const TABS = [
   { href: "/studashboard/admin/marketplace/businesses", label: "Businesses" },
   { href: "/studashboard/admin/marketplace/products", label: "Products" },
   { href: "/studashboard/admin/marketplace/reports", label: "Reports" },
+  // School Vendor delivery operations — see
+  // docs/marketplace/systems/vendor-delivery-system.md. An admin
+  // capability/tab, not a new global role (spec §38).
+  { href: "/studashboard/admin/marketplace/vendor-delivery", label: "Vendor Delivery" },
 ];
 
 export default function AdminMainMenu() {

@@ -56,9 +56,15 @@ export async function createOrdersForCheckout(userId: string, location: string) 
       // already keep unapproved businesses out of reach for a NEW add, but
       // a stale cart line is still possible, so this is checked again
       // here as the actual point of no return.
-      const business = await tx.business.findUnique({ where: { id: businessId }, select: { approvalStatus: true } });
+      const business = await tx.business.findUnique({ where: { id: businessId }, select: { approvalStatus: true, type: true } });
       if (business?.approvalStatus !== "APPROVED") {
         throw conflict(`${items[0].sellerName} isn't currently accepting orders.`);
+      }
+      // A School Vendor's items never flow through Business checkout — see
+      // add-to-cart.ts's own guard; this is the actual point of no return,
+      // so it's re-checked here too rather than trusted from the cart read.
+      if (business.type !== "BUSINESS") {
+        throw conflict(`${items[0].sellerName} orders must go through the Vendor checkout.`);
       }
 
       // Re-check + decrement stock for every line before creating

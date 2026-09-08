@@ -109,10 +109,18 @@ export default function MyTradeDropdown() {
                         {businesses.map((business) => (
                           <li key={business.id}>
                             <Link
-                              href={`/studashboard/marketplace/business/${business.id}`}
+                              href={
+                                business.type === "SCHOOL_VENDOR"
+                                  ? `/studashboard/marketplace/vendor-dashboard/${business.id}`
+                                  : `/studashboard/marketplace/business/${business.id}`
+                              }
                               className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 transition"
                             >
-                              <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
+                              <span
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden ${
+                                  business.type === "SCHOOL_VENDOR" ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-600"
+                                }`}
+                              >
                                 {business.secureUrl ? (
                                   // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL, not worth a remotePatterns entry for a tiny dropdown avatar
                                   <img src={business.secureUrl} alt="" className="w-full h-full object-cover" />
@@ -123,6 +131,11 @@ export default function MyTradeDropdown() {
                               <span className="min-w-0">
                                 <span className="flex items-center gap-1.5">
                                   <span className="block text-sm font-medium text-gray-900 truncate">{business.name}</span>
+                                  {business.type === "SCHOOL_VENDOR" && (
+                                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700">
+                                      Vendor
+                                    </span>
+                                  )}
                                   {business.approvalStatus === "PENDING_APPROVAL" && (
                                     <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">
                                       Pending

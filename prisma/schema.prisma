@@ -41,6 +41,23 @@ model User {
   // src/lib/auth.ts's jwt/session callbacks.
   isAdmin         Boolean          @default(false)
   location        String?
+  // Deliverer application's student-email verification (see
+  // docs/marketplace/systems/vendor-delivery-system.md and
+  // services/marketplace/deliverer/request-student-email-otp.ts). The
+  // applicant only ever supplies the local part — the canonical
+  // "<local>@stu.cu.edu.ng" address is constructed server-side, never
+  // trusted from the client. studentEmailVerifiedAt proves OTP possession
+  // of that mailbox only; it is NOT proof of university enrollment and is
+  // deliberately kept separate from Deliverer.status (admin approval),
+  // since verifying the email and being approved as a deliverer are two
+  // different gates. The OTP itself (code/expiry/attempts/last-sent) lives
+  // on separate fields added alongside the deliverer-application feature.
+  studentEmailLocalPart  String?
+  studentEmailVerifiedAt DateTime?
+  studentEmailOtp            String?
+  studentEmailOtpExpiry      DateTime?
+  studentEmailOtpAttempts    Int       @default(0)
+  studentEmailOtpLastSentAt  DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   businesses      Business[]
@@ -61,6 +78,7 @@ model User {
   deliverer       Deliverer?
   businessReports BusinessReport[]
   notifications   Notification[]
+  vendorDeliveryBookings VendorDeliveryBooking[]
 
   @@index([email])
   @@index([createdAt])
@@ -131,6 +149,14 @@ enum DeliveryStatus {
 // others don't.
 enum OrderDeliveryOutcome {
   PENDING
+  // Deliverer has marked the order delivered, but the buyer's 24-hour
+  // dispute window (see docs/marketplace/systems/vendor-delivery-system.md)
+  // hasn't elapsed yet. Only used by the School Vendor delivery flow today
+  // — Business orders go straight PENDING -> DELIVERED, since Business has
+  // no equivalent dispute-hold requirement. Deliverer payout
+  // (Delivery_x_businesses.delivererPayoutStatus) stays gated while an
+  // order sits in this state.
+  DELIVERED_PENDING_DISPUTE_WINDOW
   DELIVERED
   PARTIALLY_DELIVERED
   FAILED
@@ -249,6 +275,26 @@ enum OrderEventType {
   BUSINESS_DELIVERY_UNRESTRICTED
   DISPUTE_OPENED
   DISPUTE_RESOLVED
+  // School Vendor additions — see docs/marketplace/systems/vendor-system.md
+  // and vendor-delivery-system.md. Kept in this same enum (rather than a
+  // parallel one) so OrderEvent stays the single append-only history for
+  // every order, vendor or Business.
+  VENDOR_APPLICATION_SUBMITTED
+  VENDOR_APPLICATION_APPROVED
+  VENDOR_APPLICATION_REJECTED
+  VENDOR_PAUSED
+  VENDOR_UNPAUSED
+  VENDOR_SLOT_BOOKED
+  DELIVERER_STUDENT_OTP_VERIFIED
+  DISPUTE_WINDOW_STARTED
+  DISPUTE_WINDOW_ELAPSED
+  DELIVERER_PAYOUT_PENDING
+  DELIVERER_PAYOUT_PROCESSING
+  DELIVERER_PAYOUT_SUCCESS
+  DELIVERER_PAYOUT_FAILED
+  DELIVERER_PAYOUT_REJECTED
+  VENDOR_ITEM_REFUND_INITIATED
+  VENDOR_ITEM_REFUND_COMPLETED
 }
 
 // One row per user who has ever submitted a deliverer application. Created
@@ -262,6 +308,25 @@ model Deliverer {
   lastName         String
   email            String
   phone            String?
+  // School Vendor delivery additions — hall/room are location info (spec
+  // §34), only ever shown to whoever legitimately needs it for a specific
+  // assigned delivery (see docs/marketplace/security/authentication-and-authorization.md
+  // for the general privacy rule this follows). preferredAvailability is a
+  // comma-separated list of VendorDeliverySlot ids/labels the applicant
+  // prefers — a preference only, never a guarantee; actual assignment is
+  // controlled by the Vendor Delivery admin (spec §37).
+  hall             String?
+  room             String?
+  preferredAvailability String?
+  // Deliverer payout bank details — mirrors Business's equivalent fields
+  // exactly (see Business.bankName/bankCode/accountNumber/accountHolderName/
+  // paystackRecipientCode's own comments). Used by
+  // services/marketplace/vendor-delivery/payout/process-deliverer-payout.ts.
+  bankName              String?
+  bankCode              String?
+  accountNumber         String?
+  accountHolderName     String?
+  paystackRecipientCode String?
   status           DelivererStatus         @default(PENDING)
   appliedAt        DateTime                @default(now())
   approvedAt       DateTime?
@@ -275,6 +340,7 @@ model Deliverer {
   user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries       Delivery[]
   businessHandoffs Delivery_x_businesses[]
+  rosterAssignments DelivererRosterAssignment[]
 
   @@index([status])
 }
@@ -347,6 +413,22 @@ model Delivery_x_businesses {
   // handoff rather than every cron run. See
   // services/marketplace/delivery/send-pickup-deadline-reminders.ts.
   pickupDeadlineReminderSentAt DateTime?
+  // Deliverer payment for this handoff — School Vendor only, mirroring
+  // OrderItem's existing seller-payout field shape exactly rather than
+  // inventing a parallel payment system (see
+  // docs/marketplace/decisions/vendor-extends-business.md). Deliberately
+  // gated: delivererPayoutStatus stays null until the linked order(s)'
+  // 24-hour dispute window has elapsed with no unresolved dispute (see
+  // OrderDeliveryOutcome.DELIVERED_PENDING_DISPUTE_WINDOW) — the vendor
+  // cron that flips that window is also what sets this to PAYOUT_PENDING.
+  delivererPayoutAmount        Float?
+  delivererPayoutStatus        DelivererPayoutStatus?
+  delivererPayoutAttempts      Int            @default(0)
+  delivererPayoutProcessingAt  DateTime?
+  delivererPayoutSucceededAt   DateTime?
+  delivererPayoutFailedAt      DateTime?
+  delivererPayoutFailureReason String?        @db.Text
+  delivererPayoutReference     String?
   createdAt                  DateTime       @default(now())
   updatedAt                  DateTime       @updatedAt
   deliveryman                Deliverer      @relation(fields: [deliverymanId], references: [id])
@@ -354,6 +436,20 @@ model Delivery_x_businesses {
 
   @@index([deliverymanId])
   @@index([businessId])
+  @@index([delivererPayoutStatus])
+}
+
+// Mirrors PayoutStatus (OrderItem's seller-payout enum) with one addition:
+// REJECTED, set when a dispute is resolved against the deliverer (see
+// docs/marketplace/systems/vendor-delivery-system.md) — this is a
+// terminal "deliberately not paid" state, distinct from PAYOUT_FAILED
+// (a retryable provider-side failure).
+enum DelivererPayoutStatus {
+  PAYOUT_PENDING
+  PAYOUT_PROCESSING
+  PAYOUT_SUCCESS
+  PAYOUT_FAILED
+  REJECTED
 }
 
 // Append-only history for one order (optionally scoped to one item). The
@@ -466,11 +562,41 @@ enum BusinessApprovalStatus {
   SUSPENDED
 }
 
+// Distinguishes an ordinary Business Marketplace seller from a School
+// Vendor (food/drink/snack seller operating the fixed 5-8PM window, sold
+// through Vendor cart/checkout/delivery slots — see
+// docs/marketplace/decisions/vendor-extends-business.md for why this is a
+// discriminator on Business rather than a parallel table). Defaults to
+// BUSINESS so every existing row and every code path that doesn't branch
+// on `type` keeps behaving exactly as before.
+enum BusinessType {
+  BUSINESS
+  SCHOOL_VENDOR
+}
+
 model Business {
   id                    String                  @id @default(uuid())
   name                  String
   industry              String
   description           String                  @db.Text
+  // SCHOOL_VENDOR-only from here down to `pausedReason` — null/false for
+  // ordinary BUSINESS rows and never read by Business Marketplace code.
+  type                  BusinessType            @default(BUSINESS)
+  // Food | Drinks | Snacks | Other (see services/marketplace/vendor/shared/vendor-categories.ts)
+  // — free text, same convention as `industry`, not a foreign key.
+  vendorCategory        String?
+  // Vendor operating window (spec: 5PM-8PM), "HH:MM" — distinct from a
+  // deliverer's preferred availability and from the actual per-order
+  // delivery slot (VendorDeliverySlot). See docs/marketplace/systems/vendor-system.md.
+  availabilityStart     String?
+  availabilityEnd       String?
+  // Vendor's own self-service "temporarily unavailable" toggle — distinct
+  // from approvalStatus=SUSPENDED and `blocked` below, which are both
+  // admin-only enforcement actions. A paused vendor keeps its approval and
+  // can unpause itself; a suspended/blocked one cannot.
+  paused                Boolean                 @default(false)
+  pausedAt              DateTime?
+  pausedReason          String?                 @db.Text
   approvalStatus        BusinessApprovalStatus  @default(PENDING_APPROVAL)
   approvedAt            DateTime?
   approvedBy            String?
@@ -544,6 +670,11 @@ model Business {
   deliveryHandoffs      Delivery_x_businesses[]
   reports               BusinessReport[]
   verificationRequests  BusinessVerificationRequest[]
+  // Universal, vendor-level add-ons (see Side model) — SCHOOL_VENDOR only.
+  sides                 Side[]
+  // Own configured per-timeframe order-fulfillment capacity — see
+  // VendorTimeframeCapacity's own comment. SCHOOL_VENDOR only.
+  timeframeCapacities   VendorTimeframeCapacity[]
 
   @@index([userId])
   @@index([industry])
@@ -553,6 +684,37 @@ model Business {
   @@index([verified])
   @@index([blocked])
   @@index([approvalStatus])
+  @@index([type])
+}
+
+// A universal, vendor-level add-on (e.g. "Fries", "Extra sauce") — never
+// tied to one Product, per the spec's "sides are not per-product" rule.
+// A buyer can order Sides alone or alongside Product/ProductVariant lines
+// in the same Vendor cart/order (see CartItem.sideId, OrderItem.sideId).
+// SCHOOL_VENDOR-only; a plain Business never has Side rows.
+model Side {
+  id         String      @id @default(uuid())
+  businessId String
+  name       String
+  price      Float
+  available  Boolean     @default(true)
+  // Null = not inventory-tracked (unlimited/always available while
+  // `available` is true) — matches how Product.stock is always a concrete
+  // Int, but Sides may legitimately not need quantity tracking at all.
+  stock      Int?
+  // Same data-driven service-fee exemption as Product.serviceFeeExempt —
+  // sides are already exempt from the service fee by rule (spec §19), this
+  // field is reserved for future asymmetric side fee rules and defaults
+  // to true so a Side never accidentally counts as a chargeable item.
+  serviceFeeExempt Boolean @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@index([businessId])
+  @@index([available])
 }
 
 // A business's self-service request to be verified (the "Get Verified"
@@ -646,6 +808,27 @@ model MarketplaceSettings {
   // shown to sellers and the coordinator alongside the drop-off window.
   // Optional — null until an admin sets it via the Settings tab.
   dropoffLocation    String?
+  // Descriptive detail for the same central drop-off point, added for the
+  // School Vendor flow (spec: location name/instructions/active-flag) —
+  // `dropoffLocation` above remains the address/room string every existing
+  // consumer already reads; these are purely additive.
+  dropoffLocationName         String?
+  dropoffLocationInstructions String? @db.Text
+  dropoffLocationActive       Boolean @default(true)
+  // School Vendor checkout fees — admin-configurable, snapshotted onto
+  // VendorDeliveryBooking/Order at booking time (see
+  // services/marketplace/vendor-checkout/calculate-vendor-checkout-summary.ts)
+  // so a later change here never alters historical orders. Defaults match
+  // the spec (₦1000 flat delivery fee per checkout, ₦100 per distinct
+  // chargeable main item).
+  vendorDeliveryFee      Float @default(1000)
+  vendorServiceFeeAmount Float @default(100)
+  // Flat rate paid to a deliverer per (deliverer, vendor) handoff —
+  // snapshotted onto Delivery_x_businesses.delivererPayoutAmount at
+  // pickup-confirmation time (confirm-pickup.ts), never re-read live
+  // later, so changing this never alters an already-confirmed handoff's
+  // payout amount.
+  delivererPayoutAmount  Float @default(500)
   updatedAt          DateTime @updatedAt
   updatedBy          String?
 }
@@ -668,6 +851,12 @@ model Product {
   stock         Int              @default(0)
   rating        Float            @default(0)
   ratingCount   Int              @default(0)
+  // School Vendor checkout only — whether this product is excluded from
+  // the flat per-item service fee (spec example: fries). Data-driven, not
+  // a hardcoded product-name check — see
+  // services/marketplace/vendor-checkout/calculate-vendor-checkout-summary.ts.
+  // Meaningless (always false, unread) for a Business product.
+  serviceFeeExempt Boolean       @default(false)
   businessId    String
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -827,10 +1016,22 @@ model Order {
   // at all," not "what's happening to that money since." See
   // OrderItem.escrowStatus for the latter, tracked per item.
   paymentStatus              String               @default("pending")
+  // Null for Business orders. For a School Vendor order, links back to the
+  // one VendorDeliveryBooking that covers this checkout's delivery slot and
+  // (shared, charged-once) delivery fee — see VendorDeliveryBooking's own
+  // comment for why the delivery fee lives there instead of here.
+  vendorDeliveryBookingId    String?
+  // Set the moment this (vendor-only) order first enters
+  // DELIVERED_PENDING_DISPUTE_WINDOW — the 24h dispute-window cron
+  // (services/marketplace/vendor-delivery/dispute-window-sweep.ts)
+  // compares against THIS timestamp, not `updatedAt` (which changes on
+  // any field edit, not just this transition).
+  deliveredPendingDisputeAt DateTime?
   createdAt                  DateTime             @default(now())
   updatedAt                  DateTime             @updatedAt
   business                   Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
   user                       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendorDeliveryBooking      VendorDeliveryBooking? @relation(fields: [vendorDeliveryBookingId], references: [id])
   items                      OrderItem[]
   events                     OrderEvent[]
 
@@ -842,6 +1043,174 @@ model Order {
   @@index([paystackReference])
   @@index([status, createdAt])
   @@index([fulfillmentStatus, sellerDroppedOffAt])
+  @@index([vendorDeliveryBookingId])
+}
+
+// One row per checkout that contains School Vendor items — keyed by the
+// same shared paystackReference the resulting per-vendor Order rows carry
+// (mirrors the existing "one Order per business, shared reference"
+// convention — see docs/marketplace/decisions/one-order-per-business-shared-reference.md).
+// This exists specifically to hold the ONE flat delivery fee for a
+// checkout that may span multiple vendors, so it's charged once, not once
+// per resulting Order — see docs/marketplace/decisions/vendor-extends-business.md.
+// Also the unit deliverer capacity is booked against: a slot's
+// `delivererCapacity` limits concurrent CONFIRMED+PENDING_PAYMENT bookings
+// for the same (slotId, bookedFor) pair, not concurrent Orders.
+model VendorDeliveryBooking {
+  id                String              @id @default(uuid())
+  userId             String
+  slotId             String
+  // Not @unique — same rationale as Order.paystackReference: normally one
+  // booking per reference, but kept non-unique for consistency with how
+  // the rest of checkout already treats this as a grouping key, not an
+  // identity constraint.
+  paystackReference   String
+  // Snapshot of MarketplaceSettings' (or an equivalent vendor settings
+  // value's) configured delivery fee at booking time — never re-read live,
+  // so an admin changing the fee later never alters historical bookings.
+  deliveryFee         Float
+  // Snapshot of the total flat service fee for this checkout (chargeable
+  // item count x MarketplaceSettings.vendorServiceFeeAmount at booking
+  // time). Lives here, not on any one vendor Order, for the same reason as
+  // deliveryFee — it's a platform fee, not money owed to a vendor, and a
+  // checkout can span multiple vendor Orders.
+  serviceFee          Float  @default(0)
+  status              VendorBookingStatus @default(PENDING_PAYMENT)
+  // Calendar date this slot booking applies to (the slot itself only
+  // defines a recurring daily wall-clock window).
+  bookedFor           DateTime
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  user                User                @relation(fields: [userId], references: [id])
+  slot                VendorDeliverySlot  @relation(fields: [slotId], references: [id])
+  orders              Order[]
+
+  @@index([slotId, bookedFor])
+  @@index([paystackReference])
+  @@index([status])
+  @@index([userId])
+}
+
+enum VendorBookingStatus {
+  // Created inside the booking transaction before payment is confirmed —
+  // counts toward slot capacity so two concurrent checkouts can't both
+  // reserve the last slot, but is never itself proof of a paid order (see
+  // docs/marketplace/systems/vendor-delivery-system.md: cart/checkout is
+  // never a reservation on its own — this row only exists once the booking
+  // transaction has run, which only happens after slot/stock are
+  // revalidated inside that same transaction).
+  PENDING_PAYMENT
+  // Set by confirmPaymentByReference once Paystack confirms payment, in
+  // the same transaction that flips the linked Order(s)' paymentStatus.
+  CONFIRMED
+  CANCELLED
+}
+
+// Admin-configurable delivery window (spec: 5-6PM/6-7PM/7-8PM) — a real
+// row, not a hardcoded array, so admins can add/edit/retire slots and
+// reconfigure capacity without a code change. Seeded with the three
+// default windows (see prisma/seed-vendor-delivery-slots.ts); nothing in
+// application code should ever hardcode "3 slots" or MAX_DELIVERERS.
+model VendorDeliverySlot {
+  id                     String                  @id @default(uuid())
+  // Admin-editable display string, e.g. "5:00 PM - 6:00 PM".
+  label                  String
+  // "HH:MM", 24-hour, local time — same convention as MarketplaceSettings'
+  // window fields.
+  windowStart            String
+  windowEnd              String
+  // A customer cannot book this slot once fewer than this many minutes
+  // remain before windowStart. Default matches the spec's 1h30 cutoff.
+  // Enforced by services/marketplace/vendor-delivery/is-slot-bookable.ts,
+  // the one centralized function both frontend display and backend
+  // booking must call — never re-implemented ad hoc.
+  bookingCutoffMins      Int                     @default(90)
+  // How many minutes before windowStart the vendor must have the order
+  // ready for the deliverer to collect at the vendor's own location —
+  // there is no central drop-off point for vendors (see
+  // docs/marketplace/decisions/vendor-independent-architecture.md).
+  vendorPrepDeadlineMins Int                     @default(30)
+  // Admin-configured number of DELIVERER positions/roster slots for this
+  // timeframe — feeds the deliverer roster/assignment system
+  // (DelivererRosterAssignment) ONLY. This is deliberately NOT the same
+  // thing as a vendor's own order-fulfillment capacity for this timeframe
+  // (see VendorTimeframeCapacity) — the two are independent systems and
+  // this field must never be read anywhere in the customer booking/
+  // checkout path. See the decision doc above for why they were
+  // originally (incorrectly) conflated.
+  delivererCapacity      Int                     @default(1)
+  active                 Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  bookings               VendorDeliveryBooking[]
+  vendorCapacities       VendorTimeframeCapacity[]
+  rosterAssignments      DelivererRosterAssignment[]
+
+  @@index([active])
+}
+
+// A vendor's OWN configured ceiling on how many customer orders it can
+// fulfill during one VendorDeliverySlot — spec: "Set Product Deliveries
+// Per Time Range." Vendor-configured (via the vendor's own dashboard,
+// never the Business dashboard), vendor-owned, and completely independent
+// of VendorDeliverySlot.delivererCapacity (admin's deliverer-roster
+// capacity) — see that field's own comment. Enforced only at booking time
+// inside create-vendor-orders-for-checkout.ts's Serializable transaction,
+// by counting existing Orders for (businessId, slotId, date) against this
+// row's `capacity` — never a mutable decrementing counter, so restoring
+// capacity after a cancellation/refund is automatic (the count just goes
+// back down) rather than needing its own reconciliation logic.
+model VendorTimeframeCapacity {
+  id         String             @id @default(uuid())
+  businessId String
+  slotId     String
+  capacity   Int
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  slot       VendorDeliverySlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, slotId])
+  @@index([businessId])
+  @@index([slotId])
+}
+
+// Admin-managed "who is on duty for this timeframe on this date" —
+// independent of any specific order (spec §15-19). This is what the Admin
+// Vendor Delivery roster lists/edits and what a deliverer's own dashboard
+// reads to show their upcoming schedule. Distinct from Delivery_x_businesses
+// (the actual per-vendor pickup handoff for specific ready orders, created
+// only once there's something to collect) — a deliverer can be rostered
+// for a timeframe before any orders exist yet.
+enum RosterAssignmentStatus {
+  ASSIGNED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+model DelivererRosterAssignment {
+  id          String                 @id @default(uuid())
+  delivererId String
+  slotId      String
+  // Calendar date this roster assignment applies to — same convention as
+  // VendorDeliveryBooking.bookedFor (a date, not a timestamp).
+  date        DateTime
+  status      RosterAssignmentStatus @default(ASSIGNED)
+  assignedBy  String
+  assignedAt  DateTime               @default(now())
+  // Set once the deliverer is confirmed present — see spec §19's 30-minute
+  // early-arrival requirement; this is what lets admin distinguish "on
+  // time" from "late" from "no-show" (status) after the fact.
+  arrivedAt   DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  deliverer   Deliverer              @relation(fields: [delivererId], references: [id], onDelete: Cascade)
+  slot        VendorDeliverySlot     @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@index([delivererId])
+  @@index([slotId, date])
+  @@index([date])
 }
 
 model OrderItem {
@@ -852,7 +1221,10 @@ model OrderItem {
   // calculations must always use this field, never the live product price.
   price                  Float
   orderId                String
-  productId              String
+  // Exactly one of productId/sideId is set — see CartItem's comment for the
+  // same product-vs-side duality, snapshotted forward from the cart line.
+  productId              String?
+  sideId                 String?
   selectedVariants       String?             @db.Text
   // The specific ProductVariant bought, if the product had any (see
   // services/marketplace/product/shared/product-variants.ts). variantName
@@ -889,6 +1261,15 @@ model OrderItem {
   escrowStatus           EscrowPaymentStatus @default(HELD)
   refundedAt             DateTime?
   refundReference        String?
+  // Item-level refund detail (spec §31-32) — refundedAt/refundReference
+  // above already cover timestamp + provider reference; these fill the
+  // remaining "reason/who/why it failed" gaps. refundInitiatedBy is a
+  // free-text actor label (admin user id, or "system" for an automated
+  // trigger), matching AdminActionLog's own free-text `action` convention
+  // rather than a foreign key, since not every initiator is an admin.
+  refundReason           String?             @db.Text
+  refundInitiatedBy      String?
+  refundFailureReason    String?             @db.Text
   payoutStatus           PayoutStatus?
   payoutAttempts         Int                 @default(0)
   payoutProcessingAt     DateTime?
@@ -897,7 +1278,8 @@ model OrderItem {
   payoutFailureReason    String?             @db.Text
   payoutReference        String?
   order                  Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product                Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product                Product?            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  side                   Side?               @relation(fields: [sideId], references: [id], onDelete: Cascade)
   variant                ProductVariant?     @relation(fields: [variantId], references: [id])
   deliveryItem           DeliveryItem?
   events                 OrderEvent[]
@@ -908,6 +1290,7 @@ model OrderItem {
   @@index([payoutStatus])
   @@index([retryDeliveryAt])
   @@index([productId])
+  @@index([sideId])
   @@index([variantId])
 }
 
@@ -1061,17 +1444,26 @@ model CartItem {
   id               String          @id @default(uuid())
   quantity         Int             @default(1)
   userId           String
-  productId        String
+  // Exactly one of productId/sideId must be set — a cart line is either a
+  // Product(+variant) purchase or a universal Side purchase, never both.
+  // Enforced at the service layer (see services/marketplace/vendor-cart/),
+  // not the DB, since Prisma/Postgres here has no CHECK-constraint support
+  // in this schema's conventions. productId was required before Sides
+  // existed; it's now optional purely to allow side-only cart lines.
+  productId        String?
+  sideId           String?
   selectedVariants String?         @db.Text
   variantId        String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
-  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product          Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  side             Side?           @relation(fields: [sideId], references: [id], onDelete: Cascade)
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   variant          ProductVariant? @relation(fields: [variantId], references: [id])
 
   @@index([userId])
   @@index([productId])
+  @@index([sideId])
   @@index([variantId])
 }
 

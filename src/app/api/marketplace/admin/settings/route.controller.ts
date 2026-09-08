@@ -14,6 +14,13 @@ interface UpdateSettingsBody {
   handoffWindowStart?: string;
   handoffWindowEnd?: string;
   dropoffLocation?: string | null;
+  // School Vendor fields — see services/marketplace/admin/shared/marketplace-settings.ts.
+  dropoffLocationName?: string | null;
+  dropoffLocationInstructions?: string | null;
+  dropoffLocationActive?: boolean;
+  vendorDeliveryFee?: number;
+  vendorServiceFeeAmount?: number;
+  delivererPayoutAmount?: number;
 }
 
 export async function getAdminSettings(): Promise<NextResponse> {

@@ -8,7 +8,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function getFeaturedBusinesses() {
   const businesses = await prisma.business.findMany({
-    where: { approvalStatus: "APPROVED" },
+    // type: "BUSINESS" — keeps School Vendors out of "Top Businesses";
+    // they have their own "School Vendors" section, see
+    // services/marketplace/vendor/get-featured-vendors.ts.
+    where: { approvalStatus: "APPROVED", type: "BUSINESS" },
     select: { id: true, name: true, industry: true, secure_url: true, _count: { select: { products: true } } },
     orderBy: { products: { _count: "desc" } },
     take: 8,

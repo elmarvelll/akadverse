@@ -14,6 +14,7 @@ import { isAxiosError } from "axios";
 import { AlertCircle, Clock, Loader2, XCircle } from "lucide-react";
 import api from "@/lib/axios";
 import BusinessSidebar from "./BusinessSidebar";
+import { BusinessContext } from "./BusinessContext";
 import type { BusinessDetail } from "@/types/business";
 
 type GateState = "loading" | "approved" | "pending" | "rejected" | "not-found" | "error";
@@ -93,9 +94,11 @@ export default function BusinessApprovalGate({ id, children }: { id: string; chi
   }
 
   return (
-    <div className="flex flex-col sm:flex-row gap-8 flex-1 min-w-0">
-      <BusinessSidebar id={id} />
-      <div className="flex-1 min-w-0">{children}</div>
-    </div>
+    <BusinessContext.Provider value={business}>
+      <div className="flex flex-col sm:flex-row gap-8 flex-1 min-w-0">
+        <BusinessSidebar id={id} />
+        <div className="flex-1 min-w-0">{children}</div>
+      </div>
+    </BusinessContext.Provider>
   );
 }

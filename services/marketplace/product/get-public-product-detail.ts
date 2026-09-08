@@ -23,7 +23,14 @@ export async function getPublicProductDetail(productId: string) {
       stock: true,
       secure_url: true,
       businessId: true,
-      business: { select: { name: true, approvalStatus: true } },
+      business: {
+        select: {
+          name: true,
+          approvalStatus: true,
+          type: true,
+          sides: { where: { available: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, price: true, available: true, stock: true } },
+        },
+      },
       images: { select: productImageSelect },
       variants: { select: productVariantSelect },
     },
@@ -35,13 +42,27 @@ export async function getPublicProductDetail(productId: string) {
   if (!product || product.business.approvalStatus !== "APPROVED") throw notFound("Product not found.");
 
   const { secure_url, business, images, variants, ...rest } = product;
-  const estimate = await getEstimatedDeliveryForBusiness(product.businessId);
-  const { date, window } = formatEstimatedDelivery(estimate);
+
+  // Business's "estimated delivery" (delivery-day based, multi-day lead
+  // time) has no meaning for a School Vendor — vendors deliver same-day
+  // through one of the fixed VendorDeliverySlot windows, picked at
+  // checkout (see docs/marketplace/decisions/vendor-extends-business.md).
+  // Skip that calculation entirely for a vendor product rather than
+  // calling a Business-only function against data (BusinessDeliveryDay)
+  // a vendor never has.
+  const isVendor = business.type === "SCHOOL_VENDOR";
+  const { date, window } = isVendor
+    ? { date: "", window: "Choose a delivery slot at checkout" }
+    : formatEstimatedDelivery(await getEstimatedDeliveryForBusiness(product.businessId));
 
   return {
     ...rest,
     secureUrl: secure_url,
     sellerName: business.name,
+    businessType: business.type,
+    // Universal Sides available alongside this product — only meaningful
+    // for a vendor product; empty for a Business product.
+    sides: isVendor ? business.sides : [],
     images: toImageRows(images).map((image) => ({ secureUrl: image.secureUrl, position: image.position })),
     variants: variants.map(toVariantSummary),
     estimatedDeliveryDate: date,

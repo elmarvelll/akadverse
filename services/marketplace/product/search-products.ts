@@ -25,8 +25,13 @@ export async function searchProducts(params: { q?: string; categoryIds?: string[
   const where: Prisma.ProductWhereInput = {
     // Only products from an admin-approved business are ever
     // buyer-visible — see BusinessApprovalStatus's doc comment in
-    // prisma/schema.prisma.
-    business: { approvalStatus: "APPROVED" },
+    // prisma/schema.prisma. type: "BUSINESS" keeps this Business
+    // Marketplace search/homepage query from also surfacing School Vendor
+    // products — those have their own "Popular Vendor Items" query (see
+    // services/marketplace/vendor/get-popular-vendor-items.ts) so the two
+    // experiences stay visually and logically separate per
+    // docs/marketplace/decisions/vendor-extends-business.md.
+    business: { approvalStatus: "APPROVED", type: "BUSINESS" },
     // mode: "insensitive" — Postgres' `contains` is case-sensitive by
     // default (unlike MySQL's default collation, which this search relied
     // on being case-insensitive for free); explicit here so search

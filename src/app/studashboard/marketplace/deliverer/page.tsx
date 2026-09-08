@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { isAxiosError } from "axios";
-import { AlertCircle, Loader2, Package, Truck } from "lucide-react";
+import { AlertCircle, CalendarClock, Loader2, Package, Truck } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import api from "@/lib/axios";
 
@@ -27,11 +27,31 @@ interface Handoff {
   delivererConfirmedPickupAt: string | null;
 }
 
+// The deliverer's own admin-assigned roster (date + timeframe they're on
+// duty for), distinct from the per-order assignments below — see
+// services/marketplace/deliverer/list-my-roster.ts and
+// docs/marketplace/decisions/vendor-independent-architecture.md.
+interface RosterEntry {
+  id: string;
+  date: string;
+  status: string;
+  slotLabel: string;
+  windowStart: string;
+  windowEnd: string;
+  requiredArrivalTime: string;
+  arrivalLeadMins: number;
+}
+
 interface DeliveryItemRow {
   deliveryItemId: string;
   status: string;
   quantity: number;
   businessName: string;
+  businessType?: "BUSINESS" | "SCHOOL_VENDOR";
+  // The vendor's own address to collect from — null/absent for a
+  // Business item, which is collected from the central drop-off point
+  // instead (see docs/marketplace/decisions/vendor-independent-architecture.md).
+  collectionLocation?: string | null;
   productName: string;
   orderId: string;
   deliveryLocation: string | null;
@@ -44,6 +64,7 @@ interface DeliveryItemRow {
 export default function DelivererDashboardPage() {
   const [handoffs, setHandoffs] = useState<Handoff[]>([]);
   const [items, setItems] = useState<DeliveryItemRow[]>([]);
+  const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "forbidden" | "error">("loading");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -51,12 +72,14 @@ export default function DelivererDashboardPage() {
   const load = async () => {
     setLoadState("loading");
     try {
-      const [handoffsRes, itemsRes] = await Promise.all([
+      const [handoffsRes, itemsRes, rosterRes] = await Promise.all([
         api.get<{ handoffs: Handoff[] }>("/marketplace/deliverer/handoffs"),
         api.get<{ items: DeliveryItemRow[] }>("/marketplace/deliverer/deliveries"),
+        api.get<{ roster: RosterEntry[] }>("/marketplace/deliverer/roster"),
       ]);
       setHandoffs(handoffsRes.data.handoffs);
       setItems(itemsRes.data.items);
+      setRoster(rosterRes.data.roster);
       setLoadState("loaded");
     } catch (err) {
       setLoadState(isAxiosError(err) && err.response?.status === 403 ? "forbidden" : "error");
@@ -150,6 +173,32 @@ export default function DelivererDashboardPage() {
 
         <section>
           <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <CalendarClock size={16} className="text-gray-400" />
+            Upcoming schedule
+          </h2>
+          {roster.length === 0 ? (
+            <p className="text-sm text-gray-400">You&apos;re not on the roster for any upcoming timeframe yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {roster.map((r) => (
+                <div key={r.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {new Date(r.date).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })} · {r.slotLabel}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Delivery window {r.windowStart}–{r.windowEnd} · Arrive by {r.requiredArrivalTime} ({r.arrivalLeadMins} min early)
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">{r.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <Package size={16} className="text-gray-400" />
             Pending pickups
           </h2>
@@ -197,6 +246,11 @@ export default function DelivererDashboardPage() {
                     </div>
                     <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">{item.status}</span>
                   </div>
+                  {item.businessType === "SCHOOL_VENDOR" && (
+                    <p className="text-xs text-purple-700 bg-purple-50 rounded-lg px-2.5 py-1.5 mb-2 inline-block">
+                      Collect from: {item.collectionLocation || "Vendor hasn't set a location yet."}
+                    </p>
+                  )}
                   {item.estimatedDate && (
                     <p className="text-xs text-gray-500 mb-2">
                       {item.estimatedDate} · {item.deliveryWindow} · {item.deliveryLocation || "No location set."}

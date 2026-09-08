@@ -22,17 +22,91 @@ import { AlertCircle, ArrowLeft, Loader2, SearchX, Sparkles, X } from "lucide-re
 import api from "@/lib/axios";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import MarketplaceNavbar from "../_components/MarketplaceNavbar";
-import CartDrawer from "../_components/CartDrawer";
+import MarketplaceCartDrawer from "../_components/MarketplaceCartDrawer";
 import ProductCard from "../_components/ProductCard";
 import ProductDetailModal from "../_components/ProductDetailModal";
 import MarketplaceComingSoon from "../_components/MarketplaceComingSoon";
+import SpotlightCard from "../_components/SpotlightCard";
 import { buildExploreHref } from "../_components/search-params";
 import { useCart } from "../_components/useCart";
+import { useVendorCart } from "../_components/useVendorCart";
 import { productCategories, skillCategories } from "@/services/marketplace/shared/categories";
 import type { MarketplaceSide } from "@/services/marketplace/shared/types";
 import type { ProductSearchResult } from "@/types/search";
 
 const allCategories = [...productCategories, ...skillCategories];
+
+interface FeaturedVendor {
+  id: string;
+  name: string;
+  vendorCategory: string | null;
+  secureUrl: string | null;
+  location: string | null;
+  itemCount: number;
+}
+
+// Same real database-backed queries the homepage uses (see
+// src/app/studashboard/marketplace/page.tsx) — kept as one shared block so
+// Explore and Homepage never drift into two different implementations of
+// the same two sections (spec §5).
+function VendorSections({ onShowDetails }: { onShowDetails: (id: string) => void }) {
+  const [popularVendorItems, setPopularVendorItems] = useState<ProductSearchResult[]>([]);
+  const [schoolVendors, setSchoolVendors] = useState<FeaturedVendor[]>([]);
+
+  useEffect(() => {
+    api
+      .get<{ products: ProductSearchResult[] }>("/marketplace/vendor/popular-items", { params: { limit: 8 } })
+      .then((res) => setPopularVendorItems(res.data.products))
+      .catch(() => setPopularVendorItems([]));
+
+    api
+      .get<{ vendors: FeaturedVendor[] }>("/marketplace/vendor/featured")
+      .then((res) => setSchoolVendors(res.data.vendors))
+      .catch(() => setSchoolVendors([]));
+  }, []);
+
+  return (
+    <>
+      <section>
+        <h2 className="text-xl font-bold text-gray-900 mb-5">Popular Vendor Items</h2>
+        {popularVendorItems.length === 0 ? (
+          <p className="text-sm text-gray-400">No vendor items are currently available.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {popularVendorItems.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={{ id: product.id, name: product.name, sellerName: product.sellerName, price: product.price, image: product.secureUrl }}
+                onShowDetails={onShowDetails}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-xl font-bold text-gray-900 mb-5">School Vendors</h2>
+        {schoolVendors.length === 0 ? (
+          <p className="text-sm text-gray-400">No vendors are currently available.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {schoolVendors.map((vendor) => (
+              <Link key={vendor.id} href={`/studashboard/marketplace/vendor/${vendor.id}`}>
+                <SpotlightCard
+                  image={vendor.secureUrl}
+                  name={vendor.name}
+                  subtitle={[vendor.vendorCategory, vendor.location].filter(Boolean).join(" · ") || "School Vendor"}
+                  ordersFulfilled={vendor.itemCount}
+                  countLabel="items"
+                />
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
 
 function CategoryBrowseView({ onShowDetails }: { onShowDetails: (id: string) => void }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
@@ -57,6 +131,8 @@ function CategoryBrowseView({ onShowDetails }: { onShowDetails: (id: string) => 
 
   return (
     <div className="space-y-14">
+      <VendorSections onShowDetails={onShowDetails} />
+
       {status === "loading" && (
         <div className="flex justify-center py-24">
           <Loader2 size={28} className="animate-spin text-gray-400" />
@@ -221,6 +297,11 @@ function ExplorePageInner() {
   const [cartOpen, setCartOpen] = useState(false);
   const [detailProductId, setDetailProductId] = useState<string | null>(null);
   const cart = useCart();
+  const vendorCart = useVendorCart();
+  const refreshCarts = () => {
+    cart.refresh();
+    vendorCart.refresh();
+  };
 
   const query = searchParams.get("q") ?? "";
   const side: MarketplaceSide = searchParams.get("side") === "skills" ? "skills" : "products";
@@ -236,16 +317,14 @@ function ExplorePageInner() {
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar />
       <div className="pt-16">
-        <MarketplaceNavbar cartCount={cart.count} onCartClick={() => setCartOpen(true)} />
-        <CartDrawer
+        <MarketplaceNavbar cartCount={cart.count + vendorCart.count} onCartClick={() => setCartOpen(true)} />
+        <MarketplaceCartDrawer
           open={cartOpen}
           onClose={() => setCartOpen(false)}
-          items={cart.items}
-          subtotal={cart.subtotal}
-          onUpdateQuantity={cart.updateQuantity}
-          onRemove={cart.removeItem}
+          business={{ items: cart.items, subtotal: cart.subtotal, onUpdateQuantity: cart.updateQuantity, onRemove: cart.removeItem }}
+          vendor={{ items: vendorCart.items, subtotal: vendorCart.subtotal, onUpdateQuantity: vendorCart.updateQuantity, onRemove: vendorCart.removeItem }}
         />
-        <ProductDetailModal productId={detailProductId} onClose={() => setDetailProductId(null)} onAdded={cart.refresh} />
+        <ProductDetailModal productId={detailProductId} onClose={() => setDetailProductId(null)} onAdded={refreshCarts} />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <Link

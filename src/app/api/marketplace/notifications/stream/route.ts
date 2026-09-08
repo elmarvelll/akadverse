@@ -36,7 +36,17 @@ import { subscribe } from "@/services/marketplace/notifications/sse-broadcaster"
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const POLL_INTERVAL_MS = 5000;
+// The in-process broadcaster (sse-broadcaster.ts) is the primary delivery
+// path and pushes instantly for a notification created on this server
+// instance — this poll only exists as a fallback to catch one created on a
+// *different* instance. A fallback doesn't need sub-5-second responsiveness,
+// and every open connection runs this query on its own timer regardless of
+// whether anything changed, so 5s was needlessly aggressive DB load for
+// what's meant to be a rare-case safety net, not the primary mechanism —
+// see docs/marketplace/decisions/notification-poll-connection-safety.md.
+// Delivery semantics are unchanged: same eventual-delivery guarantee, same
+// dedup, just a longer worst-case delay for the fallback path specifically.
+const POLL_INTERVAL_MS = 20000;
 const HEARTBEAT_INTERVAL_MS = 20000;
 // Comfortably more than any realistic burst between polls — this is a
 // dedup window, not a hard cap on throughput.
@@ -68,6 +78,10 @@ export async function GET(request: NextRequest) {
   // Insertion-ordered, so trimming the oldest entries when over
   // MAX_TRACKED_IDS is a simple "delete the first N keys".
   const sentIds = new Set<string>();
+  // Declared in this shared outer scope (not inside start()) so cancel()
+  // below — a sibling of start(), not a nested closure inside it — can
+  // also reach it. Assigned once start() actually runs.
+  let cleanup: () => void = () => {};
 
   const stream = new ReadableStream({
     start(controller) {
@@ -100,37 +114,67 @@ export async function GET(request: NextRequest) {
         controller.enqueue(encoder.encode(`: heartbeat\n\n`));
       }, HEARTBEAT_INTERVAL_MS);
 
+      // Guards against overlapping polls: if one poll is still waiting on
+      // the DB (e.g. queueing for a pooled connection under load) when the
+      // next interval tick fires, that tick is skipped rather than piling
+      // another concurrent query onto an already-contended pool — see
+      // docs/marketplace/decisions/notification-poll-connection-safety.md.
+      let polling = false;
+
       // Fallback path — see file header. Catches notifications created on
       // a different server instance than this connection is held open on.
       // Rows already delivered by the broadcaster are filtered out by
       // send()'s sentIds check above, not here — the createdAt cursor is
       // just a query-size optimization (don't re-fetch old rows forever),
       // not the correctness guarantee.
+      //
+      // try/catch is load-bearing, not defensive boilerplate: this
+      // callback runs inside a bare setInterval, so an unawaited rejection
+      // here (e.g. a P2024 pool-timeout while the DB is under load) would
+      // otherwise surface as an unhandled promise rejection instead of a
+      // single failed poll — the connection itself must survive a
+      // transient DB hiccup and just try again on the next tick.
       const poll = setInterval(async () => {
-        if (closed) return;
-        const rows = await prisma.notification.findMany({
-          where: { userId, createdAt: { gt: lastSeenAt } },
-          orderBy: { createdAt: "asc" },
-        });
-        for (const row of rows) {
-          send("notification", {
-            id: row.id,
-            scope: row.scope,
-            type: row.type,
-            title: row.title,
-            message: row.message,
-            read: row.read,
-            link: row.link,
-            orderId: row.orderId,
-            businessId: row.businessId,
-            createdAt: row.createdAt.toISOString(),
+        if (closed || polling) return;
+        polling = true;
+        // Temporary diagnostic (see the decision doc above) — wall-clock
+        // time for the whole await, to compare against Prisma's own
+        // engine-reported query duration (logged separately when
+        // DB_TIMING_DEBUG=1 — see src/lib/prisma.ts) and isolate how much
+        // of any slowness is time spent queueing for a pooled connection
+        // versus actual query execution. Safe to remove once the pool
+        // sizing is confirmed fixed.
+        const startedAt = Date.now();
+        try {
+          const rows = await prisma.notification.findMany({
+            where: { userId, createdAt: { gt: lastSeenAt } },
+            orderBy: { createdAt: "asc" },
           });
+          if (process.env.DB_TIMING_DEBUG === "1") {
+            console.log(`[notifications/stream] poll total=${Date.now() - startedAt}ms rows=${rows.length}`);
+          }
+          for (const row of rows) {
+            send("notification", {
+              id: row.id,
+              scope: row.scope,
+              type: row.type,
+              title: row.title,
+              message: row.message,
+              read: row.read,
+              link: row.link,
+              orderId: row.orderId,
+              businessId: row.businessId,
+              createdAt: row.createdAt.toISOString(),
+            });
+          }
+        } catch (error) {
+          console.error("[notifications/stream] Poll failed:", error);
+        } finally {
+          polling = false;
         }
       }, POLL_INTERVAL_MS);
 
-      const cleanup = () => {
-        if (closed) return;
-        closed = true;
+      cleanup = () => {
         clearInterval(heartbeat);
         clearInterval(poll);
         unsubscribe();
@@ -141,10 +185,22 @@ export async function GET(request: NextRequest) {
         }
       };
 
-      request.signal.addEventListener("abort", cleanup);
+      request.signal.addEventListener("abort", () => {
+        if (closed) return;
+        closed = true;
+        cleanup();
+      });
     },
+    // Called by the platform when the client disconnects in a way that
+    // doesn't fire request.signal's "abort" event (observed to happen —
+    // relying on "abort" alone left the heartbeat/poll intervals running
+    // forever in that case, since `closed` was set true here without ever
+    // actually clearing them). Both paths now funnel through the same
+    // idempotent teardown.
     cancel() {
+      if (closed) return;
       closed = true;
+      cleanup();
     },
   });
 

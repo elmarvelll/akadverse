@@ -14,11 +14,12 @@ import { verifyOtp } from "@/lib/otp";
 import { recordOrderEvent } from "@/services/marketplace/order/record-order-event";
 import { recomputeOrderDeliveryOutcome } from "@/services/marketplace/order/recompute-order-delivery-outcome";
 import { createNotification } from "@/services/marketplace/notifications/notification.service";
+import { getMarketplaceSettings } from "@/services/marketplace/admin/shared/marketplace-settings";
 
 export async function confirmPickup(delivererId: string, handoffId: string, suppliedOtp: string) {
   const handoff = await prisma.delivery_x_businesses.findFirst({
     where: { id: handoffId, deliverymanId: delivererId },
-    include: { business: { select: { name: true, userId: true } } },
+    include: { business: { select: { name: true, userId: true, type: true } } },
   });
   if (!handoff) throw notFound("Handoff not found.");
   if (handoff.delivererConfirmedPickupAt) throw conflict("This handoff has already been confirmed.");
@@ -50,9 +51,20 @@ export async function confirmPickup(delivererId: string, handoffId: string, supp
 
   if (!result.ok) throw badRequest(`OTP verification failed: ${result.reason}.`);
 
+  // Deliverer payout rate is snapshotted the moment the handoff is
+  // confirmed — never re-read live later, so an admin changing the rate
+  // afterward never alters an already-confirmed handoff's payout amount
+  // (spec §55). School-Vendor-only; a Business handoff never pays a
+  // deliverer (Business sellers are paid via the existing seller-payout
+  // system instead — see docs/marketplace/decisions/vendor-extends-business.md).
+  const delivererPayoutAmount = handoff.business.type === "SCHOOL_VENDOR" ? (await getMarketplaceSettings()).delivererPayoutAmount : undefined;
+
   const now = new Date();
   await prisma.$transaction(async (tx) => {
-    await tx.delivery_x_businesses.update({ where: { id: handoffId }, data: { deliveryStatus: "PICKED_UP", delivererConfirmedPickupAt: now } });
+    await tx.delivery_x_businesses.update({
+      where: { id: handoffId },
+      data: { deliveryStatus: "PICKED_UP", delivererConfirmedPickupAt: now, ...(delivererPayoutAmount !== undefined ? { delivererPayoutAmount } : {}) },
+    });
     await tx.deliveryItem.updateMany({ where: { id: { in: items.map((i) => i.id) } }, data: { status: "PICKED_UP" } });
     await tx.orderItem.updateMany({ where: { id: { in: items.map((i) => i.orderItemId) } }, data: { deliveryStatus: "PICKED_UP" } });
 

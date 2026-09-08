@@ -34,7 +34,9 @@ export async function createProduct(businessId: string, body: Partial<ProductFor
     await replaceProductImages(tx, created.id, images);
 
     return tx.product.findUniqueOrThrow({ where: { id: created.id }, select: productDetailSelect });
-  });
+  },
+  {timeout: 30000}
+);
 
   return toProductDetail(product);
 }

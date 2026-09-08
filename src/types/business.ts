@@ -41,6 +41,8 @@ export interface BusinessFormValues {
 
 export type BusinessApprovalStatus = "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "SUSPENDED";
 export type VerificationRequestStatus = "NOT_REQUESTED" | "PENDING" | "APPROVED" | "REJECTED";
+// "BUSINESS" | "SCHOOL_VENDOR" — see docs/marketplace/decisions/vendor-extends-business.md.
+export type BusinessType = "BUSINESS" | "SCHOOL_VENDOR";
 
 // Minimal shape used by the navbar's "My Businesses" dropdown — just
 // enough to list a business and link to its dashboard.
@@ -50,6 +52,7 @@ export interface BusinessSummary {
   industry: string;
   secureUrl: string | null;
   approvalStatus: BusinessApprovalStatus;
+  type: BusinessType;
 }
 
 export interface BusinessStats {
@@ -60,6 +63,7 @@ export interface BusinessStats {
 }
 
 export interface BusinessDetail extends BusinessSummary, Omit<BusinessFormValues, "secureUrl"> {
+  type: BusinessType;
   createdAt: string;
   stats: BusinessStats;
   deliveryRestricted: boolean;

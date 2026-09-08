@@ -27,9 +27,16 @@ export async function addToCart(userId: string, input: AddToCartInput): Promise<
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { id: true, stock: true, variants: { select: { id: true } } },
+    select: { id: true, stock: true, variants: { select: { id: true } }, business: { select: { type: true } } },
   });
   if (!product) throw notFound("Product not found.");
+  // A School Vendor's products go through the separate Vendor cart/checkout
+  // (slot booking, shared delivery fee, flat service fee — see
+  // docs/marketplace/decisions/vendor-extends-business.md), never this
+  // Business cart, even if a client somehow has the product id.
+  if (product.business.type !== "BUSINESS") {
+    throw badRequest("This item is only available through the Vendor cart.");
+  }
 
   if (product.variants.length > 0 && !variantId) {
     throw badRequest("This product has variants — select one before adding it to your cart.");
