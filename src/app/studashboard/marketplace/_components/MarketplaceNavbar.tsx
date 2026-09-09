@@ -69,10 +69,10 @@ export default function MarketplaceNavbar({ cartCount, onCartClick }: Marketplac
   return (
     <div className="sticky top-16 z-30 bg-white border-b border-gray-100">
       <div className="px-3 sm:px-6 h-20 flex items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-2.5 shrink-0">
+        <Link href="/studashboard/marketplace" className="flex items-center gap-2.5 shrink-0">
           <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0">M</div>
           <span className="font-bold text-gray-900 hidden sm:inline">Student Marketplace</span>
-        </div>
+        </Link>
 
         <div className="flex-1 flex items-center gap-2 sm:gap-3 min-w-0 sm:max-w-2xl">
           <form onSubmit={handleSubmitSearch} className="relative flex-1 min-w-0">

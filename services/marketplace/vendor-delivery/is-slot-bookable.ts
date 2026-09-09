@@ -22,6 +22,14 @@ export interface BookableSlot {
   bookingCutoffMins: number;
 }
 
+// A calendar date (year/month/day only, no time-of-day) — the shape
+// `todayInSchoolTimezone()`/`parseAndValidateDeliveryDate()` produce, and
+// what `VendorDeliveryBooking.bookedFor` stores. Compared by calendar day,
+// never by exact instant.
+function isSameSchoolDay(a: Date, b: Date): boolean {
+  return a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth() && a.getUTCDate() === b.getUTCDate();
+}
+
 // "Now," expressed as the wall-clock date/time it actually is in
 // SCHOOL_TIMEZONE — computed via Intl rather than assuming the server's
 // own local time equals school time.
@@ -46,27 +54,37 @@ export function nowInSchoolTimezone(now: Date = new Date()): Date {
   );
 }
 
-// The slot's windowStart ("HH:MM"), as a Date on today's date in
-// SCHOOL_TIMEZONE — comparable directly against nowInSchoolTimezone()'s
-// output since both are UTC instants carrying school wall-clock values.
-export function slotWindowStartToday(windowStart: string, referenceNow: Date = new Date()): Date {
-  const school = nowInSchoolTimezone(referenceNow);
+// The slot's windowStart ("HH:MM"), as a Date on `targetDate` (defaults to
+// today) in SCHOOL_TIMEZONE — comparable directly against
+// nowInSchoolTimezone()'s output since both are UTC instants carrying
+// school wall-clock values.
+export function slotWindowStartToday(windowStart: string, referenceNow: Date = new Date(), targetDate?: Date): Date {
+  const base = targetDate ?? nowInSchoolTimezone(referenceNow);
   const [hour, minute] = windowStart.split(":").map(Number);
-  const start = new Date(school);
+  const start = new Date(base);
   start.setUTCHours(hour, minute, 0, 0);
   return start;
 }
 
-// True if a booking made right now would still leave at least
-// slot.bookingCutoffMins before the slot's window opens today. A slot
-// whose window has already passed today is never bookable (negative
-// margin), independent of the cutoff. Boundary: exactly bookingCutoffMins
-// remaining is bookable — the spec's rule text is "cannot book if less
-// than 1h30 before," so exactly 1h30 before is the last bookable instant
-// (>=, not >).
-export function isSlotBookable(slot: BookableSlot, now: Date = new Date()): boolean {
-  const windowStartToday = slotWindowStartToday(slot.windowStart, now);
+// True if a booking made right now, for `targetDate` (defaults to today —
+// a customer choosing a future delivery date, spec §4-6), would still leave
+// at least slot.bookingCutoffMins before the slot's window opens *if that
+// date is today*. The cutoff-minutes rule only makes sense for same-day
+// bookings — a slot on a future date is bookable purely on capacity, never
+// blocked by "too close to the window" since the window hasn't started
+// counting down yet. A same-day slot whose window has already passed today
+// is never bookable (negative margin), independent of the cutoff.
+// Boundary: exactly bookingCutoffMins remaining is bookable — the spec's
+// rule text is "cannot book if less than 1h30 before," so exactly 1h30
+// before is the last bookable instant (>=, not >).
+export function isSlotBookable(slot: BookableSlot, now: Date = new Date(), targetDate?: Date): boolean {
   const schoolNow = nowInSchoolTimezone(now);
+  if (targetDate && !isSameSchoolDay(targetDate, schoolNow)) {
+    // A future date is never "too late" to book — only same-day bookings
+    // are subject to the pre-window cutoff.
+    return true;
+  }
+  const windowStartToday = slotWindowStartToday(slot.windowStart, now);
   const minutesUntilWindow = (windowStartToday.getTime() - schoolNow.getTime()) / 60000;
   return minutesUntilWindow >= slot.bookingCutoffMins;
 }

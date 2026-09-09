@@ -33,8 +33,9 @@ import { conflict, badRequest } from "@/lib/service-error";
 import { getVendorCartForUser } from "@/services/marketplace/vendor-cart/get-vendor-cart-for-user";
 import { getMarketplaceSettings } from "@/services/marketplace/admin/shared/marketplace-settings";
 import { isSlotBookable } from "@/services/marketplace/vendor-delivery/is-slot-bookable";
+import { parseAndValidateDeliveryDate } from "@/services/marketplace/vendor-delivery/validate-delivery-date";
 import { calculateVendorFees } from "./shared/vendor-fees";
-import { todayInSchoolTimezone } from "./calculate-vendor-checkout-summary";
+import { resolveVendorCapacity } from "@/services/marketplace/vendor/capacity/resolve-vendor-capacity";
 import { countVendorBookingsForSlot } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
 import { EmptyCartError } from "@/services/marketplace/checkout/shared/empty-cart-error";
 
@@ -42,7 +43,7 @@ export { EmptyCartError };
 
 const MAX_SERIALIZATION_RETRIES = 2;
 
-export async function createVendorOrdersForCheckout(userId: string, params: { slotId: string; location: string }) {
+export async function createVendorOrdersForCheckout(userId: string, params: { slotId: string; location: string; date?: string }) {
   const slotId = params.slotId?.trim();
   if (!slotId) throw badRequest("slotId is required.");
 
@@ -51,7 +52,10 @@ export async function createVendorOrdersForCheckout(userId: string, params: { sl
 
   const settings = await getMarketplaceSettings();
   const reference = `AKD-VEND-${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const bookedFor = todayInSchoolTimezone();
+  // Never trusts the client's date blindly — re-validated here as the
+  // actual point of no return, same as every other value re-checked inside
+  // this transaction (spec §6/§28).
+  const bookedFor = parseAndValidateDeliveryDate(params.date);
 
   let attempt = 0;
   for (;;) {
@@ -79,7 +83,7 @@ export async function createVendorOrdersForCheckout(userId: string, params: { sl
       async (tx) => {
         const slot = await tx.vendorDeliverySlot.findUnique({ where: { id: slotId } });
         if (!slot || !slot.active) throw conflict("Selected delivery slot is not available.");
-        if (!isSlotBookable(slot)) throw conflict("This delivery slot can no longer be booked — please pick another.");
+        if (!isSlotBookable(slot, new Date(), bookedFor)) throw conflict("This delivery slot can no longer be booked — please pick another.");
 
         // Note: slot.delivererCapacity is NOT checked here — it's the
         // admin-configured deliverer-roster capacity (a completely
@@ -175,13 +179,6 @@ export async function createVendorOrdersForCheckout(userId: string, params: { sl
         });
         const businessById = new Map(businesses.map((b) => [b.id, b]));
 
-        // Each vendor's OWN order-fulfillment capacity for this slot,
-        // fetched in bulk once for every vendor in the cart.
-        const timeframeCapacities = await tx.vendorTimeframeCapacity.findMany({
-          where: { slotId: slot.id, businessId: { in: Array.from(byBusiness.keys()) } },
-        });
-        const capacityByBusiness = new Map(timeframeCapacities.map((c) => [c.businessId, c.capacity]));
-
         for (const businessId of byBusiness.keys()) {
           const business = businessById.get(businessId);
           if (!business || business.type !== "SCHOOL_VENDOR" || business.approvalStatus !== "APPROVED") {
@@ -189,15 +186,19 @@ export async function createVendorOrdersForCheckout(userId: string, params: { sl
           }
           if (business.paused) throw conflict(`${business.name} isn't currently accepting orders.`);
 
-          // Vendor's own per-timeframe order capacity (spec §4-5) — a
-          // completely independent check from slot.delivererCapacity
-          // above. A missing VendorTimeframeCapacity row means the vendor
-          // hasn't configured/opted into this timeframe at all, so
-          // capacity is 0. Counted (not decremented) inside this same
-          // Serializable transaction, so "count then create" is atomic
-          // against a concurrent checkout for the same vendor+slot — two
-          // customers can't both consume the last unit of capacity.
-          const capacity = capacityByBusiness.get(businessId) ?? 0;
+          // Vendor's own per-timeframe, per-DATE order capacity (spec
+          // §4-7) — a completely independent check from
+          // slot.delivererCapacity above. resolveVendorCapacity checks a
+          // VendorTimeframeCapacityOverride for this exact bookedFor date
+          // first, falling back to the vendor's default
+          // VendorTimeframeCapacity row, else 0 (never configured this
+          // timeframe at all). Counted (not decremented) inside this same
+          // Serializable transaction, so "resolve capacity, count, then
+          // create" is atomic against a concurrent checkout for the same
+          // vendor+slot+date — two customers can't both consume the last
+          // unit of capacity, and a booking for one date can never consume
+          // another date's capacity.
+          const capacity = await resolveVendorCapacity(businessId, slot.id, bookedFor, tx);
           const alreadyBooked = await countVendorBookingsForSlot(businessId, slot.id, bookedFor, tx);
           if (alreadyBooked >= capacity) {
             throw conflict(`${business.name} is fully booked for this delivery time — please pick another vendor or time.`);

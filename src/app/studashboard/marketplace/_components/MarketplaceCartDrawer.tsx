@@ -20,7 +20,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Minus, Plus, ShoppingCart, ShoppingBag, Trash2 } from "lucide-react";
+import { Loader2, X, Minus, Plus, ShoppingCart, ShoppingBag, Trash2 } from "lucide-react";
 import type { CartLineItem } from "@/types/cart";
 import type { VendorCartLineItem } from "@/types/vendor-cart";
 
@@ -33,6 +33,11 @@ interface CartSide<T> {
   subtotal: number;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onRemove: (itemId: string) => void;
+  // Optional so existing callers that don't yet pass it keep working —
+  // defaults to "loaded" (never blocks rendering existing items). While
+  // "loading", the cart body shows a spinner instead of an empty-cart
+  // message that would otherwise flash before the real items arrive.
+  status?: "loading" | "loaded" | "error";
 }
 
 interface MarketplaceCartDrawerProps {
@@ -145,11 +150,16 @@ function BusinessCartBody({
   subtotal,
   onUpdateQuantity,
   onRemove,
+  status = "loaded",
 }: CartSide<CartLineItem>) {
   return (
     <>
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-        {items.length === 0 ? (
+        {status === "loading" ? (
+          <div className="flex justify-center py-16">
+            <Loader2 size={22} className="animate-spin text-gray-400" />
+          </div>
+        ) : items.length === 0 ? (
           <p className="text-sm text-gray-500 text-center mt-10">Your Business cart is empty.</p>
         ) : (
           items.map((item) => (
@@ -227,11 +237,15 @@ function BusinessCartBody({
   );
 }
 
-function VendorCartBody({ items, subtotal, onUpdateQuantity, onRemove }: CartSide<VendorCartLineItem>) {
+function VendorCartBody({ items, subtotal, onUpdateQuantity, onRemove, status = "loaded" }: CartSide<VendorCartLineItem>) {
   return (
     <>
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-        {items.length === 0 ? (
+        {status === "loading" ? (
+          <div className="flex justify-center py-16">
+            <Loader2 size={22} className="animate-spin text-gray-400" />
+          </div>
+        ) : items.length === 0 ? (
           <p className="text-sm text-gray-500 text-center mt-10">Your Vendor cart is empty.</p>
         ) : (
           items.map((item) => (

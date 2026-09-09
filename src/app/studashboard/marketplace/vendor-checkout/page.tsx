@@ -27,6 +27,7 @@ import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, MapPin, ShoppingB
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import api from "@/lib/axios";
 import { loadPaystackScript } from "../checkout/_components/loadPaystackScript";
+import DeliveryDatePicker, { todayIsoDate } from "./_components/DeliveryDatePicker";
 import type { VendorCartLineItem } from "@/types/vendor-cart";
 import type { InitializeCheckoutResponse } from "@/types/checkout";
 
@@ -54,6 +55,7 @@ interface VendorCheckoutSummary {
   items: VendorCartLineItem[];
   fees: VendorFees;
   slots: VendorSlot[];
+  date: string;
 }
 
 type PageStatus = "loading" | "ready" | "empty" | "error" | "paying" | "verifying" | "success" | "payment-error";
@@ -63,6 +65,11 @@ export default function VendorCheckoutPage() {
   const [summary, setSummary] = useState<VendorCheckoutSummary | null>(null);
   const [location, setLocation] = useState("");
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [deliveryDate, setDeliveryDate] = useState(() => todayIsoDate());
+  // Scoped loading state for just the slot-availability section when the
+  // date changes — the rest of the page (items, location, fees) stays put
+  // so switching dates doesn't jump the whole layout (spec §1/§30).
+  const [slotsRefreshing, setSlotsRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -70,12 +77,17 @@ export default function VendorCheckoutPage() {
 
     const load = async () => {
       try {
-        const res = await api.get<VendorCheckoutSummary>("/marketplace/vendor-checkout/summary");
+        const res = await api.get<VendorCheckoutSummary>("/marketplace/vendor-checkout/summary", {
+          params: { date: deliveryDate },
+        });
         if (cancelled) return;
         setSummary(res.data);
-        setStatus(res.data.items.length === 0 ? "empty" : "ready");
+        setSelectedSlotId((current) => (res.data.slots.some((s) => s.id === current) ? current : null));
+        setStatus((current) => (current === "loading" ? (res.data.items.length === 0 ? "empty" : "ready") : current));
       } catch {
         if (!cancelled) setStatus("error");
+      } finally {
+        if (!cancelled) setSlotsRefreshing(false);
       }
     };
 
@@ -83,7 +95,13 @@ export default function VendorCheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [deliveryDate]);
+
+  const handleDateChange = (nextDate: string) => {
+    if (nextDate === deliveryDate) return;
+    setDeliveryDate(nextDate);
+    setSlotsRefreshing(true);
+  };
 
   const handleBookOrder = async () => {
     if (!location.trim()) {
@@ -103,6 +121,7 @@ export default function VendorCheckoutPage() {
       const res = await api.post<InitializeCheckoutResponse>("/marketplace/vendor-checkout/initialize", {
         slotId: selectedSlotId,
         location,
+        date: deliveryDate,
       });
       const { reference, amountKobo, email } = res.data;
 
@@ -250,10 +269,23 @@ export default function VendorCheckoutPage() {
             </section>
 
             <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
+              <DeliveryDatePicker
+                value={deliveryDate}
+                onChange={handleDateChange}
+                disabled={status === "paying" || status === "verifying"}
+              />
+            </section>
+
+            <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
               <p className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
                 <Clock size={16} className="text-gray-400" />
                 Delivery slot
               </p>
+              {slotsRefreshing ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 size={20} className="animate-spin text-gray-400" />
+                </div>
+              ) : (
               <div className="space-y-2">
                 {summary.slots.length === 0 && <p className="text-sm text-gray-400">No delivery slots configured.</p>}
                 {summary.slots.map((slot) => {
@@ -275,6 +307,7 @@ export default function VendorCheckoutPage() {
                   );
                 })}
               </div>
+              )}
             </section>
 
             <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 space-y-2 text-sm">

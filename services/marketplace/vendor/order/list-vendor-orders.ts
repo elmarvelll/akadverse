@@ -10,6 +10,12 @@
 // at their own location — there is no coordinator screen for vendor
 // pickups. Called by
 // src/app/api/marketplace/vendor/[id]/orders/route.controller.ts.
+//
+// Includes each order's delivery date + timeframe (via its
+// VendorDeliveryBooking) so the frontend can group "September 10 -> 5-6PM
+// -> Order #1001…" (spec §8) and orders are returned oldest-first within
+// the underlying query so a slot's orders are already in creation order
+// once grouped (spec §9) — never re-sorted by name/customer.
 
 import { prisma } from "@/lib/prisma";
 import { requireOwnedVendor } from "@/services/marketplace/vendor/shared/require-owned-vendor";
@@ -30,18 +36,22 @@ export async function listVendorOrders(businessId: string) {
         sellerMarkedReadyAt: true,
         deliveryLocation: true,
         isDisputed: true,
+        vendorDeliveryBooking: { select: { bookedFor: true, slot: { select: { id: true, label: true, windowStart: true } } } },
         items: {
           select: {
             id: true,
             quantity: true,
             price: true,
             deliveryStatus: true,
+            rejectedAt: true,
             product: { select: { name: true } },
             side: { select: { name: true } },
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      // Oldest first (spec §9) — the vendor works through a slot's orders
+      // in the order they were created, never reverse-chronological.
+      orderBy: { createdAt: "asc" },
     }),
     // Every currently-uncollected handoff for this vendor — used to show
     // "deliverer assigned, here's the pickup code" instead of a
@@ -72,12 +82,15 @@ export async function listVendorOrders(businessId: string) {
       sellerMarkedReadyAt: order.sellerMarkedReadyAt?.toISOString() ?? null,
       deliveryLocation: order.deliveryLocation,
       isDisputed: order.isDisputed,
+      bookedFor: order.vendorDeliveryBooking?.bookedFor.toISOString() ?? null,
+      slot: order.vendorDeliveryBooking?.slot ?? null,
       items: order.items.map((item) => ({
         id: item.id,
         productName: item.product?.name ?? item.side?.name ?? "Unknown item",
         quantity: item.quantity,
         price: item.price,
         deliveryStatus: item.deliveryStatus,
+        rejectedAt: item.rejectedAt?.toISOString() ?? null,
       })),
     })),
     pendingPickups: handoffs.map((h) => ({

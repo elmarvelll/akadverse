@@ -9,6 +9,7 @@
 // src/app/api/marketplace/admin/dropoffs/route.controller.ts.
 
 import { prisma } from "@/lib/prisma";
+import { getSellerDropoffDeadline } from "./dropoff-deadline.service";
 
 export async function listPendingDropoffs() {
   const orders = await prisma.order.findMany({
@@ -22,6 +23,7 @@ export async function listPendingDropoffs() {
       id: true,
       businessId: true,
       business: { select: { name: true } },
+      user: { select: { firstName: true, lastName: true } },
       dropoffOtpExpiry: true,
       dropoffOtpAttempts: true,
       estimatedDeliveryAt: true,
@@ -34,10 +36,15 @@ export async function listPendingDropoffs() {
     orderId: order.id,
     businessId: order.businessId,
     businessName: order.business.name,
+    customerName: `${order.user.firstName} ${order.user.lastName}`,
     itemCount: order.items.length,
     quantity: order.items.reduce((sum, item) => sum + item.quantity, 0),
     otpExpiry: order.dropoffOtpExpiry?.toISOString() ?? null,
     otpAttempts: order.dropoffOtpAttempts,
     estimatedDeliveryAt: order.estimatedDeliveryAt?.toISOString() ?? null,
+    // Spec §18-19: the single authoritative drop-off-deadline calculation
+    // (dropoff-deadline.service.ts), surfaced here rather than recomputed —
+    // Admin never has to work this out by hand.
+    expectedDropoffDeadline: order.estimatedDeliveryAt ? getSellerDropoffDeadline(order.estimatedDeliveryAt).toISOString() : null,
   }));
 }

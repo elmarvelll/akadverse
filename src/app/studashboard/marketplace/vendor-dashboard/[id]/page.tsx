@@ -19,11 +19,12 @@
 
 import { use, useEffect, useState } from "react";
 import { isAxiosError } from "axios";
-import { AlertCircle, CheckCircle2, Clock, Loader2, Pencil, Wallet, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Loader2, Pencil, Save, Wallet, X } from "lucide-react";
 import api from "@/lib/axios";
 import { VENDOR_CATEGORIES } from "@/types/vendor";
 import ImageUploadField from "../../business/_components/ImageUploadField";
 import BankDetailsFields from "../../business/_components/BankDetailsFields";
+import DeliveryDatePicker, { todayIsoDate } from "../../vendor-checkout/_components/DeliveryDatePicker";
 import { useVendorContext } from "../_components/VendorContext";
 import type { VendorProfile } from "../_components/VendorApprovalGate";
 
@@ -64,20 +65,35 @@ interface CapacityRow {
   slotLabel: string;
   windowStart: string;
   windowEnd: string;
+  defaultCapacity: number;
+  overrideCapacity: number | null;
   capacity: number;
-  bookedToday: number;
+  booked: number;
 }
 
+// Editing a slot's capacity NEVER sends a request while the vendor is
+// typing (spec §3) — inputs are controlled local state, and the only
+// backend call is the single explicit "Save Capacity" click below, which
+// batches every changed row. Date-specific (spec §7): the vendor picks a
+// date (defaults to today, same Today/Tomorrow/custom picker as checkout)
+// and edits/saves capacity for that date's override, falling back to the
+// "Default" recurring value when no override exists yet.
 function CapacitySection({ businessId }: { businessId: string }) {
+  const [date, setDate] = useState(() => todayIsoDate());
   const [rows, setRows] = useState<CapacityRow[]>([]);
+  const [draft, setDraft] = useState<Record<string, number>>({});
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
-  const [savingSlotId, setSavingSlotId] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveError, setSaveError] = useState("");
 
-  const load = async () => {
+  const load = async (targetDate: string) => {
     setLoadState("loading");
     try {
-      const res = await api.get<{ capacity: CapacityRow[] }>(`/marketplace/vendor/${businessId}/capacity`);
+      const res = await api.get<{ capacity: CapacityRow[]; date: string }>(`/marketplace/vendor/${businessId}/capacity`, {
+        params: { date: targetDate },
+      });
       setRows(res.data.capacity);
+      setDraft(Object.fromEntries(res.data.capacity.map((r) => [r.slotId, r.capacity])));
       setLoadState("loaded");
     } catch {
       setLoadState("error");
@@ -86,19 +102,29 @@ function CapacitySection({ businessId }: { businessId: string }) {
 
   useEffect(() => {
     const run = async () => {
-      await load();
+      await load(date);
     };
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId]);
+  }, [businessId, date]);
 
-  const saveCapacity = async (slotId: string, capacity: number) => {
-    setSavingSlotId(slotId);
+  const isDirty = rows.some((row) => draft[row.slotId] !== row.capacity);
+
+  const saveAll = async () => {
+    if (saveState === "saving") return; // guards against double-submit on repeated clicks
+    setSaveState("saving");
+    setSaveError("");
     try {
-      await api.put(`/marketplace/vendor/${businessId}/capacity`, { slotId, capacity });
-      await load();
-    } finally {
-      setSavingSlotId(null);
+      const changed = rows.filter((row) => draft[row.slotId] !== row.capacity);
+      for (const row of changed) {
+        await api.put(`/marketplace/vendor/${businessId}/capacity`, { slotId: row.slotId, capacity: draft[row.slotId], date });
+      }
+      await load(date);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1500);
+    } catch {
+      setSaveError("Couldn't save capacity. Please try again.");
+      setSaveState("idle");
     }
   };
 
@@ -114,35 +140,56 @@ function CapacitySection({ businessId }: { businessId: string }) {
   }
 
   return (
-    <div className="space-y-2">
-      {rows.map((row) => {
-        const remaining = Math.max(0, row.capacity - row.bookedToday);
-        return (
-          <div key={row.slotId} className="flex flex-wrap items-center gap-3 bg-gray-50 rounded-xl p-3">
-            <div className="min-w-[140px]">
-              <p className="font-medium text-gray-900 text-sm">{row.slotLabel}</p>
-              <p className="text-xs text-gray-500">
-                {row.bookedToday} booked today · {remaining} remaining
-              </p>
+    <div className="space-y-4">
+      <DeliveryDatePicker value={date} onChange={setDate} disabled={saveState === "saving"} />
+
+      <div className="space-y-2">
+        {rows.map((row) => {
+          const value = draft[row.slotId] ?? row.capacity;
+          const remaining = Math.max(0, value - row.booked);
+          return (
+            <div key={row.slotId} className="flex flex-wrap items-center gap-3 bg-gray-50 rounded-xl p-3">
+              <div className="min-w-[140px]">
+                <p className="font-medium text-gray-900 text-sm">{row.slotLabel}</p>
+                <p className="text-xs text-gray-500">
+                  {row.booked} booked · {remaining} remaining
+                  {row.overrideCapacity === null && <span className="text-gray-400"> · using default ({row.defaultCapacity})</span>}
+                </p>
+              </div>
+              <label className="flex items-center gap-1.5 text-xs text-gray-500 ml-auto">
+                Max orders
+                <input
+                  type="number"
+                  min={0}
+                  value={value}
+                  disabled={saveState === "saving"}
+                  onChange={(e) => setDraft((d) => ({ ...d, [row.slotId]: Math.max(0, Math.trunc(Number(e.target.value) || 0)) }))}
+                  className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+                />
+              </label>
             </div>
-            <label className="flex items-center gap-1.5 text-xs text-gray-500 ml-auto">
-              Max orders
-              <input
-                type="number"
-                min={0}
-                defaultValue={row.capacity}
-                disabled={savingSlotId === row.slotId}
-                onBlur={(e) => {
-                  const value = Math.max(0, Math.trunc(Number(e.target.value)));
-                  if (value !== row.capacity) saveCapacity(row.slotId, value);
-                }}
-                className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
-              />
-            </label>
-          </div>
-        );
-      })}
-      {rows.length === 0 && <p className="text-sm text-gray-400">No delivery timeframes are configured yet.</p>}
+          );
+        })}
+        {rows.length === 0 && <p className="text-sm text-gray-400">No delivery timeframes are configured yet.</p>}
+      </div>
+
+      {saveError && <div className="text-sm p-2.5 rounded-lg text-red-700 bg-red-100">{saveError}</div>}
+
+      {rows.length > 0 && (
+        <button
+          type="button"
+          disabled={!isDirty || saveState === "saving"}
+          onClick={saveAll}
+          className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+            saveState === "saved" ? "bg-green-50 text-green-700" : "bg-purple-600 hover:bg-purple-700 text-white"
+          }`}
+        >
+          {saveState === "saving" && <Loader2 size={14} className="animate-spin" />}
+          {saveState === "saved" && <CheckCircle2 size={14} />}
+          {saveState === "idle" && <Save size={14} />}
+          {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved successfully" : "Save Capacity"}
+        </button>
+      )}
     </div>
   );
 }

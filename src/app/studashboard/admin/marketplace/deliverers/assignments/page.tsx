@@ -30,6 +30,19 @@ interface ActiveItem {
   businessName: string;
   productName: string;
   orderId: string;
+  bookedFor: string | null;
+  slotLabel: string | null;
+}
+
+const dateFormatter = new Intl.DateTimeFormat("en-NG", { month: "short", day: "numeric" });
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 interface DelivererAssignments {
@@ -91,7 +104,15 @@ export default function AdminDelivererAssignmentsPage() {
         <div className="space-y-4">
           {deliverers.map((deliverer) => (
             <div key={deliverer.delivererId} className="bg-white rounded-2xl border border-gray-100 p-5">
-              <p className="text-sm font-semibold text-gray-900 mb-3">{deliverer.delivererName}</p>
+              {/* Assigned deliverer name is the dominant element on this
+                  card (spec §15) — large, bold, with an initials avatar —
+                  never buried in small text. */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                  {initials(deliverer.delivererName)}
+                </div>
+                <p className="text-lg font-bold text-gray-900">{deliverer.delivererName}</p>
+              </div>
 
               {deliverer.pendingHandoffs.length > 0 && (
                 <div className="mb-4 space-y-2">
@@ -120,18 +141,40 @@ export default function AdminDelivererAssignmentsPage() {
               )}
 
               {deliverer.activeItems.length > 0 ? (
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Currently assigned</p>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    {deliverer.activeItems.map((item) => (
-                      <li key={item.deliveryItemId} className="flex justify-between">
-                        <span>
-                          {item.quantity} x {item.productName} — {item.businessName} · Order #{item.orderId.slice(0, 8)}
-                        </span>
-                        <span className="text-gray-400">{item.status}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {Object.entries(
+                    deliverer.activeItems.reduce<Record<string, ActiveItem[]>>((acc, item) => {
+                      (acc[item.orderId] ??= []).push(item);
+                      return acc;
+                    }, {})
+                  ).map(([orderId, items]) => {
+                    const first = items[0];
+                    return (
+                      <div key={orderId} className="border border-gray-100 rounded-xl p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {first.businessName} · Order #{orderId.slice(0, 8)}
+                          </p>
+                          {first.bookedFor && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                              {dateFormatter.format(new Date(first.bookedFor))} · {first.slotLabel}
+                            </span>
+                          )}
+                        </div>
+                        <ul className="text-sm text-gray-600 space-y-0.5">
+                          {items.map((item) => (
+                            <li key={item.deliveryItemId} className="flex justify-between">
+                              <span>
+                                {item.quantity} x {item.productName}
+                              </span>
+                              <span className="text-gray-400">{item.status}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 deliverer.pendingHandoffs.length === 0 && <p className="text-xs text-gray-400">Nothing assigned right now.</p>

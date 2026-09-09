@@ -1,15 +1,18 @@
 // src/app/studashboard/admin/marketplace/deliveries/page.tsx
 //
-// Delivery coordinator's assignment screen: dropped-off order items on one
-// side, approved deliverers on the other — select items, pick a deliverer,
-// assign. Chrome (navbar + admin tab menu) comes from ../layout.tsx. See
-// docs/marketplace/systems/delivery-coordinator-system.md.
+// Delivery coordinator's assignment screen: ready items grouped by
+// delivery DATE, then by ORDER (spec §20-23) — each order card shows the
+// business/vendor (and its collection location for a School Vendor item —
+// spec §23), the customer, and every line item, with one checkbox
+// selecting the whole order at once. Approved deliverers on the other
+// side — pick one, assign. Chrome (navbar + admin tab menu) comes from
+// ../layout.tsx. See docs/marketplace/systems/delivery-coordinator-system.md.
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, MapPin } from "lucide-react";
 import api from "@/lib/axios";
 
 interface ReadyItem {
@@ -18,7 +21,13 @@ interface ReadyItem {
   quantity: number;
   productName: string;
   businessName: string;
+  businessType: string;
+  customerName: string;
+  orderCreatedAt: string;
+  collectionLocation: string | null;
   sellerDroppedOffAt: string | null;
+  bookedFor: string | null;
+  slot: { id: string; label: string } | null;
 }
 
 interface DelivererRow {
@@ -33,6 +42,16 @@ interface AssignedHandoff {
   businessName: string;
   pickupOtp: string;
   pickupOtpExpiry: string;
+}
+
+const dateFormatter = new Intl.DateTimeFormat("en-NG", { weekday: "short", month: "long", day: "numeric" });
+
+function dateKey(item: ReadyItem): string {
+  // Vendor items group by their booked delivery date; Business items (no
+  // vendor booking) group by the day they were dropped off at the central
+  // point — the closest equivalent "operational date" for that item.
+  const raw = item.bookedFor ?? item.sellerDroppedOffAt;
+  return raw ? raw.slice(0, 10) : "unscheduled";
 }
 
 export default function AdminDeliveriesPage() {
@@ -69,8 +88,32 @@ export default function AdminDeliveriesPage() {
     run();
   }, []);
 
-  const toggleItem = (id: string) => {
-    setSelectedItemIds((current) => (current.includes(id) ? current.filter((i) => i !== id) : [...current, id]));
+  // date -> orderId -> items, dates ascending, orders within a date in
+  // creation-order (spec §9 applies here too — never re-sorted by name).
+  const grouped = useMemo(() => {
+    const byDate = new Map<string, Map<string, ReadyItem[]>>();
+    for (const item of readyItems) {
+      const dKey = dateKey(item);
+      if (!byDate.has(dKey)) byDate.set(dKey, new Map());
+      const byOrder = byDate.get(dKey)!;
+      if (!byOrder.has(item.orderId)) byOrder.set(item.orderId, []);
+      byOrder.get(item.orderId)!.push(item);
+    }
+    const dates = Array.from(byDate.keys()).sort();
+    return dates.map((date) => ({
+      date,
+      orders: Array.from(byDate.get(date)!.entries())
+        .map(([orderId, items]) => ({ orderId, items }))
+        .sort((a, b) => a.items[0].orderCreatedAt.localeCompare(b.items[0].orderCreatedAt)),
+    }));
+  }, [readyItems]);
+
+  const toggleOrder = (items: ReadyItem[]) => {
+    const ids = items.map((i) => i.id);
+    const allSelected = ids.every((id) => selectedItemIds.includes(id));
+    setSelectedItemIds((current) =>
+      allSelected ? current.filter((id) => !ids.includes(id)) : Array.from(new Set([...current, ...ids]))
+    );
   };
 
   const assign = async () => {
@@ -113,7 +156,7 @@ export default function AdminDeliveriesPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Assign deliveries</h1>
-      <p className="text-sm text-gray-500 mb-6">Items dropped off at the central drop-off point, waiting for a deliverer.</p>
+      <p className="text-sm text-gray-500 mb-6">Orders ready for a deliverer, grouped by delivery date and order.</p>
 
       {lastHandoffs.length > 0 && (
         <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl p-5 space-y-2">
@@ -138,28 +181,54 @@ export default function AdminDeliveriesPage() {
       )}
 
       {readyItems.length === 0 ? (
-        <p className="text-sm text-gray-400">No items waiting for assignment.</p>
+        <p className="text-sm text-gray-400">No orders waiting for assignment.</p>
       ) : (
         <>
-          <div className="space-y-2 mb-6">
-            {readyItems.map((item) => (
-              <label key={item.id} className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-4 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedItemIds.includes(item.id)}
-                  onChange={() => toggleItem(item.id)}
-                  className="w-4 h-4"
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    {item.quantity} x {item.productName}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {item.businessName} · Order #{item.orderId.slice(0, 8)}
-                    {item.sellerDroppedOffAt && ` · dropped off ${new Date(item.sellerDroppedOffAt).toLocaleString()}`}
-                  </p>
+          <div className="space-y-6 mb-6">
+            {grouped.map((g) => (
+              <div key={g.date}>
+                <h2 className="text-sm font-semibold text-gray-900 mb-2">
+                  {g.date === "unscheduled" ? "Unscheduled" : dateFormatter.format(new Date(`${g.date}T00:00:00Z`))}
+                </h2>
+                <div className="space-y-2">
+                  {g.orders.map(({ orderId, items }) => {
+                    const first = items[0];
+                    const selected = items.every((i) => selectedItemIds.includes(i.id));
+                    return (
+                      <label
+                        key={orderId}
+                        className={`flex items-start gap-3 bg-white rounded-xl border p-4 cursor-pointer transition ${
+                          selected ? "border-blue-300 bg-blue-50/40" : "border-gray-100"
+                        }`}
+                      >
+                        <input type="checkbox" checked={selected} onChange={() => toggleOrder(items)} className="w-4 h-4 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {first.businessName}
+                              {first.slot && <span className="ml-2 text-xs font-medium text-blue-600">{first.slot.label}</span>}
+                            </p>
+                            <span className="text-xs text-gray-400">Order #{orderId.slice(0, 8)}</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">Customer: {first.customerName}</p>
+                          {first.collectionLocation && (
+                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                              <MapPin size={11} /> Collect at: {first.collectionLocation}
+                            </p>
+                          )}
+                          <ul className="mt-1.5 space-y-0.5">
+                            {items.map((item) => (
+                              <li key={item.id} className="text-xs text-gray-600">
+                                {item.quantity} x {item.productName}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
-              </label>
+              </div>
             ))}
           </div>
 

@@ -23,7 +23,19 @@ export async function listReadyItems() {
       // the central point (MarketplaceSettings.dropoffLocation).
       product: { select: { name: true, businessId: true, business: { select: { name: true, type: true, location: true } } } },
       side: { select: { name: true, businessId: true, business: { select: { name: true, type: true, location: true } } } },
-      order: { select: { id: true, sellerDroppedOffAt: true, estimatedDeliveryAt: true } },
+      order: {
+        select: {
+          id: true,
+          sellerDroppedOffAt: true,
+          estimatedDeliveryAt: true,
+          createdAt: true,
+          user: { select: { firstName: true, lastName: true } },
+          // Vendor orders carry their delivery date+timeframe via the
+          // booking — used to group the assignment pool by order (spec
+          // §21-22), never available for a Business item (null).
+          vendorDeliveryBooking: { select: { bookedFor: true, slot: { select: { id: true, label: true } } } },
+        },
+      },
     },
     orderBy: { order: { sellerDroppedOffAt: "asc" } },
   });
@@ -41,12 +53,16 @@ export async function listReadyItems() {
       businessId: source.businessId,
       businessName: source.business.name,
       businessType: source.business.type,
+      customerName: `${item.order.user.firstName} ${item.order.user.lastName}`,
+      orderCreatedAt: item.order.createdAt.toISOString(),
       // Only meaningful (and only ever populated) for a School Vendor —
       // the collection point for a Business item is always the central
       // drop-off location instead.
       collectionLocation: source.business.type === "SCHOOL_VENDOR" ? source.business.location : null,
       sellerDroppedOffAt: item.order.sellerDroppedOffAt?.toISOString() ?? null,
       estimatedDeliveryAt: item.order.estimatedDeliveryAt?.toISOString() ?? null,
+      bookedFor: item.order.vendorDeliveryBooking?.bookedFor.toISOString() ?? null,
+      slot: item.order.vendorDeliveryBooking?.slot ?? null,
     };
   });
 }

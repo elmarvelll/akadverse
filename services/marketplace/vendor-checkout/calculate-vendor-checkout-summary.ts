@@ -19,8 +19,10 @@
 import { prisma } from "@/lib/prisma";
 import { getVendorCartForUser } from "@/services/marketplace/vendor-cart/get-vendor-cart-for-user";
 import { getMarketplaceSettings } from "@/services/marketplace/admin/shared/marketplace-settings";
-import { isSlotBookable, nowInSchoolTimezone } from "@/services/marketplace/vendor-delivery/is-slot-bookable";
+import { isSlotBookable } from "@/services/marketplace/vendor-delivery/is-slot-bookable";
+import { todayInSchoolTimezone as schoolToday, parseAndValidateDeliveryDate } from "@/services/marketplace/vendor-delivery/validate-delivery-date";
 import { countVendorBookingsForSlot } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
+import { resolveVendorCapacity } from "@/services/marketplace/vendor/capacity/resolve-vendor-capacity";
 import { calculateVendorFees, type VendorFeeBreakdown } from "./shared/vendor-fees";
 import type { VendorCartLineItem } from "@/types/vendor-cart";
 
@@ -38,17 +40,18 @@ export interface VendorCheckoutSummary {
   items: VendorCartLineItem[];
   fees: VendorFeeBreakdown;
   slots: VendorSlotAvailability[];
+  // The calendar date these slots' capacity/booked numbers were computed
+  // against — echoes back whatever was requested (or today, if none was),
+  // so the frontend can confirm it's showing the date it asked for.
+  date: string;
 }
 
-// Today's calendar date in SCHOOL_TIMEZONE, "YYYY-MM-DD" — the date every
-// active slot's capacity is checked/booked against, since these are
-// same-day delivery windows.
-export function todayInSchoolTimezone(now: Date = new Date()): Date {
-  const school = nowInSchoolTimezone(now);
-  return new Date(Date.UTC(school.getUTCFullYear(), school.getUTCMonth(), school.getUTCDate()));
-}
+// Re-exported for existing callers (create-vendor-orders-for-checkout.ts)
+// — the canonical implementation now lives in validate-delivery-date.ts,
+// alongside the date-parsing/validation it's used for.
+export { schoolToday as todayInSchoolTimezone };
 
-export async function calculateVendorCheckoutSummary(userId: string): Promise<VendorCheckoutSummary> {
+export async function calculateVendorCheckoutSummary(userId: string, dateStr?: string): Promise<VendorCheckoutSummary> {
   // Empty cart is a valid, displayable summary state (zero everything) —
   // not an error, same convention as get-checkout-summary.ts.
   const items = await getVendorCartForUser(userId);
@@ -56,7 +59,10 @@ export async function calculateVendorCheckoutSummary(userId: string): Promise<Ve
   const settings = await getMarketplaceSettings();
   const fees = calculateVendorFees(items, settings);
 
-  const bookedFor = todayInSchoolTimezone();
+  // Never trusts the client's date blindly — same validation the booking
+  // transaction itself will re-run (spec §6/§28). Defaults to today when
+  // the customer hasn't picked one yet (initial page load).
+  const bookedFor = parseAndValidateDeliveryDate(dateStr);
   const slotRows = await prisma.vendorDeliverySlot.findMany({ where: { active: true }, orderBy: { windowStart: "asc" } });
   const businessIds = Array.from(new Set(items.map((item) => item.businessId)));
 
@@ -66,11 +72,8 @@ export async function calculateVendorCheckoutSummary(userId: string): Promise<Ve
         // Nothing in the cart yet to check capacity for — bookability is
         // purely the time cutoff; capacity/booked are meaningless until a
         // vendor is actually selected.
-        return { id: slot.id, label: slot.label, windowStart: slot.windowStart, windowEnd: slot.windowEnd, capacity: 0, booked: 0, bookable: isSlotBookable(slot) };
+        return { id: slot.id, label: slot.label, windowStart: slot.windowStart, windowEnd: slot.windowEnd, capacity: 0, booked: 0, bookable: isSlotBookable(slot, new Date(), bookedFor) };
       }
-
-      const capacities = await prisma.vendorTimeframeCapacity.findMany({ where: { slotId: slot.id, businessId: { in: businessIds } } });
-      const capacityByBusiness = new Map(capacities.map((c) => [c.businessId, c.capacity]));
 
       // The bottleneck vendor determines both the displayed numbers and
       // overall bookability — matches create-vendor-orders-for-checkout.ts's
@@ -79,7 +82,7 @@ export async function calculateVendorCheckoutSummary(userId: string): Promise<Ve
       let bottleneckCapacity = 0;
       let bottleneckBooked = 0;
       for (const businessId of businessIds) {
-        const capacity = capacityByBusiness.get(businessId) ?? 0;
+        const capacity = await resolveVendorCapacity(businessId, slot.id, bookedFor);
         const booked = await countVendorBookingsForSlot(businessId, slot.id, bookedFor);
         const remaining = capacity - booked;
         if (remaining < minRemaining) {
@@ -96,10 +99,10 @@ export async function calculateVendorCheckoutSummary(userId: string): Promise<Ve
         windowEnd: slot.windowEnd,
         capacity: bottleneckCapacity,
         booked: bottleneckBooked,
-        bookable: minRemaining > 0 && isSlotBookable(slot),
+        bookable: minRemaining > 0 && isSlotBookable(slot, new Date(), bookedFor),
       };
     })
   );
 
-  return { items, fees, slots };
+  return { items, fees, slots, date: bookedFor.toISOString().slice(0, 10) };
 }
