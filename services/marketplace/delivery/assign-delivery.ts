@@ -39,12 +39,17 @@ export async function assignDelivery(delivererId: string | undefined, orderItemI
       quantity: true,
       orderId: true,
       product: { select: { businessId: true, business: { select: { name: true } } } },
+      side: { select: { businessId: true, business: { select: { name: true } } } },
       order: { select: { userId: true, estimatedDeliveryAt: true } },
     },
   });
   if (items.length === 0) {
     throw badRequest("None of the selected items are eligible for assignment.");
   }
+
+  // An item is either a Product line or a School Vendor Side line — either
+  // way it belongs to exactly one business, that's all this function needs.
+  const businessOf = (item: (typeof items)[number]) => (item.product ?? item.side)!;
 
   const earliestEstimate = items.reduce<Date | null>((min, item) => {
     const estimate = item.order.estimatedDeliveryAt;
@@ -59,11 +64,11 @@ export async function assignDelivery(delivererId: string | undefined, orderItemI
   // batch.
   const businesses = new Map<string, { name: string; earliestEstimate: Date | null }>();
   for (const item of items) {
-    const businessId = item.product.businessId;
+    const { businessId, business } = businessOf(item);
     const existing = businesses.get(businessId);
     const estimate = item.order.estimatedDeliveryAt;
     if (!existing) {
-      businesses.set(businessId, { name: item.product.business.name, earliestEstimate: estimate });
+      businesses.set(businessId, { name: business.name, earliestEstimate: estimate });
     } else if (estimate && (!existing.earliestEstimate || estimate < existing.earliestEstimate)) {
       existing.earliestEstimate = estimate;
     }
@@ -82,7 +87,7 @@ export async function assignDelivery(delivererId: string | undefined, orderItemI
     for (const item of items) {
       await tx.deliveryItem.upsert({
         where: { orderItemId: item.id },
-        create: { deliveryId: created.id, orderItemId: item.id, quantity: item.quantity, businessId: item.product.businessId, status: "ASSIGNED" },
+        create: { deliveryId: created.id, orderItemId: item.id, quantity: item.quantity, businessId: businessOf(item).businessId, status: "ASSIGNED" },
         update: { deliveryId: created.id, status: "ASSIGNED" },
       });
     }

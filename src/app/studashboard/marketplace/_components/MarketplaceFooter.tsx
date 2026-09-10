@@ -46,6 +46,9 @@ export default function MarketplaceFooter() {
         <p>&copy; {new Date().getFullYear()} Deltvolve Inc. All rights reserved.</p>
         <div className="flex items-center gap-5">
           <DelivererLink state={state} />
+          <Link href="/studashboard/marketplace/vendor/apply" className="hover:text-gray-900 transition">
+            Become a Vendor
+          </Link>
           <a href="mailto:marvelousifezue31@gmail.com" className="flex items-center gap-1.5 hover:text-gray-900 transition">
             <Mail size={14} />
             marvelousifezue31@gmail.com

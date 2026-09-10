@@ -26,7 +26,7 @@ export async function listBuyerOrders(userId: string) {
       deliveryWindowEnd: true,
       isDisputed: true,
       disputeResolvedAt: true,
-      business: { select: { name: true } },
+      business: { select: { name: true, type: true } },
       items: {
         select: {
           id: true,
@@ -38,6 +38,7 @@ export async function listBuyerOrders(userId: string) {
           rejectionReason: true,
           cancelledAt: true,
           product: { select: { name: true } },
+          side: { select: { name: true } },
         },
       },
     },
@@ -61,13 +62,16 @@ export async function listBuyerOrders(userId: string) {
       totalAmount: order.totalAmount,
       createdAt: order.createdAt.toISOString(),
       businessName: order.business.name,
+      // Distinguishes School Vendor orders from Business orders (spec
+      // §66) — see src/app/studashboard/marketplace/orders/page.tsx.
+      businessType: order.business.type,
       estimatedDate: estimate?.date ?? null,
       deliveryWindow: estimate?.window ?? null,
       isDisputed: order.isDisputed,
       disputeResolvedAt: order.disputeResolvedAt?.toISOString() ?? null,
       items: order.items.map((item) => ({
         id: item.id,
-        productName: item.product.name,
+        productName: item.product?.name ?? item.side?.name ?? "Unknown item",
         quantity: item.quantity,
         price: item.price,
         deliveryStatus: item.deliveryStatus,

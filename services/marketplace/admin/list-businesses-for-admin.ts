@@ -22,14 +22,24 @@ export interface AdminBusinessRow {
   blocked: boolean;
   deliveryRestricted: boolean;
   createdAt: string;
+  // School Vendor fields — null/false for an ordinary Business row. See
+  // docs/marketplace/decisions/vendor-extends-business.md.
+  type: string;
+  vendorCategory: string | null;
+  paused: boolean;
 }
 
 export type BusinessAdminFilter = "all" | "pending_approval" | "pending_verification" | "verified" | "blocked";
+// Separate from BusinessAdminFilter (status) — this narrows by
+// Business.type. "all" (default) intentionally shows both, so the existing
+// Businesses tab keeps working unchanged for anyone not passing `type`.
+export type BusinessAdminTypeFilter = "all" | "BUSINESS" | "SCHOOL_VENDOR";
 
 export async function listBusinessesForAdmin(searchParams: URLSearchParams): Promise<PageResult<AdminBusinessRow>> {
   const pageParams = parsePageParams(searchParams);
   const q = searchParams.get("q")?.trim();
   const filter = (searchParams.get("filter") as BusinessAdminFilter | null) ?? "all";
+  const typeFilter = (searchParams.get("type") as BusinessAdminTypeFilter | null) ?? "all";
 
   const where: Prisma.BusinessWhereInput = {
     // mode: "insensitive" — see the identical comment in
@@ -39,6 +49,7 @@ export async function listBusinessesForAdmin(searchParams: URLSearchParams): Pro
     ...(filter === "pending_verification" ? { verificationRequests: { some: { status: "PENDING" } } } : {}),
     ...(filter === "verified" ? { verified: true } : {}),
     ...(filter === "blocked" ? { blocked: true } : {}),
+    ...(typeFilter !== "all" ? { type: typeFilter } : {}),
   };
 
   const [businesses, total] = await Promise.all([
@@ -54,6 +65,9 @@ export async function listBusinessesForAdmin(searchParams: URLSearchParams): Pro
         blocked: true,
         deliveryRestricted: true,
         createdAt: true,
+        type: true,
+        vendorCategory: true,
+        paused: true,
         user: { select: { email: true } },
       },
       orderBy: { createdAt: "desc" },

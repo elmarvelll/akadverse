@@ -19,8 +19,9 @@ export async function confirmPaymentByReference(reference: string): Promise<{ co
       id: true,
       userId: true,
       businessId: true,
+      vendorDeliveryBookingId: true,
       business: { select: { name: true, user: { select: { id: true, email: true } } } },
-      items: { select: { quantity: true, price: true, product: { select: { name: true } } } },
+      items: { select: { quantity: true, price: true, product: { select: { name: true } }, side: { select: { name: true } } } },
     },
   });
 
@@ -28,11 +29,44 @@ export async function confirmPaymentByReference(reference: string): Promise<{ co
     return { confirmedOrderIds: [] };
   }
 
+  // Additive for the Vendor checkout path — a reference shared by
+  // Business-only orders has no matching row here, so this is a pure
+  // no-op for Business checkouts (see
+  // docs/marketplace/decisions/vendor-extends-business.md). Confirmed in
+  // the SAME transaction as the orders below so a booking can never end
+  // up CONFIRMED with its orders still "pending", or vice versa.
+  const vendorDeliveryBookingId = pendingOrders.find((o) => o.vendorDeliveryBookingId)?.vendorDeliveryBookingId ?? null;
+
+  const now = new Date();
+
   await prisma.$transaction(async (tx) => {
     await tx.order.updateMany({
       where: { id: { in: pendingOrders.map((o) => o.id) } },
       data: { paymentStatus: "paid" },
     });
+
+    if (vendorDeliveryBookingId) {
+      await tx.vendorDeliveryBooking.updateMany({
+        where: { id: vendorDeliveryBookingId, status: "PENDING_PAYMENT" },
+        data: { status: "CONFIRMED" },
+      });
+
+      // Vendor orders are never manually accepted/rejected (spec §6) —
+      // payment confirmation IS the acceptance moment. Business orders are
+      // untouched here: they keep starting at PENDING_SELLER and go
+      // through the seller's own accept/reject flow unchanged. See
+      // docs/marketplace/decisions/vendor-independent-architecture.md.
+      const vendorOrderIds = pendingOrders.filter((o) => o.vendorDeliveryBookingId).map((o) => o.id);
+      if (vendorOrderIds.length > 0) {
+        await tx.order.updateMany({
+          where: { id: { in: vendorOrderIds } },
+          data: { status: "ACCEPTED", acceptedAt: now, fulfillmentStatus: "PROCESSING" },
+        });
+        for (const orderId of vendorOrderIds) {
+          await recordOrderEvent(tx, { orderId, type: "SELLER_ACCEPTED", actorType: "system", message: "Vendor orders are auto-accepted on payment — no manual accept step." });
+        }
+      }
+    }
 
     for (const order of pendingOrders) {
       await recordOrderEvent(tx, { orderId: order.id, type: "ORDER_CREATED", actorType: "buyer", actorId: order.userId });
@@ -41,9 +75,25 @@ export async function confirmPaymentByReference(reference: string): Promise<{ co
   });
 
   // The cart was fully snapshotted into these orders at initialize time —
-  // clearing it now removes exactly what was just paid for.
+  // clearing it now removes exactly what was just paid for. Scoped to
+  // Business-only cart lines (productId set, product's business is type
+  // BUSINESS) — NOT a blanket delete-everything-for-this-user, since
+  // CartItem is now shared with the Vendor cart (see
+  // docs/marketplace/decisions/vendor-extends-business.md): a user paying
+  // for a Business checkout must not have an unrelated, still-in-progress
+  // Vendor cart silently wiped out. The Vendor checkout path clears its
+  // own cart lines separately, below.
   const userId = pendingOrders[0].userId;
-  await prisma.cartItem.deleteMany({ where: { userId } });
+  if (vendorDeliveryBookingId) {
+    // Vendor checkout path — clear only vendor-scoped cart lines (Sides,
+    // or Products belonging to a School Vendor), same rationale as the
+    // Business branch below.
+    await prisma.cartItem.deleteMany({
+      where: { userId, OR: [{ sideId: { not: null } }, { product: { business: { type: "SCHOOL_VENDOR" } } }] },
+    });
+  } else {
+    await prisma.cartItem.deleteMany({ where: { userId, productId: { not: null }, product: { business: { type: "BUSINESS" } } } });
+  }
 
   // Notify each business owner of their new order. Fire-and-forget by
   // design (see services/marketplace/notifications/email.service.ts) —
@@ -51,7 +101,7 @@ export async function confirmPaymentByReference(reference: string): Promise<{ co
   for (const order of pendingOrders) {
     const owner = order.business.user;
     const itemSummary = order.items
-      .map((item) => `${item.quantity} x ${item.product.name} (₦${(item.price * item.quantity).toLocaleString()})`)
+      .map((item) => `${item.quantity} x ${item.product?.name ?? item.side?.name ?? "item"} (₦${(item.price * item.quantity).toLocaleString()})`)
       .join("<br/>");
     const totalAmount = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     if (owner?.email) {
@@ -61,12 +111,18 @@ export async function confirmPaymentByReference(reference: string): Promise<{ co
       });
     }
     if (owner?.id) {
+      // A vendor order's owner dashboard lives at a different route tree
+      // than Business's — see
+      // docs/marketplace/decisions/vendor-independent-architecture.md.
+      const dashboardBase = order.vendorDeliveryBookingId
+        ? `/studashboard/marketplace/vendor-dashboard/${order.businessId}`
+        : `/studashboard/marketplace/business/${order.businessId}`;
       await createNotification({
         recipientId: owner.id,
         type: "NEW_ORDER",
         title: "New order",
         message: `You have a new order on ${order.business.name}.`,
-        targetUrl: `/studashboard/marketplace/business/${order.businessId}/orders`,
+        targetUrl: `${dashboardBase}/orders`,
         orderId: order.id,
         businessId: order.businessId,
       });

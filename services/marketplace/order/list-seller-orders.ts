@@ -35,6 +35,7 @@ export async function listSellerOrders(businessId: string): Promise<BusinessOrde
           deliveryStatus: true,
           rejectedAt: true,
           product: { select: { name: true } },
+          side: { select: { name: true } },
         },
       },
     },
@@ -70,7 +71,7 @@ export async function listSellerOrders(businessId: string): Promise<BusinessOrde
         hasMissedDropoffDeadline(order.estimatedDeliveryAt, order.sellerDroppedOffAt),
       items: order.items.map((item) => ({
         id: item.id,
-        productName: item.product.name,
+        productName: item.product?.name ?? item.side?.name ?? "Unknown item",
         quantity: item.quantity,
         price: item.price,
         deliveryStatus: item.deliveryStatus,

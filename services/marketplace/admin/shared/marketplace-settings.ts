@@ -24,6 +24,15 @@ export interface MarketplaceSettingsDto {
   // Where the central drop-off point physically is (address/room string).
   // Null until an admin sets it via the Settings tab.
   dropoffLocation: string | null;
+  // School Vendor drop-off point detail — see prisma/schema.prisma's
+  // comment on these fields.
+  dropoffLocationName: string | null;
+  dropoffLocationInstructions: string | null;
+  dropoffLocationActive: boolean;
+  // School Vendor checkout fees — see prisma/schema.prisma's comment.
+  vendorDeliveryFee: number;
+  vendorServiceFeeAmount: number;
+  delivererPayoutAmount: number;
   updatedAt: string;
 }
 
@@ -33,6 +42,12 @@ function toDto(row: {
   handoffWindowStart: string;
   handoffWindowEnd: string;
   dropoffLocation: string | null;
+  dropoffLocationName: string | null;
+  dropoffLocationInstructions: string | null;
+  dropoffLocationActive: boolean;
+  vendorDeliveryFee: number;
+  vendorServiceFeeAmount: number;
+  delivererPayoutAmount: number;
   updatedAt: Date;
 }): MarketplaceSettingsDto {
   return {
@@ -41,6 +56,12 @@ function toDto(row: {
     handoffWindowStart: row.handoffWindowStart,
     handoffWindowEnd: row.handoffWindowEnd,
     dropoffLocation: row.dropoffLocation,
+    dropoffLocationName: row.dropoffLocationName,
+    dropoffLocationInstructions: row.dropoffLocationInstructions,
+    dropoffLocationActive: row.dropoffLocationActive,
+    vendorDeliveryFee: row.vendorDeliveryFee,
+    vendorServiceFeeAmount: row.vendorServiceFeeAmount,
+    delivererPayoutAmount: row.delivererPayoutAmount,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -83,6 +104,12 @@ export async function updateMarketplaceSettings(
     handoffWindowStart?: string;
     handoffWindowEnd?: string;
     dropoffLocation?: string | null;
+    dropoffLocationName?: string | null;
+    dropoffLocationInstructions?: string | null;
+    dropoffLocationActive?: boolean;
+    vendorDeliveryFee?: number;
+    vendorServiceFeeAmount?: number;
+    delivererPayoutAmount?: number;
   },
   adminUserId: string
 ): Promise<MarketplaceSettingsDto> {
@@ -94,9 +121,23 @@ export async function updateMarketplaceSettings(
     handoffWindowStart: input.handoffWindowStart ?? current.handoffWindowStart,
     handoffWindowEnd: input.handoffWindowEnd ?? current.handoffWindowEnd,
     dropoffLocation: input.dropoffLocation === undefined ? current.dropoffLocation : input.dropoffLocation?.trim() || null,
+    dropoffLocationName: input.dropoffLocationName === undefined ? current.dropoffLocationName : input.dropoffLocationName?.trim() || null,
+    dropoffLocationInstructions:
+      input.dropoffLocationInstructions === undefined ? current.dropoffLocationInstructions : input.dropoffLocationInstructions?.trim() || null,
+    dropoffLocationActive: input.dropoffLocationActive ?? current.dropoffLocationActive,
+    vendorDeliveryFee: input.vendorDeliveryFee ?? current.vendorDeliveryFee,
+    vendorServiceFeeAmount: input.vendorServiceFeeAmount ?? current.vendorServiceFeeAmount,
+    delivererPayoutAmount: input.delivererPayoutAmount ?? current.delivererPayoutAmount,
   };
   assertValidWindow("dropoffWindowStart", next.dropoffWindowStart, "dropoffWindowEnd", next.dropoffWindowEnd);
   assertValidWindow("handoffWindowStart", next.handoffWindowStart, "handoffWindowEnd", next.handoffWindowEnd);
+  if (!Number.isFinite(next.vendorDeliveryFee) || next.vendorDeliveryFee < 0) throw badRequest("vendorDeliveryFee must be a non-negative number.");
+  if (!Number.isFinite(next.vendorServiceFeeAmount) || next.vendorServiceFeeAmount < 0) {
+    throw badRequest("vendorServiceFeeAmount must be a non-negative number.");
+  }
+  if (!Number.isFinite(next.delivererPayoutAmount) || next.delivererPayoutAmount < 0) {
+    throw badRequest("delivererPayoutAmount must be a non-negative number.");
+  }
 
   const row = await prisma.marketplaceSettings.update({
     where: { id: SETTINGS_ID },

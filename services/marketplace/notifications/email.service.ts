@@ -37,6 +37,13 @@ export interface SendEmailInput {
   to: string;
   subject: string;
   html: string;
+  // A stable, unique-per-template identifier (see each template function
+  // below) — logged alongside every send outcome so a specific
+  // notification type can be grepped for in the logs even though the
+  // subject line is sometimes dynamic (e.g. newOrderEmail's order id) and
+  // several templates otherwise share very similar subjects (the two
+  // "Delivery failed" emails, the two payout emails, etc).
+  type: string;
 }
 
 // Deliberately swallows send failures (after logging) rather than
@@ -44,23 +51,25 @@ export interface SendEmailInput {
 // state change, payout, or cron run that triggered the notification. Every
 // call site in this codebase should be a fire-and-forget `void sendEmail(...)`
 // or an awaited-but-ignored-on-failure call for exactly this reason.
-export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<void> {
+export async function sendEmail({ to, subject, html, type }: SendEmailInput): Promise<void> {
   const client = getClient();
   if (!client) {
     // No RESEND_API_KEY configured (e.g. local dev without the env var
     // set) — log instead of silently doing nothing, so a missing key is
     // obvious in the logs rather than looking like a delivered email.
-    console.warn(`[email] RESEND_API_KEY not set — would have sent "${subject}" to ${to}`);
+    console.warn(`[email] RESEND_API_KEY not set — would have sent "${type}" ("${subject}") to ${to}`);
     return;
   }
 
   try {
     const result = await client.emails.send({ from: FROM_ADDRESS, to, subject, html });
     if (result.error) {
-      console.error(`[email] Resend rejected "${subject}" to ${to}:`, result.error);
+      console.error(`[email] Resend rejected "${type}" ("${subject}") to ${to}:`, result.error);
+      return;
     }
+    console.log(`[email] sent "${type}" ("${subject}") to ${to}${result.data?.id ? ` (id: ${result.data.id})` : ""}`);
   } catch (err) {
-    console.error(`[email] failed to send "${subject}" to ${to}:`, err);
+    console.error(`[email] failed to send "${type}" ("${subject}") to ${to}:`, err);
   }
 }
 
@@ -86,6 +95,7 @@ function layout(title: string, bodyHtml: string): string {
 
 export function newOrderEmail(params: { businessName: string; orderId: string; itemSummary: string; totalAmount: number }) {
   return {
+    type: "new_order",
     subject: `New order! ${params.orderId.slice(0, 8)}`,
     html: layout("New order!", `
       <p>You have a new order on <strong>${params.businessName}</strong>.</p>
@@ -99,6 +109,7 @@ export function newOrderEmail(params: { businessName: string; orderId: string; i
 
 export function sellerOrderProcessingEmail(params: { businessName: string; orderId: string }) {
   return {
+    type: "seller_order_processing",
     subject: "Your order is being processed",
     html: layout("Order accepted", `
       <p>Your order at <strong>${params.businessName}</strong> has been accepted and is now being processed.</p>
@@ -109,6 +120,7 @@ export function sellerOrderProcessingEmail(params: { businessName: string; order
 
 export function sellerRejectedEmail(params: { businessName: string; orderId: string; reason: string }) {
   return {
+    type: "seller_rejected",
     subject: "Your order was not accepted",
     html: layout("Order rejected", `
       <p><strong>${params.businessName}</strong> was unable to fulfill this order.</p>
@@ -126,6 +138,7 @@ export function buyerOrderReadyEmail(params: {
   deliveryWindow: string;
 }) {
   return {
+    type: "buyer_order_ready",
     subject: "Your order is ready to be shipped",
     html: layout("Order ready", `
       <p>Your order from <strong>${params.businessName}</strong> is ready and on its way to our delivery network.</p>
@@ -138,6 +151,7 @@ export function buyerOrderReadyEmail(params: {
 
 export function buyerOutForDeliveryEmail(params: { orderId: string }) {
   return {
+    type: "buyer_out_for_delivery",
     subject: "Your order is on its way",
     html: layout("On its way", `
       <p>Your order is on its way.</p>
@@ -148,6 +162,7 @@ export function buyerOutForDeliveryEmail(params: { orderId: string }) {
 
 export function buyerDeliveryOtpEmail(params: { orderId: string; otp: string; expiresAt: string }) {
   return {
+    type: "buyer_delivery_otp",
     subject: "Your delivery confirmation code",
     html: layout("Delivery code", `
       <p>Your delivery confirmation code is:</p>
@@ -165,6 +180,7 @@ export function buyerDeliveryOtpEmail(params: { orderId: string; otp: string; ex
 // short for a cron to reliably beat.
 export function sellerDropoffOtpEmail(params: { businessName: string; orderId: string; otp: string; expiresAt: string }) {
   return {
+    type: "seller_dropoff_otp",
     subject: "Your drop-off code",
     html: layout("Drop-off code", `
       <p>Show this code to the Delivery Coordinator when you drop off your order from <strong>${params.businessName}</strong>:</p>
@@ -181,6 +197,7 @@ export function sellerDropoffOtpEmail(params: { businessName: string; orderId: s
 // code verbally from the coordinator in person, not read it in-app.
 export function delivererPickupAssignedEmail(params: { delivererName: string; businessName: string; deadline: string }) {
   return {
+    type: "deliverer_pickup_assigned",
     subject: "New pickup assigned",
     html: layout("New pickup assigned", `
       <p>Hi ${params.delivererName}, you've been assigned to pick up an order from <strong>${params.businessName}</strong>.</p>
@@ -196,6 +213,7 @@ export function delivererPickupAssignedEmail(params: { delivererName: string; bu
 // no-digits rule as delivererPickupAssignedEmail above.
 export function delivererPickupDeadlineReminderEmail(params: { delivererName: string; businessName: string; deadline: string }) {
   return {
+    type: "deliverer_pickup_deadline_reminder",
     subject: "Pickup deadline approaching",
     html: layout("Pickup deadline approaching", `
       <p>Hi ${params.delivererName}, your pickup from <strong>${params.businessName}</strong> hasn't been confirmed yet.</p>
@@ -206,6 +224,7 @@ export function delivererPickupDeadlineReminderEmail(params: { delivererName: st
 
 export function sellerDeliveryFailedEmail(params: { businessName: string; orderId: string }) {
   return {
+    type: "seller_delivery_failed",
     subject: "Delivery attempt failed",
     html: layout("Delivery failed", `
       <p>A delivery attempt for your order at <strong>${params.businessName}</strong> was unsuccessful.</p>
@@ -217,6 +236,7 @@ export function sellerDeliveryFailedEmail(params: { businessName: string; orderI
 
 export function buyerDeliveryFailedEmail(params: { orderId: string; retryAt: string }) {
   return {
+    type: "buyer_delivery_failed",
     subject: "Delivery attempt failed",
     html: layout("Delivery failed", `
       <p>We were unable to deliver your order.</p>
@@ -228,6 +248,7 @@ export function buyerDeliveryFailedEmail(params: { orderId: string; retryAt: str
 
 export function buyerRefundEmail(params: { orderId: string; reason: string }) {
   return {
+    type: "buyer_refund",
     subject: "Your refund has been initiated",
     html: layout("Refund initiated", `
       <p>A refund has been initiated for part of your order.</p>
@@ -239,6 +260,7 @@ export function buyerRefundEmail(params: { orderId: string; reason: string }) {
 
 export function sellerLateDeliveryRestrictionEmail(params: { businessName: string; fineAmount: number }) {
   return {
+    type: "seller_late_delivery_restriction",
     subject: "Delivery restricted — late-delivery fine due",
     html: layout("Delivery restricted", `
       <p><strong>${params.businessName}</strong> missed the drop-off deadline for an order, and is now restricted from delivery.</p>
@@ -250,6 +272,7 @@ export function sellerLateDeliveryRestrictionEmail(params: { businessName: strin
 
 export function sellerPayoutSuccessEmail(params: { businessName: string; amount: number; orderId: string }) {
   return {
+    type: "seller_payout_success",
     subject: "Payout sent",
     html: layout("Payout sent", `
       <p>₦${params.amount.toLocaleString()} has been sent to <strong>${params.businessName}</strong>'s bank account.</p>
@@ -260,6 +283,7 @@ export function sellerPayoutSuccessEmail(params: { businessName: string; amount:
 
 export function sellerPayoutFailedEmail(params: { businessName: string; orderId: string }) {
   return {
+    type: "seller_payout_failed",
     subject: "Payout failed",
     html: layout("Payout failed", `
       <p>A payout to <strong>${params.businessName}</strong> failed and will be retried.</p>
@@ -271,6 +295,7 @@ export function sellerPayoutFailedEmail(params: { businessName: string; orderId:
 export function delivererDailyScheduleEmail(params: { delivererName: string; entries: { orderId: string; date: string; window: string }[] }) {
   const rows = params.entries.map((e) => `<li>Order ${e.orderId.slice(0, 8)} — ${e.date}, ${e.window}</li>`).join("");
   return {
+    type: "deliverer_daily_schedule",
     subject: "Today's confirmed deliveries",
     html: layout("Today's deliveries", `
       <p>Hi ${params.delivererName}, here are today's confirmed deliveries:</p>
@@ -281,9 +306,27 @@ export function delivererDailyScheduleEmail(params: { delivererName: string; ent
 
 export function delivererApplicationApprovedEmail(params: { firstName: string }) {
   return {
+    type: "deliverer_application_approved",
     subject: "Your deliverer application was approved",
     html: layout("Application approved", `
       <p>Hi ${params.firstName}, your deliverer application has been approved. You now have access to the Delivery Dashboard.</p>
+    `),
+  };
+}
+
+// Deliverer application's student-email verification — see
+// services/marketplace/deliverer/request-student-email-otp.ts. Sent to the
+// canonical <local>@stu.cu.edu.ng address the backend constructs, never a
+// client-supplied full address (spec §34). Verifying this OTP proves
+// mailbox access only, not university enrollment or admin approval.
+export function studentEmailOtpEmail(params: { otp: string; expiresAt: string }) {
+  return {
+    type: "student_email_otp",
+    subject: "Verify your student email",
+    html: layout("Verify your student email", `
+      <p>Your verification code for the Deliverer application is:</p>
+      <p style="font-size:28px; font-weight:700; letter-spacing:4px;">${params.otp}</p>
+      <p>This code expires at <strong>${params.expiresAt}</strong> and can only be used once.</p>
     `),
   };
 }
@@ -300,6 +343,7 @@ export function delivererApplicationApprovedEmail(params: { firstName: string })
 
 export function newBusinessRegistrationEmail(params: { businessName: string; ownerEmail: string; industry: string; businessId: string }) {
   return {
+    type: "new_business_registration",
     subject: "New business registration request",
     html: layout("New business registration", `
       <p><strong>Business:</strong> ${params.businessName}</p>
@@ -313,6 +357,7 @@ export function newBusinessRegistrationEmail(params: { businessName: string; own
 
 export function businessApprovedEmail(params: { businessName: string; businessId: string }) {
   return {
+    type: "business_approved",
     subject: "Your business has been approved",
     html: layout("Business approved", `
       <p><strong>${params.businessName}</strong> has been approved and is now live on the marketplace.</p>
@@ -323,6 +368,7 @@ export function businessApprovedEmail(params: { businessName: string; businessId
 
 export function businessRejectedEmail(params: { businessName: string; reason: string }) {
   return {
+    type: "business_rejected",
     subject: "Your business registration was not approved",
     html: layout("Business not approved", `
       <p><strong>${params.businessName}</strong> was not approved.</p>
@@ -333,6 +379,7 @@ export function businessRejectedEmail(params: { businessName: string; reason: st
 
 export function businessVerificationRequestEmail(params: { businessName: string; completedOrders: number; businessId: string }) {
   return {
+    type: "business_verification_request",
     subject: "New business verification request",
     html: layout("New verification request", `
       <p><strong>Business:</strong> ${params.businessName}</p>
@@ -345,6 +392,7 @@ export function businessVerificationRequestEmail(params: { businessName: string;
 
 export function businessVerificationApprovedEmail(params: { businessName: string }) {
   return {
+    type: "business_verification_approved",
     subject: "Your business is now verified",
     html: layout("Verification approved", `
       <p>Congratulations — <strong>${params.businessName}</strong> is now a verified business on the marketplace.</p>
@@ -354,6 +402,7 @@ export function businessVerificationApprovedEmail(params: { businessName: string
 
 export function businessVerificationRejectedEmail(params: { businessName: string; reason: string }) {
   return {
+    type: "business_verification_rejected",
     subject: "Your verification request was not approved",
     html: layout("Verification not approved", `
       <p>Your verification request for <strong>${params.businessName}</strong> was not approved.</p>

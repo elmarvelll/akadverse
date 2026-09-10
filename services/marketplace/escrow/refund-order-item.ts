@@ -15,7 +15,12 @@ import { notFound } from "@/lib/service-error";
 import { recordOrderEvent } from "@/services/marketplace/order/record-order-event";
 import { sendEmail, buyerRefundEmail } from "@/services/marketplace/notifications/email.service";
 
-export async function refundOrderItem(orderItemId: string, reason: string, actorType: "seller" | "system", actorId?: string) {
+export async function refundOrderItem(
+  orderItemId: string,
+  reason: string,
+  actorType: "seller" | "system" | "admin",
+  actorId?: string
+) {
   const item = await prisma.orderItem.findUnique({
     where: { id: orderItemId },
     select: { id: true, orderId: true, escrowStatus: true, order: { select: { userId: true, user: { select: { email: true } } } } },
@@ -29,7 +34,10 @@ export async function refundOrderItem(orderItemId: string, reason: string, actor
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.orderItem.update({ where: { id: orderItemId }, data: { escrowStatus: "REFUND_PENDING", refundedAt: null } });
+    await tx.orderItem.update({
+      where: { id: orderItemId },
+      data: { escrowStatus: "REFUND_PENDING", refundedAt: null, refundReason: reason, refundInitiatedBy: actorId ?? actorType },
+    });
     await recordOrderEvent(tx, { orderId: item.orderId, orderItemId, type: "REFUND_INITIATED", actorType, actorId, message: reason });
   });
 

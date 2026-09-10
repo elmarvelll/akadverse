@@ -36,6 +36,8 @@ interface OrderRow {
   totalAmount: number;
   createdAt: string;
   businessName: string;
+  // Distinguishes School Vendor orders from Business orders (spec §66).
+  businessType: "BUSINESS" | "SCHOOL_VENDOR";
   estimatedDate: string | null;
   deliveryWindow: string | null;
   isDisputed: boolean;
@@ -48,6 +50,74 @@ function itemStatusLabel(item: OrderItemRow): string {
   if (item.rejectedAt) return "Rejected";
   if (!item.deliveryStatus) return "Processing";
   return item.deliveryStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function OrderCard({ order, busyId, onDispute }: { order: OrderRow; busyId: string | null; onDispute: (orderId: string) => void }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+        <div>
+          <p className="font-semibold text-gray-900">
+            Order #{order.id.slice(0, 8)} · {order.businessName}
+          </p>
+          <p className="text-xs text-gray-500">
+            {order.status.replace(/_/g, " ")}
+            {order.deliveryOutcome !== "PENDING" && ` · ${order.deliveryOutcome.replace(/_/g, " ").toLowerCase()}`}
+          </p>
+        </div>
+        <p className="font-semibold text-gray-900">₦{nairaFormatter.format(order.totalAmount)}</p>
+      </div>
+
+      {order.estimatedDate && (
+        <p className="text-xs text-gray-500 mb-3">
+          Estimated delivery: {order.estimatedDate} · {order.deliveryWindow}
+        </p>
+      )}
+      {order.businessType === "SCHOOL_VENDOR" && order.deliveryWindow && (
+        <p className="text-xs text-gray-500 mb-3">{order.deliveryWindow}</p>
+      )}
+
+      <ul className="space-y-1.5">
+        {order.items.map((item) => (
+          <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
+            <span className="text-gray-700 min-w-0 truncate">
+              {item.quantity} x {item.productName}
+            </span>
+            <span className="text-gray-500 shrink-0">{itemStatusLabel(item)}</span>
+          </li>
+        ))}
+      </ul>
+
+      {order.items.some((item) => item.deliveryOtp) && (
+        <div className="mt-3 p-3 rounded-xl bg-blue-50 text-blue-800 text-xs">
+          Delivery code:{" "}
+          <span className="font-bold tracking-wider">{order.items.find((item) => item.deliveryOtp)?.deliveryOtp}</span>
+          <br />
+          Only share this code after you have received and checked your order.
+        </div>
+      )}
+
+      {order.items.some((item) => item.rejectedAt && item.rejectionReason) && (
+        <div className="mt-3 text-xs text-red-600">{order.items.find((item) => item.rejectionReason)?.rejectionReason}</div>
+      )}
+
+      {order.isDisputed ? (
+        <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-700">
+          <AlertTriangle size={13} />
+          {order.disputeResolvedAt ? "Dispute resolved" : "Dispute under review"}
+        </div>
+      ) : (
+        <button
+          type="button"
+          disabled={busyId === order.id}
+          onClick={() => onDispute(order.id)}
+          className="mt-3 text-xs text-gray-400 hover:text-red-500 underline transition disabled:opacity-50"
+        >
+          Dispute this order
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function BuyerOrdersPage() {
@@ -73,6 +143,9 @@ export default function BuyerOrdersPage() {
     };
     run();
   }, []);
+
+  const businessOrders = orders.filter((order) => order.businessType !== "SCHOOL_VENDOR");
+  const vendorOrders = orders.filter((order) => order.businessType === "SCHOOL_VENDOR");
 
   const disputeOrder = async (orderId: string) => {
     const reason = window.prompt("What went wrong with this order?");
@@ -115,71 +188,32 @@ export default function BuyerOrdersPage() {
         )}
 
         {loadState === "loaded" && orders.length > 0 && (
-          <div className="space-y-4">
-            {orders.map((order) => (
-              <div key={order.id} className="bg-white rounded-2xl border border-gray-100 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      Order #{order.id.slice(0, 8)} · {order.businessName}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {order.status.replace(/_/g, " ")}
-                      {order.deliveryOutcome !== "PENDING" && ` · ${order.deliveryOutcome.replace(/_/g, " ").toLowerCase()}`}
-                    </p>
-                  </div>
-                  <p className="font-semibold text-gray-900">₦{nairaFormatter.format(order.totalAmount)}</p>
-                </div>
-
-                {order.estimatedDate && (
-                  <p className="text-xs text-gray-500 mb-3">
-                    Estimated delivery: {order.estimatedDate} · {order.deliveryWindow}
-                  </p>
-                )}
-
-                <ul className="space-y-1.5">
-                  {order.items.map((item) => (
-                    <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="text-gray-700 min-w-0 truncate">
-                        {item.quantity} x {item.productName}
-                      </span>
-                      <span className="text-gray-500 shrink-0">{itemStatusLabel(item)}</span>
-                    </li>
+          <div className="space-y-10">
+            <section>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Business Orders</h2>
+              {businessOrders.length === 0 ? (
+                <p className="text-sm text-gray-400">No Business orders yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {businessOrders.map((order) => (
+                    <OrderCard key={order.id} order={order} busyId={busyId} onDispute={disputeOrder} />
                   ))}
-                </ul>
+                </div>
+              )}
+            </section>
 
-                {order.items.some((item) => item.deliveryOtp) && (
-                  <div className="mt-3 p-3 rounded-xl bg-blue-50 text-blue-800 text-xs">
-                    Delivery code:{" "}
-                    <span className="font-bold tracking-wider">{order.items.find((item) => item.deliveryOtp)?.deliveryOtp}</span>
-                    <br />
-                    Only share this code after you have received and checked your order.
-                  </div>
-                )}
-
-                {order.items.some((item) => item.rejectedAt && item.rejectionReason) && (
-                  <div className="mt-3 text-xs text-red-600">
-                    {order.items.find((item) => item.rejectionReason)?.rejectionReason}
-                  </div>
-                )}
-
-                {order.isDisputed ? (
-                  <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-700">
-                    <AlertTriangle size={13} />
-                    {order.disputeResolvedAt ? "Dispute resolved" : "Dispute under review"}
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={busyId === order.id}
-                    onClick={() => disputeOrder(order.id)}
-                    className="mt-3 text-xs text-gray-400 hover:text-red-500 underline transition disabled:opacity-50"
-                  >
-                    Dispute this order
-                  </button>
-                )}
-              </div>
-            ))}
+            <section>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Vendor Orders</h2>
+              {vendorOrders.length === 0 ? (
+                <p className="text-sm text-gray-400">No Vendor orders yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {vendorOrders.map((order) => (
+                    <OrderCard key={order.id} order={order} busyId={busyId} onDispute={disputeOrder} />
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         )}
       </div>

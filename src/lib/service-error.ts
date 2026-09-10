@@ -25,3 +25,4 @@ export const conflict = (message = "Conflict.") => new ServiceError(409, message
 export const paymentRequired = (message = "Payment required.") => new ServiceError(402, message);
 export const unprocessable = (message = "Couldn't process that request.") => new ServiceError(422, message);
 export const badGateway = (message = "Upstream request failed.") => new ServiceError(502, message);
+export const tooManyRequests = (message = "Too many requests. Please try again shortly.") => new ServiceError(429, message);

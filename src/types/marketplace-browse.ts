@@ -25,8 +25,16 @@ export interface ProductBrowseDetail {
   // just picks a quantity against the base price/stock above).
   variants: { id: string; name: string; price: number; stock: number }[];
   // See services/marketplace/delivery/estimated-delivery.service.ts — "estimated," never "expected."
+  // Empty/placeholder for a School Vendor product — see
+  // get-public-product-detail.ts's own comment.
   estimatedDeliveryDate: string;
   deliveryWindow: string;
+  // "BUSINESS" | "SCHOOL_VENDOR" — see docs/marketplace/decisions/vendor-extends-business.md.
+  // Drives the modal's Sides section and (until the Vendor cart ships in a
+  // later phase) whether "Add to Cart" is offered at all.
+  businessType: "BUSINESS" | "SCHOOL_VENDOR";
+  // Universal, vendor-level add-ons — always empty for a Business product.
+  sides: { id: string; name: string; price: number; available: boolean; stock: number | null }[];
 }
 
 export interface FeaturedBusiness {

@@ -19,6 +19,14 @@ interface SettingsDto {
   handoffWindowStart: string;
   handoffWindowEnd: string;
   dropoffLocation: string | null;
+  // School Vendor fields — see
+  // services/marketplace/admin/shared/marketplace-settings.ts.
+  dropoffLocationName: string | null;
+  dropoffLocationInstructions: string | null;
+  dropoffLocationActive: boolean;
+  vendorDeliveryFee: number;
+  vendorServiceFeeAmount: number;
+  delivererPayoutAmount: number;
   updatedAt: string;
 }
 
@@ -57,6 +65,12 @@ export default function AdminSettingsPage() {
         handoffWindowStart: form.handoffWindowStart,
         handoffWindowEnd: form.handoffWindowEnd,
         dropoffLocation: form.dropoffLocation,
+        dropoffLocationName: form.dropoffLocationName,
+        dropoffLocationInstructions: form.dropoffLocationInstructions,
+        dropoffLocationActive: form.dropoffLocationActive,
+        vendorDeliveryFee: form.vendorDeliveryFee,
+        vendorServiceFeeAmount: form.vendorServiceFeeAmount,
+        delivererPayoutAmount: form.delivererPayoutAmount,
       });
       setForm(res.data);
       setMessage("Saved.");
@@ -160,6 +174,85 @@ export default function AdminSettingsPage() {
             {saving ? "Saving…" : "Save"}
           </button>
           {message && <span className="text-sm text-gray-500">{message}</span>}
+        </div>
+      </div>
+
+      <h2 className="text-lg font-bold text-gray-900 mt-8 mb-1">School Vendor</h2>
+      <p className="text-sm text-gray-500 mb-4">Fees are snapshotted onto each booking — changing these never alters past orders.</p>
+
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Delivery fee (₦)</label>
+            <input
+              type="number"
+              min={0}
+              value={form.vendorDeliveryFee}
+              onChange={(e) => setForm({ ...form, vendorDeliveryFee: Number(e.target.value) })}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Service fee per item (₦)</label>
+            <input
+              type="number"
+              min={0}
+              value={form.vendorServiceFeeAmount}
+              onChange={(e) => setForm({ ...form, vendorServiceFeeAmount: Number(e.target.value) })}
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Deliverer payout per handoff (₦)</label>
+          <input
+            type="number"
+            min={0}
+            value={form.delivererPayoutAmount}
+            onChange={(e) => setForm({ ...form, delivererPayoutAmount: Number(e.target.value) })}
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Central drop-off name</label>
+          <input
+            type="text"
+            placeholder="e.g. Vendor Collection Point"
+            value={form.dropoffLocationName ?? ""}
+            onChange={(e) => setForm({ ...form, dropoffLocationName: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Drop-off instructions</label>
+          <textarea
+            rows={3}
+            placeholder="How vendors/deliverers should use this point"
+            value={form.dropoffLocationInstructions ?? ""}
+            onChange={(e) => setForm({ ...form, dropoffLocationInstructions: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={form.dropoffLocationActive}
+            onChange={(e) => setForm({ ...form, dropoffLocationActive: e.target.checked })}
+          />
+          Drop-off point active
+        </label>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={save}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
         </div>
       </div>
     </div>

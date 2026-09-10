@@ -34,3 +34,20 @@ export async function requireOwnedBusiness(businessId: string): Promise<OwnedBus
 
   return { session, businessId: business.id };
 }
+
+// Business-only variant — rejects a School Vendor row even if the caller
+// owns it, so Business's own product/order API routes can't become a
+// second, un-gated path into vendor resources just because the generic
+// ownership check alone would pass (a determined vendor owner typing the
+// Business API URL directly, not just following a UI link) — see
+// docs/marketplace/decisions/vendor-independent-architecture.md. Not
+// used by requireOwnedBusiness itself, since Vendor's own service layer
+// legitimately calls that one too.
+export async function requireOwnedBusinessOnly(businessId: string): Promise<OwnedBusiness> {
+  const owned = await requireOwnedBusiness(businessId);
+  const business = await prisma.business.findUnique({ where: { id: businessId }, select: { type: true } });
+  if (!business || business.type !== "BUSINESS") {
+    throw notFound("Business not found.");
+  }
+  return owned;
+}

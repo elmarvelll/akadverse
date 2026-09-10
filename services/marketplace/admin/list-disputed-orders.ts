@@ -56,7 +56,7 @@ export async function listDisputedOrders(searchParams: URLSearchParams): Promise
         disputeResolution: true,
         business: { select: { name: true } },
         user: { select: { email: true } },
-        items: { select: { id: true, quantity: true, price: true, deliveryStatus: true, product: { select: { name: true } } } },
+        items: { select: { id: true, quantity: true, price: true, deliveryStatus: true, product: { select: { name: true } }, side: { select: { name: true } } } },
         events: { orderBy: { createdAt: "asc" }, select: { id: true, type: true, actorType: true, message: true, createdAt: true } },
       },
     }),
@@ -77,7 +77,9 @@ export async function listDisputedOrders(searchParams: URLSearchParams): Promise
       disputeCreatedAt: order.disputeCreatedAt?.toISOString() ?? null,
       disputeResolvedAt: order.disputeResolvedAt?.toISOString() ?? null,
       disputeResolution: order.disputeResolution,
-      items: order.items.map((item) => ({ id: item.id, productName: item.product.name, quantity: item.quantity, price: item.price, deliveryStatus: item.deliveryStatus })),
+      // Vendor order items may be a Side line (no product) — fall back to
+      // the side's name so vendor disputes render correctly here too.
+      items: order.items.map((item) => ({ id: item.id, productName: item.product?.name ?? item.side?.name ?? "Unknown item", quantity: item.quantity, price: item.price, deliveryStatus: item.deliveryStatus })),
       events: order.events.map((e) => ({ ...e, createdAt: e.createdAt.toISOString() })),
     })),
     total,

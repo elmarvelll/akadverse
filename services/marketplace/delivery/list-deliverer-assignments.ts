@@ -46,7 +46,14 @@ export async function listDelivererAssignments() {
               status: true,
               quantity: true,
               business: { select: { name: true } },
-              orderItem: { select: { orderId: true, product: { select: { name: true } } } },
+              orderItem: {
+                select: {
+                  orderId: true,
+                  product: { select: { name: true } },
+                  side: { select: { name: true } },
+                  order: { select: { vendorDeliveryBooking: { select: { bookedFor: true, slot: { select: { label: true } } } } } },
+                },
+              },
             },
           },
         },
@@ -71,8 +78,10 @@ export async function listDelivererAssignments() {
         status: item.status,
         quantity: item.quantity,
         businessName: item.business.name,
-        productName: item.orderItem.product.name,
+        productName: item.orderItem.product?.name ?? item.orderItem.side?.name ?? "Unknown item",
         orderId: item.orderItem.orderId,
+        bookedFor: item.orderItem.order.vendorDeliveryBooking?.bookedFor.toISOString() ?? null,
+        slotLabel: item.orderItem.order.vendorDeliveryBooking?.slot.label ?? null,
       }))
     ),
   }));

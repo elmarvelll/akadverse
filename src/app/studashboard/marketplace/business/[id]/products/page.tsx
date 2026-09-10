@@ -3,6 +3,11 @@
 // The business dashboard's Products tab — every product for this business
 // (GET .../products), a "Create Product" button, and per-product
 // "Update Inventory"/delete controls (see ../../_components/DashboardProductCard.tsx).
+// Business-only — School Vendor product/side management has its own,
+// separate dashboard tree (see
+// src/app/studashboard/marketplace/vendor-dashboard/[id]/) and its own
+// API routes, per
+// docs/marketplace/decisions/vendor-independent-architecture.md.
 
 "use client";
 
@@ -48,7 +53,7 @@ export default function BusinessProductsPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Products</h1>
         <Link
           href={`/studashboard/marketplace/business/${id}/products/create`}

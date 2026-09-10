@@ -22,6 +22,12 @@ import type { CartLineItem } from "@/types/cart";
 
 const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 });
 
+// "base" stands in for "the product itself" when it has no variants — a
+// vendor product's per-line quantity map is keyed by variantId when the
+// product has variants, else this sentinel, so a no-variant vendor product
+// still gets a single qty stepper through the same code path.
+const BASE_VARIANT_KEY = "base";
+
 interface ProductDetailModalProps {
   productId: string | null;
   onClose: () => void;
@@ -37,6 +43,13 @@ export default function ProductDetailModal({ productId, onClose, onAdded }: Prod
   const [addStatus, setAddStatus] = useState<"idle" | "adding" | "added" | "error">("idle");
   const [addError, setAddError] = useState("");
   const [reportStatus, setReportStatus] = useState<"idle" | "sending" | "sent">("idle");
+  // Vendor mode: every variant (or BASE_VARIANT_KEY if none) and every
+  // side gets its own independent quantity — spec §8's "Small x2, Large
+  // x1" requirement, not a single radio-style pick.
+  const [variantQuantities, setVariantQuantities] = useState<Record<string, number>>({});
+  const [sideQuantities, setSideQuantities] = useState<Record<string, number>>({});
+  const [vendorAddStatus, setVendorAddStatus] = useState<"idle" | "adding" | "added" | "error">("idle");
+  const [vendorAddError, setVendorAddError] = useState("");
 
   useEffect(() => {
     if (!productId) return;
@@ -49,6 +62,10 @@ export default function ProductDetailModal({ productId, onClose, onAdded }: Prod
       setActiveImage(0);
       setQuantity(1);
       setAddStatus("idle");
+      setVariantQuantities({});
+      setSideQuantities({});
+      setVendorAddStatus("idle");
+      setVendorAddError("");
       try {
         const res = await api.get<{ product: ProductBrowseDetail }>(`/marketplace/products/${productId}`);
         if (cancelled) return;
@@ -105,6 +122,49 @@ export default function ProductDetailModal({ productId, onClose, onAdded }: Prod
         (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "Couldn't add this to your cart.";
       setAddError(message);
       setAddStatus("error");
+    }
+  };
+
+  const setVariantQty = (key: string, qty: number, max: number) => {
+    setVariantQuantities((current) => ({ ...current, [key]: Math.max(0, Math.min(qty, max)) }));
+  };
+  const setSideQty = (sideId: string, qty: number, max: number | null) => {
+    setSideQuantities((current) => ({ ...current, [sideId]: Math.max(0, max === null ? qty : Math.min(qty, max)) }));
+  };
+
+  const handleAddToVendorCart = async () => {
+    if (!product) return;
+    setVendorAddStatus("adding");
+    setVendorAddError("");
+
+    try {
+      const variantLines = product.variants.length > 0
+        ? product.variants.filter((v) => (variantQuantities[v.id] ?? 0) > 0).map((v) => ({ variantId: v.id, quantity: variantQuantities[v.id] }))
+        : (variantQuantities[BASE_VARIANT_KEY] ?? 0) > 0
+          ? [{ variantId: undefined, quantity: variantQuantities[BASE_VARIANT_KEY] }]
+          : [];
+      const sideLines = product.sides.filter((s) => (sideQuantities[s.id] ?? 0) > 0).map((s) => ({ sideId: s.id, quantity: sideQuantities[s.id] }));
+
+      if (variantLines.length === 0 && sideLines.length === 0) {
+        setVendorAddStatus("error");
+        setVendorAddError("Select at least one item or side.");
+        return;
+      }
+
+      for (const line of variantLines) {
+        await api.post("/marketplace/vendor-cart", { productId: product.id, variantId: line.variantId, quantity: line.quantity });
+      }
+      for (const line of sideLines) {
+        await api.post("/marketplace/vendor-cart", { sideId: line.sideId, quantity: line.quantity });
+      }
+
+      setVendorAddStatus("added");
+      onAdded();
+    } catch (err) {
+      const message =
+        (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "Couldn't add this to your Vendor cart.";
+      setVendorAddError(message);
+      setVendorAddStatus("error");
     }
   };
 
@@ -205,87 +265,202 @@ export default function ProductDetailModal({ productId, onClose, onAdded }: Prod
                         </button>
                       )}
                     </div>
-                    <p className="text-2xl font-bold text-blue-600 mt-3">₦{nairaFormatter.format(displayPrice)}</p>
+                    <p className="text-2xl font-bold text-blue-600 mt-3">
+                      {product.businessType === "SCHOOL_VENDOR" ? `From ₦${nairaFormatter.format(product.price)}` : `₦${nairaFormatter.format(displayPrice)}`}
+                    </p>
                     <p className="text-xs text-gray-500 mt-2">
-                      Estimated delivery: {product.estimatedDeliveryDate} · {product.deliveryWindow}
+                      {product.businessType === "SCHOOL_VENDOR"
+                        ? product.deliveryWindow
+                        : `Estimated delivery: ${product.estimatedDeliveryDate} · ${product.deliveryWindow}`}
                     </p>
                     <p className="text-sm text-gray-600 mt-4 leading-relaxed">{product.description}</p>
 
-                    {hasVariants && (
-                      <div className="mt-5">
-                        <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Options</p>
-                        <div className="flex flex-wrap gap-2">
-                          {product.variants.map((variant) => {
-                            const selected = selectedVariantId === variant.id;
-                            const outOfStock = variant.stock === 0;
-                            return (
-                              <button
-                                key={variant.id}
-                                type="button"
-                                disabled={outOfStock}
-                                onClick={() => {
-                                  setSelectedVariantId(variant.id);
-                                  setQuantity(1);
-                                }}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed ${
-                                  selected ? "bg-blue-600 border-blue-600 text-white" : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                                }`}
-                              >
-                                {selected && <Check size={12} />}
-                                {variant.name} — ₦{nairaFormatter.format(variant.price)}
-                                {outOfStock && " (out of stock)"}
-                              </button>
-                            );
-                          })}
+                    {product.businessType === "SCHOOL_VENDOR" ? (
+                      <>
+                        <div className="mt-5">
+                          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                            {hasVariants ? "Options" : "Quantity"}
+                          </p>
+                          <div className="space-y-2">
+                            {(hasVariants ? product.variants : [{ id: BASE_VARIANT_KEY, name: "", price: product.price, stock: product.stock }]).map(
+                              (variant) => {
+                                const key = variant.id;
+                                const qty = variantQuantities[key] ?? 0;
+                                const outOfStock = variant.stock === 0;
+                                return (
+                                  <div key={key} className="flex items-center justify-between gap-3 border border-gray-200 rounded-xl px-3 py-2">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {variant.name || product.name} — ₦{nairaFormatter.format(variant.price)}
+                                      </p>
+                                      <p className="text-xs text-gray-400">{outOfStock ? "Out of stock" : `${variant.stock} in stock`}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-1.5 py-0.5 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => setVariantQty(key, qty - 1, variant.stock)}
+                                        disabled={qty <= 0}
+                                        className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
+                                        aria-label={`Decrease ${variant.name || product.name} quantity`}
+                                      >
+                                        <Minus size={13} />
+                                      </button>
+                                      <span className="text-xs font-medium w-5 text-center">{qty}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setVariantQty(key, qty + 1, variant.stock)}
+                                        disabled={outOfStock || qty >= variant.stock}
+                                        className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
+                                        aria-label={`Increase ${variant.name || product.name} quantity`}
+                                      >
+                                        <Plus size={13} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            )}
+                          </div>
                         </div>
-                      </div>
+
+                        {product.sides.length > 0 && (
+                          <div className="mt-5">
+                            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                              Sides available from this vendor
+                            </p>
+                            <div className="space-y-2">
+                              {product.sides.map((side) => {
+                                const qty = sideQuantities[side.id] ?? 0;
+                                const outOfStock = side.stock === 0;
+                                return (
+                                  <div key={side.id} className="flex items-center justify-between gap-3 border border-gray-200 rounded-xl px-3 py-2">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {side.name} — ₦{nairaFormatter.format(side.price)}
+                                      </p>
+                                      <p className="text-xs text-gray-400">
+                                        {outOfStock ? "Out of stock" : side.stock === null ? "Available" : `${side.stock} in stock`}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-1.5 py-0.5 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => setSideQty(side.id, qty - 1, side.stock)}
+                                        disabled={qty <= 0}
+                                        className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
+                                        aria-label={`Decrease ${side.name} quantity`}
+                                      >
+                                        <Minus size={13} />
+                                      </button>
+                                      <span className="text-xs font-medium w-5 text-center">{qty}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSideQty(side.id, qty + 1, side.stock)}
+                                        disabled={outOfStock || (side.stock !== null && qty >= side.stock)}
+                                        className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
+                                        aria-label={`Increase ${side.name} quantity`}
+                                      >
+                                        <Plus size={13} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {vendorAddError && <p className="mt-3 text-sm text-red-600">{vendorAddError}</p>}
+
+                        <button
+                          type="button"
+                          onClick={handleAddToVendorCart}
+                          disabled={vendorAddStatus === "adding"}
+                          className="mt-5 w-full py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {vendorAddStatus === "adding" && <Loader2 size={16} className="animate-spin" />}
+                          {vendorAddStatus === "added" ? "Added to Vendor cart ✓" : "Add to Vendor Cart"}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {hasVariants && (
+                          <div className="mt-5">
+                            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Options</p>
+                            <div className="flex flex-wrap gap-2">
+                              {product.variants.map((variant) => {
+                                const selected = selectedVariantId === variant.id;
+                                const outOfStock = variant.stock === 0;
+                                return (
+                                  <button
+                                    key={variant.id}
+                                    type="button"
+                                    disabled={outOfStock}
+                                    onClick={() => {
+                                      setSelectedVariantId(variant.id);
+                                      setQuantity(1);
+                                    }}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed ${
+                                      selected ? "bg-blue-600 border-blue-600 text-white" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    {selected && <Check size={12} />}
+                                    {variant.name} — ₦{nairaFormatter.format(variant.price)}
+                                    {outOfStock && " (out of stock)"}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mt-5 flex items-center gap-3">
+                          <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Qty</span>
+                          <div className="flex items-center gap-3 border border-gray-200 rounded-lg px-2 py-1">
+                            <button
+                              type="button"
+                              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                              disabled={quantity <= 1}
+                              className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <span className="text-sm font-medium w-5 text-center">{quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
+                              disabled={quantity >= availableStock || (hasVariants && !selectedVariant)}
+                              className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                          <span className="text-xs text-gray-400">
+                            {hasVariants && !selectedVariant ? "Select an option" : `${availableStock} in stock`}
+                          </span>
+                        </div>
+
+                        {addError && <p className="mt-3 text-sm text-red-600">{addError}</p>}
+
+                        <button
+                          type="button"
+                          onClick={handleAddToCart}
+                          disabled={variantRequired || availableStock === 0 || addStatus === "adding"}
+                          className="mt-5 w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {addStatus === "adding" && <Loader2 size={16} className="animate-spin" />}
+                          {variantRequired
+                            ? "Select options"
+                            : availableStock === 0
+                              ? "Out of stock"
+                              : addStatus === "added"
+                                ? "Added to cart ✓"
+                                : "Add to Cart"}
+                        </button>
+                      </>
                     )}
-
-                    <div className="mt-5 flex items-center gap-3">
-                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Qty</span>
-                      <div className="flex items-center gap-3 border border-gray-200 rounded-lg px-2 py-1">
-                        <button
-                          type="button"
-                          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                          disabled={quantity <= 1}
-                          className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
-                          aria-label="Decrease quantity"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="text-sm font-medium w-5 text-center">{quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
-                          disabled={quantity >= availableStock || (hasVariants && !selectedVariant)}
-                          className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
-                          aria-label="Increase quantity"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        {hasVariants && !selectedVariant ? "Select an option" : `${availableStock} in stock`}
-                      </span>
-                    </div>
-
-                    {addError && <p className="mt-3 text-sm text-red-600">{addError}</p>}
-
-                    <button
-                      type="button"
-                      onClick={handleAddToCart}
-                      disabled={variantRequired || availableStock === 0 || addStatus === "adding"}
-                      className="mt-5 w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {addStatus === "adding" && <Loader2 size={16} className="animate-spin" />}
-                      {variantRequired
-                        ? "Select options"
-                        : availableStock === 0
-                          ? "Out of stock"
-                          : addStatus === "added"
-                            ? "Added to cart ✓"
-                            : "Add to Cart"}
-                    </button>
                   </div>
                 </div>
               )}

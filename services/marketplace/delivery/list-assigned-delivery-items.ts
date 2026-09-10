@@ -16,13 +16,21 @@ export async function listAssignedDeliveryItems(delivererId: string) {
       status: true,
       quantity: true,
       businessId: true,
-      business: { select: { name: true } },
+      // type/location so a deliverer collecting a School Vendor item sees
+      // the vendor's own address as the pickup point — there is no
+      // central drop-off for vendor pickups (see
+      // docs/marketplace/decisions/vendor-independent-architecture.md). A
+      // Business item's pickup point is still the central location
+      // (unrelated to this field, sourced from MarketplaceSettings
+      // elsewhere in the deliverer dashboard).
+      business: { select: { name: true, type: true, location: true } },
       orderItem: {
         select: {
           id: true,
           failedDeliveryAttempts: true,
           retryDeliveryAt: true,
           product: { select: { name: true } },
+          side: { select: { name: true } },
           order: { select: { id: true, deliveryLocation: true, estimatedDeliveryAt: true, deliveryWindowStart: true, deliveryWindowEnd: true } },
         },
       },
@@ -46,8 +54,15 @@ export async function listAssignedDeliveryItems(delivererId: string) {
       quantity: item.quantity,
       businessId: item.businessId,
       businessName: item.business.name,
-      productName: item.orderItem.product.name,
+      businessType: item.business.type,
+      // Where to COLLECT this item — the vendor's own address for a
+      // School Vendor item, null for Business (collected from the
+      // central drop-off point instead).
+      collectionLocation: item.business.type === "SCHOOL_VENDOR" ? item.business.location : null,
+      productName: item.orderItem.product?.name ?? item.orderItem.side?.name ?? "Unknown item",
       orderId: order.id,
+      // Where to DELIVER this item — the buyer's destination, unchanged
+      // for both Business and Vendor.
       deliveryLocation: order.deliveryLocation,
       estimatedDate: estimate?.date ?? null,
       deliveryWindow: estimate?.window ?? null,

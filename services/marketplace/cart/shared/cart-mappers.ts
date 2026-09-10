@@ -50,16 +50,23 @@ export function toCartLineItem(row: CartItemRow): CartLineItem {
 
   const variantName = row.variant?.variantValues[0]?.value.value ?? null;
 
+  // CartItem.productId is nullable at the schema level to also allow
+  // School Vendor "Side" lines (see prisma/schema.prisma), but this
+  // Business-cart mapper is only ever called on rows every caller has
+  // already filtered to productId != null (see get-cart-for-user.ts) — a
+  // Side line has no mapping through this Business-shaped DTO.
+  const product = row.product!;
+
   return {
     id: row.id,
-    productId: row.product.id,
-    businessId: row.product.businessId,
-    productName: row.product.name,
-    sellerName: row.product.business.name,
-    price: row.variant?.price ?? row.product.price,
+    productId: product.id,
+    businessId: product.businessId,
+    productName: product.name,
+    sellerName: product.business.name,
+    price: row.variant?.price ?? product.price,
     quantity: row.quantity,
-    stock: row.variant?.stock ?? row.product.stock,
-    image: row.product.secure_url,
+    stock: row.variant?.stock ?? product.stock,
+    image: product.secure_url,
     selectedVariants,
     variantId: row.variantId,
     variantName,

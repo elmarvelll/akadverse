@@ -22,20 +22,44 @@ interface DelivererRow {
   lastName: string;
   email: string;
   phone: string | null;
+  // Location info (spec §69) — shown here since an admin reviewing an
+  // application legitimately needs it.
+  hall: string | null;
+  room: string | null;
+  preferredAvailability: string | null;
   status: string;
   appliedAt: string;
 }
 
 export default function AdminDeliverersPage() {
   const [deliverers, setDeliverers] = useState<DelivererRow[]>([]);
+  const [slotLabels, setSlotLabels] = useState<Record<string, string>>({});
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "forbidden" | "error">("loading");
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Resolves the ranked, comma-separated slot ids stored on
+  // Deliverer.preferredAvailability into "1st: X · 2nd: Y" — see
+  // docs/marketplace/decisions/vendor-independent-architecture.md for why
+  // the field is ranked, not an unordered set.
+  const formatPreferences = (raw: string | null) => {
+    if (!raw) return null;
+    const ordinals = ["1st", "2nd", "3rd", "4th", "5th"];
+    return raw
+      .split(",")
+      .filter(Boolean)
+      .map((slotId, index) => `${ordinals[index] ?? `${index + 1}th`}: ${slotLabels[slotId] ?? "Unknown timeframe"}`)
+      .join(" · ");
+  };
 
   const load = async () => {
     setLoadState("loading");
     try {
-      const res = await api.get<{ deliverers: DelivererRow[] }>("/marketplace/admin/deliverers");
-      setDeliverers(res.data.deliverers);
+      const [deliverersRes, slotsRes] = await Promise.all([
+        api.get<{ deliverers: DelivererRow[] }>("/marketplace/admin/deliverers"),
+        api.get<{ slots: { id: string; label: string }[] }>("/marketplace/admin/vendor-delivery/slots"),
+      ]);
+      setDeliverers(deliverersRes.data.deliverers);
+      setSlotLabels(Object.fromEntries(slotsRes.data.slots.map((s) => [s.id, s.label])));
       setLoadState("loaded");
     } catch (err) {
       setLoadState(isAxiosError(err) && err.response?.status === 403 ? "forbidden" : "error");
@@ -110,6 +134,12 @@ export default function AdminDeliverersPage() {
                   {d.firstName} {d.lastName}
                 </p>
                 <p className="text-xs text-gray-500">{d.email} {d.phone && `· ${d.phone}`}</p>
+                {(d.hall || d.room) && (
+                  <p className="text-xs text-gray-400">
+                    {[d.hall, d.room].filter(Boolean).join(", ")}
+                  </p>
+                )}
+                {d.preferredAvailability && <p className="text-xs text-gray-400">Prefers: {formatPreferences(d.preferredAvailability)}</p>}
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">{d.status}</span>

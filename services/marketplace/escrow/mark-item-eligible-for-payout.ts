@@ -17,5 +17,4 @@ export async function markItemEligibleForPayout(db: Db, orderItemId: string, ord
     data: { escrowStatus: "PAYOUT_PENDING", payoutStatus: "PAYOUT_PENDING" },
   });
   await recordOrderEvent(db, { orderId, orderItemId, type: "PAYOUT_PENDING", actorType: "system" });
-  await recomputeOrderDeliveryOutcome(db, orderId);
 }

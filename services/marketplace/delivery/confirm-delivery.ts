@@ -59,7 +59,8 @@ export async function confirmDelivery(delivererId: string, deliveryItemId: strin
     await recordOrderEvent(tx, { orderId, orderItemId: deliveryItem.orderItemId, type: "DELIVERED", actorType: "deliverer", actorId: delivererId });
     await markItemEligibleForPayout(tx, deliveryItem.orderItemId, orderId);
     await recomputeOrderDeliveryOutcome(tx, orderId);
-  });
+  },
+{timeout: 15000});
 
   await createNotification({
     recipientId: deliveryItem.orderItem.order.userId,

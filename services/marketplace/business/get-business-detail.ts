@@ -13,7 +13,13 @@ const VERIFICATION_ORDER_THRESHOLD = 20;
 
 async function loadOwnedBusinessWithStats(id: string, userId: string) {
   return prisma.business.findFirst({
-    where: { id, userId },
+    // type: "BUSINESS" — a School Vendor row must never be reachable
+    // through the Business dashboard/API, even by a determined owner
+    // typing the URL directly (not just hidden from the navbar link) —
+    // see docs/marketplace/decisions/vendor-independent-architecture.md.
+    // Not-found (not forbidden) matches this file's own existing
+    // buyer-visibility convention elsewhere in the codebase.
+    where: { id, userId, type: "BUSINESS" },
     include: {
       products: { select: { id: true } },
       deliveryDays: { select: { day: true } },
@@ -37,7 +43,13 @@ export async function getBusinessDetail(businessId: string, userId: string) {
   const revenue = business.orders.reduce((sum, order) => sum + order.totalAmount, 0);
   const profit = business.orders.reduce(
     (sum, order) =>
-      sum + order.items.reduce((lineSum, item) => lineSum + (item.price - item.product.cost) * item.quantity, 0),
+      sum +
+      order.items.reduce(
+        // Side lines (School Vendor) have no tracked cost, same default
+        // convention as Product.cost defaulting to 0 when unset.
+        (lineSum, item) => lineSum + (item.price - (item.product?.cost ?? 0)) * item.quantity,
+        0
+      ),
     0
   );
   // "Completed order" = every item on the order buyer-confirmed delivered
@@ -51,6 +63,11 @@ export async function getBusinessDetail(businessId: string, userId: string) {
   return {
     id: business.id,
     name: business.name,
+    // "BUSINESS" | "SCHOOL_VENDOR" — see
+    // docs/marketplace/decisions/vendor-extends-business.md. Lets any
+    // dashboard page (Products tab, etc) branch on vendor-ness without a
+    // separate fetch.
+    type: business.type,
     industry: business.industry,
     description: business.description,
     contactInfo: business.contactInfo,

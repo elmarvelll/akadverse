@@ -27,6 +27,10 @@ interface BusinessRow {
   blocked: boolean;
   deliveryRestricted: boolean;
   createdAt: string;
+  // School Vendor fields — see docs/marketplace/decisions/vendor-extends-business.md.
+  type: "BUSINESS" | "SCHOOL_VENDOR";
+  vendorCategory: string | null;
+  paused: boolean;
 }
 
 interface BusinessPage {
@@ -45,20 +49,35 @@ const FILTERS: { key: "all" | "pending_approval" | "verified" | "blocked"; label
   { key: "blocked", label: "Blocked" },
 ];
 
+// Business.type filter, independent of the status filter above (see
+// services/marketplace/admin/list-businesses-for-admin.ts's
+// BusinessAdminTypeFilter — both narrow the same list together).
+const TYPE_FILTERS: { key: "all" | "BUSINESS" | "SCHOOL_VENDOR"; label: string }[] = [
+  { key: "all", label: "All types" },
+  { key: "BUSINESS", label: "Business" },
+  { key: "SCHOOL_VENDOR", label: "School Vendor" },
+];
+
 export default function AdminBusinessesPage() {
   const [result, setResult] = useState<BusinessPage | null>(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [typeFilter, setTypeFilter] = useState<(typeof TYPE_FILTERS)[number]["key"]>("all");
   const [page, setPage] = useState(1);
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "forbidden" | "error">("loading");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
-  const load = async (targetPage: number, query: string, targetFilter: string) => {
+  const load = async (targetPage: number, query: string, targetFilter: string, targetType: string) => {
     setLoadState("loading");
     try {
       const res = await api.get<BusinessPage>("/marketplace/admin/businesses", {
-        params: { page: targetPage, q: query || undefined, filter: targetFilter === "all" ? undefined : targetFilter },
+        params: {
+          page: targetPage,
+          q: query || undefined,
+          filter: targetFilter === "all" ? undefined : targetFilter,
+          type: targetType === "all" ? undefined : targetType,
+        },
       });
       setResult(res.data);
       setLoadState("loaded");
@@ -69,16 +88,16 @@ export default function AdminBusinessesPage() {
 
   useEffect(() => {
     const run = async () => {
-      await load(page, q, filter);
+      await load(page, q, filter, typeFilter);
     };
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filter]);
+  }, [page, filter, typeFilter]);
 
   const search = async (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    await load(1, q, filter);
+    await load(1, q, filter, typeFilter);
   };
 
   const approve = async (business: BusinessRow) => {
@@ -86,7 +105,7 @@ export default function AdminBusinessesPage() {
     setActionError("");
     try {
       await api.post(`/marketplace/admin/businesses/${business.id}/approve`);
-      await load(page, q, filter);
+      await load(page, q, filter, typeFilter);
     } catch (err) {
       setActionError((isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "Approve failed.");
     } finally {
@@ -101,7 +120,7 @@ export default function AdminBusinessesPage() {
     setActionError("");
     try {
       await api.post(`/marketplace/admin/businesses/${business.id}/reject`, { reason });
-      await load(page, q, filter);
+      await load(page, q, filter, typeFilter);
     } catch (err) {
       setActionError((isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "Reject failed.");
     } finally {
@@ -116,7 +135,7 @@ export default function AdminBusinessesPage() {
     setActionError("");
     try {
       await api.post(`/marketplace/admin/businesses/${business.id}/block`, { reason });
-      await load(page, q, filter);
+      await load(page, q, filter, typeFilter);
     } catch (err) {
       setActionError((isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "Block failed.");
     } finally {
@@ -129,7 +148,7 @@ export default function AdminBusinessesPage() {
     setActionError("");
     try {
       await api.post(`/marketplace/admin/businesses/${business.id}/unblock`);
-      await load(page, q, filter);
+      await load(page, q, filter, typeFilter);
     } finally {
       setBusyId(null);
     }
@@ -163,7 +182,7 @@ export default function AdminBusinessesPage() {
         </button>
       </form>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3">
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -174,6 +193,24 @@ export default function AdminBusinessesPage() {
             }}
             className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
               filter === f.key ? "bg-blue-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
+        {TYPE_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => {
+              setTypeFilter(f.key);
+              setPage(1);
+            }}
+            className={`shrink-0 px-4 py-2 rounded-full text-xs font-medium transition ${
+              typeFilter === f.key ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"
             }`}
           >
             {f.label}
@@ -198,15 +235,21 @@ export default function AdminBusinessesPage() {
               {result.items.map((business) => (
                 <div key={business.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium text-gray-900 break-words">{business.name}</p>
+                    <p className="font-medium text-gray-900 break-words flex items-center gap-2">
+                      {business.name}
+                      {business.type === "SCHOOL_VENDOR" && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">School Vendor</span>
+                      )}
+                    </p>
                     <p className="text-xs text-gray-500 break-words">
-                      {business.industry} · {business.ownerEmail} · created {dateFormatter.format(new Date(business.createdAt))}
+                      {business.vendorCategory ?? business.industry} · {business.ownerEmail} · created {dateFormatter.format(new Date(business.createdAt))}
                     </p>
                     {business.approvalStatus === "REJECTED" && business.rejectionReason && (
                       <p className="text-xs text-red-600 mt-1">Rejected: {business.rejectionReason}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {business.paused && <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">Paused</span>}
                     <Link
                       href={`/studashboard/admin/marketplace/businesses/${business.id}`}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition"

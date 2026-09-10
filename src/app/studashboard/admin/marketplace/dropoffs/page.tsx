@@ -18,12 +18,16 @@ interface PendingDropoff {
   orderId: string;
   businessId: string;
   businessName: string;
+  customerName: string;
   itemCount: number;
   quantity: number;
   otpExpiry: string | null;
   otpAttempts: number;
   estimatedDeliveryAt: string | null;
+  expectedDropoffDeadline: string | null;
 }
+
+const dropoffDateFormatter = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" });
 
 export default function AdminDropoffsPage() {
   const [dropoffs, setDropoffs] = useState<PendingDropoff[]>([]);
@@ -104,8 +108,21 @@ export default function AdminDropoffsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-900">{dropoff.businessName}</p>
                   <p className="text-xs text-gray-500">
-                    {dropoff.quantity} item(s) across {dropoff.itemCount} line(s) · Order #{dropoff.orderId.slice(0, 8)}
+                    Order #{dropoff.orderId.slice(0, 8)} · Customer {dropoff.customerName}
                   </p>
+                  <p className="text-xs text-gray-500">
+                    {dropoff.quantity} item(s) across {dropoff.itemCount} line(s)
+                  </p>
+                  {dropoff.estimatedDeliveryAt && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Customer delivery date: {new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(dropoff.estimatedDeliveryAt))}
+                    </p>
+                  )}
+                  {dropoff.expectedDropoffDeadline && (
+                    <p className="text-xs font-semibold text-amber-700 mt-0.5">
+                      Expected drop-off by: {dropoffDateFormatter.format(new Date(dropoff.expectedDropoffDeadline))}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right text-xs text-gray-500">
                   {dropoff.otpExpiry && <p>Code expires {new Date(dropoff.otpExpiry).toLocaleTimeString()}</p>}
