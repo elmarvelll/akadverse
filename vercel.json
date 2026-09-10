@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/delivery-schedule",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/vendor-dispute-window-sweep",
-      "schedule": "0 * * * *"
     }
   ]
 }
