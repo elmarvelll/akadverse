@@ -35,7 +35,8 @@ export default function ImageUploadField({ secureUrl, onUploaded, disabled }: Im
       formData.append("file", file);
       const res = await api.post<{ public_id: string; secure_url: string }>("/marketplace/uploads", formData);
       onUploaded({ publicId: res.data.public_id, secureUrl: res.data.secure_url });
-    } catch {
+    } catch (err) {
+      console.error("[ImageUploadField] upload failed", { fileName: file.name, error: err });
       setError("Upload failed. Please try again.");
     } finally {
       setUploading(false);

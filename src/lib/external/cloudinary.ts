@@ -11,7 +11,7 @@
 import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
@@ -25,10 +25,15 @@ export interface CloudinaryUploadResult {
 // Cloudinary's SDK accepts) into a folder namespaced per business so
 // assets don't collide across the app as more upload call sites get added.
 export async function uploadImage(fileData: string, folder = "akadverse/business-profiles"): Promise<CloudinaryUploadResult> {
-  const result = await cloudinary.uploader.upload(fileData, {
-    folder,
-    resource_type: "image",
-  });
+  try {
+    const result = await cloudinary.uploader.upload(fileData, {
+      folder,
+      resource_type: "image",
+    });
 
-  return { public_id: result.public_id, secure_url: result.secure_url };
+    return { public_id: result.public_id, secure_url: result.secure_url };
+  } catch (err) {
+    console.error("[cloudinary] uploadImage failed", { folder, error: err });
+    throw err;
+  }
 }

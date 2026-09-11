@@ -53,7 +53,11 @@ export default function ProductImagesField({ value, onChange, disabled }: Produc
         uploaded.push({ publicId: res.data.public_id, secureUrl: res.data.secure_url, position: value.length + uploaded.length });
       }
       onChange([...value, ...uploaded]);
-    } catch {
+    } catch (err) {
+      console.error("[ProductImagesField] upload failed", {
+        fileNames: toUpload.map((file) => file.name),
+        error: err,
+      });
       setError("Upload failed. Please try again.");
     } finally {
       setUploading(false);

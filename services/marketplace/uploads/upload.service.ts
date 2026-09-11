@@ -18,7 +18,13 @@ export async function uploadMarketplaceImage(file: File): Promise<CloudinaryUplo
 
   try {
     return await uploadImage(dataUri);
-  } catch {
+  } catch (err) {
+    console.error("[upload.service] uploadMarketplaceImage failed", {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      error: err,
+    });
     throw badGateway("Image upload failed. Please try again.");
   }
 }
