@@ -43,7 +43,7 @@ async function main() {
     collegeId: college.id, departmentId: dept.id, programmeId: prog.id, level: 300,
   });
   const matricOf = (n: string) => `ZZ/${tag}/${n.toUpperCase()}`; // matric numbers are stored upper-case
-  created.matrics.push(...["a", "b", "c", "d", "f", "g"].map(matricOf));
+  created.matrics.push(...["a", "b", "c", "d", "f", "g", "h"].map(matricOf));
 
   try {
     // ---- 1. dropdown data + role -> domain -----------------------------------------------------------------------------
@@ -170,7 +170,7 @@ async function main() {
     const gUser = await core.user.findUniqueOrThrow({ where: { email: dEmail } });
     ok("after OTP: one User (no password) + one linked StudentProfile", gUser.password === "" && gUser.firstName === "Goo" && !!(await db.studentProfile.findUnique({ where: { userId: gUser.id } })));
     ok("the returning Google user signs in with NO further OTP (callback returns true)", (await g(dEmail)) === true);
-    ok("an existing pre-flow account (e.g. an old Gmail user) can still sign in with Google", (await g("marvelousifezue15@gmail.com")) === true);
+    ok("an existing pre-flow account (the retained Gmail admin) can still sign in with Google", (await g("marvelousifezue31@gmail.com")) === true);
 
     // ---- 9. the old register endpoint can't be used to bypass the flow ----------------------------------------------------------
     const reg = (email: string) => registerPost(new Request("http://x/api/register", { method: "POST", body: JSON.stringify({ firstName: "A", lastName: "B", email, password: "longenough1" }) }) as never);
@@ -207,7 +207,7 @@ async function main() {
     // ---- 9c. abuse circuit breaker on the public start endpoint -----------------------------------------------------------------
     const floodRows = Array.from({ length: 500 }, (_, i) => ({ email: `zzflood${i}${tag}@stu.cu.edu.ng`, authMethod: "credentials", firstName: "F", lastName: "L", payload: {}, otpHash: "x", otpExpiresAt: new Date(Date.now() + 60000), otpLastSentAt: new Date() }));
     await core.pendingSignup.createMany({ data: floodRows });
-    await rejects("a brand-new sign-up is refused once the site-wide 15-minute cap is reached (no e-mail sent)", 429, () => startStudentSignup(base("f"), capture), /very busy/);
+    await rejects("a brand-new sign-up is refused once the site-wide 15-minute cap is reached (no e-mail sent)", 429, () => startStudentSignup(base("h"), capture), /very busy/);
     await core.pendingSignup.deleteMany({ where: { email: { startsWith: "zzflood" } } });
     const okAfter = await startStudentSignup({ ...base("g") }, capture).then(() => true, () => false);
     ok("…and sign-up works again as soon as the flood is gone", okAfter);

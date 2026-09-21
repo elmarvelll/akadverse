@@ -48,7 +48,7 @@ export default function Shell({
 
   return (
     <div className="elearning-shell min-h-screen bg-gray-50">
-      <Header role={role} name={name} menuOpen={open} onMenuToggle={() => setOpen((v) => !v)} />
+      <Header role={role} name={name} menuOpen={open} onMenuToggle={() => setOpen((v) => !v)} onBrandClick={() => setOpen(false)} />
 
       {open && <div className="fixed inset-0 top-16 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
 

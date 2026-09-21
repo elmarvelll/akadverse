@@ -15,7 +15,8 @@
     "db:elearning:seed": "tsx scripts/elearning-seed.ts",
     "storage:setup": "tsx scripts/setup-course-material-storage.ts",
     "ccmas:extract": "python3 scripts/ccmas/extract_ccmas.py",
-    "db:ccmas:import": "tsx scripts/ccmas/import-ccmas.ts"
+    "db:ccmas:import": "tsx scripts/ccmas/import-ccmas.ts",
+    "sync:vercel-env": "./scripts/sync-vercel-env.sh production"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

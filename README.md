@@ -38,3 +38,9 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 =======
 # AkadVerse
 >>>>>>> deltvolve/main
+
+## Environment variables on Vercel
+
+Local env files (`.env`, `.env.local`) are git-ignored and never uploaded by Git. To copy your local variables to Vercel without typing them
+into the dashboard, run `npm run sync:vercel-env` (Production) — see [`docs/runbooks/vercel-environment-sync.md`](docs/runbooks/vercel-environment-sync.md)
+for first-time setup (`vercel login`, `vercel link`), Preview/Development, options and security notes. Changed variables apply to the next deployment.
