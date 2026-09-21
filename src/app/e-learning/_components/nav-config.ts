@@ -30,6 +30,21 @@ import {
   Library,
 } from "lucide-react";
 
+// Where each role's dashboard lives. The header's AkadVerse logo uses this (always the CURRENT role's dashboard), and so do the nav
+// trees below, so the two can never disagree. Dean/VC have no dashboard yet (§29): their single placeholder page is their "home".
+export const DASHBOARD_HREF = {
+  student: "/studashboard",
+  faculty: "/facultydashboard",
+  hod: "/e-learning/hod/dashboard",
+  dapu: "/e-learning/dapu/dashboard",
+  dean: "/e-learning/dean",
+  vc: "/e-learning/vc",
+} as const;
+
+export function getDashboardHref(role: keyof typeof DASHBOARD_HREF): string {
+  return DASHBOARD_HREF[role];
+}
+
 export interface NavLeaf {
   label: string;
   // A leaf with `children` (and no link of its own) is a nested group, e.g. Course Control inside Academic Essentials.
@@ -49,7 +64,7 @@ export interface NavSection {
 
 export function getStudentNav(): NavSection[] {
   return [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/e-learning/student/dashboard" },
+    { label: "Dashboard", icon: LayoutDashboard, href: DASHBOARD_HREF.student },
     {
       label: "Academic Essentials",
       icon: BookOpen,
@@ -82,7 +97,7 @@ export function getStudentNav(): NavSection[] {
 
 export function getFacultyNav(isLevelAdviser: boolean): NavSection[] {
   const nav: NavSection[] = [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/e-learning/faculty/dashboard" },
+    { label: "Dashboard", icon: LayoutDashboard, href: DASHBOARD_HREF.faculty },
     { label: "My Subjects", icon: BookOpen, href: "/e-learning/faculty/my-subjects" },
     { label: "Results Record", icon: FileText, href: "/e-learning/faculty/results" },
   ];
@@ -106,7 +121,7 @@ export function getFacultyNav(isLevelAdviser: boolean): NavSection[] {
 
 export function getHodNav(): NavSection[] {
   return [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/e-learning/hod/dashboard" },
+    { label: "Dashboard", icon: LayoutDashboard, href: DASHBOARD_HREF.hod },
     { label: "View Course Structures", icon: ClipboardList, href: "/e-learning/hod/curriculum" },
     {
       label: "Assignments",
@@ -139,7 +154,7 @@ export function getHodNav(): NavSection[] {
 
 export function getDapuNav(): NavSection[] {
   return [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/e-learning/dapu/dashboard" },
+    { label: "Dashboard", icon: LayoutDashboard, href: DASHBOARD_HREF.dapu },
     { label: "Course Structure", icon: Inbox, href: "/e-learning/dapu/course-structure" },
     { label: "Add Course", icon: ClipboardList, href: "/e-learning/dapu/add-course" },
     { label: "Review Saved Courses", icon: CheckCircle2, href: "/e-learning/dapu/course-structure/review" },
