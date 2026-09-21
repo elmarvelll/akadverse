@@ -1,0 +1,960 @@
+// prisma/elearning/schema.prisma
+//
+// The E-Learning system's own Prisma schema, backed by its own Postgres
+// database (ELEARNING_DATABASE_URL) — deliberately separate from
+// prisma/schema.prisma (the AkadVerse Core/Marketplace database). See
+// docs/elearning/ for the architecture write-up.
+//
+// Generated with a custom `output` (below) so this produces its own
+// Prisma Client, distinct from `@prisma/client` (the Marketplace one) —
+// the two are never mixed. Use it via src/lib/db/elearning.ts, never by
+// importing "@prisma/client" from E-Learning code and vice versa.
+//
+// IDENTITY: there is no `User` model here on purpose. Authentication and
+// the AkadVerse-wide `role` (student/faculty/hod/dapu/dean/vc) live in the
+// Core database's `User` table (prisma/schema.prisma). Every profile below
+// stores only `userId` — an application-level reference to that table's
+// `User.id` — and application code resolves identity across the two
+// databases when it needs to (see services/e-learning/). There is
+// deliberately no database-level foreign key from here to the Core
+// database: that's not possible across two separate Postgres instances,
+// and wouldn't be desirable even if it were (see AGENTS.md §35/§38 — no
+// cross-database FKs or transactions).
+//
+// SCOPE: Phase 1 ("Foundation") laid down academic session/semester, the
+// academic org hierarchy profiles hang off of, and one profile per role
+// that needs E-Learning-specific data. Phase 2 ("Student") added Course,
+// CourseAssignment, LearningResource, Syllabus, CourseRegistration(Item),
+// Result and AcademicTimeFrame — only as far as the Student-facing
+// workflows in AGENTS.md §13-§15 need them (e.g. CourseAssignment exists
+// because "My Courses" needs to show a lecturer, not because Phase 5's HOD
+// assignment UI is built yet). Timetable and the HOD/DAPU-side management
+// screens for these same tables are still later phases (AGENTS.md §44) —
+// modeling more than the current phase's workflow needs would just be
+// guessing at relationships.
+
+generator client {
+  provider = "prisma-client-js"
+  // Own output directory so this never collides with, or gets confused
+  // for, the Marketplace's default `@prisma/client` output. Import it via
+  // the "@/generated/prisma-elearning" path (tsconfig's "@/*" -> "./src/*")
+  // rather than a relative path.
+  output   = "../../src/generated/prisma-elearning"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("ELEARNING_DATABASE_URL")
+  directUrl = env("ELEARNING_DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Academic calendar
+//
+// Every academic record in this system is scoped by session + semester
+// (AGENTS.md §31) — nothing here is written as if only "the current year"
+// exists. `isCurrent` is a convenience for "what should the UI default to
+// showing", not a substitute for storing the session/semester a given
+// record actually belongs to.
+// ---------------------------------------------------------------------------
+
+model AcademicSession {
+  id                String           @id @default(cuid())
+  // e.g. "2026/2027"
+  name              String           @unique
+  // Optional: the session name (e.g. "2026/2027") is the academic year; dates aren't required.
+  startDate         DateTime?
+  endDate           DateTime?
+  // At most one session should be current at a time; enforced at the
+  // application layer (a DB constraint for "only one row where
+  // isCurrent=true" isn't expressible as a simple column constraint in
+  // Postgres without a partial unique index, which can be added later if
+  // needed).
+  isCurrent         Boolean          @default(false)
+  isActive          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  semesters         Semester[]
+  // Students admitted in this session — see StudentProfile.admissionSession.
+  studentAdmissions StudentProfile[] @relation("StudentAdmissionSession")
+
+  courseAssignments   CourseAssignment[]
+  learningResources   LearningResource[]
+  syllabuses          Syllabus[]
+  courseRegistrations CourseRegistration[]
+  results             Result[]
+  timeFrames          AcademicTimeFrame[]
+  timetableEntries    TimetableEntry[]
+
+  curricula                Curriculum[]
+  levelAdvisorAssignments  LevelAdvisorAssignment[]
+
+  @@index([isCurrent])
+}
+
+model Semester {
+  id                String          @id @default(cuid())
+  academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  academicSessionId String
+  // Configurable per session (e.g. "Alpha"/"Omega") — never hard-coded. `sequence` orders semesters within the session.
+  name              String
+  sequence          Int
+  startDate         DateTime
+  endDate           DateTime
+  isCurrent         Boolean         @default(false)
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  courseAssignments   CourseAssignment[]
+  learningResources   LearningResource[]
+  syllabuses          Syllabus[]
+  courseRegistrations CourseRegistration[]
+  results             Result[]
+  timeFrames          AcademicTimeFrame[]
+  timetableEntries    TimetableEntry[]
+
+  curricula               Curriculum[]
+  levelAdvisorAssignments LevelAdvisorAssignment[]
+  academicRules           AcademicRule[]
+
+  @@unique([academicSessionId, sequence])
+  @@unique([academicSessionId, name])
+  @@index([isCurrent])
+}
+
+// ---------------------------------------------------------------------------
+// Academic org hierarchy (AGENTS.md §30)
+//
+//   AcademicFaculty (e.g. "Engineering")
+//     └── Department (e.g. "Electrical/Electronics Engineering")
+//           └── Program (e.g. "B.Eng Electrical Engineering")
+//
+// Named `AcademicFaculty` (not `Faculty`) specifically to avoid colliding
+// with "faculty" the *role* (a person) — this model is the organizational
+// unit a department belongs to.
+// ---------------------------------------------------------------------------
+
+model College {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  code        String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  departments Department[]
+
+  // Table kept as "AcademicFaculty" — renamed at the Prisma level only, so no data moves.
+  @@map("AcademicFaculty")
+}
+
+model Department {
+  id                String          @id @default(cuid())
+  college           College         @relation(fields: [collegeId], references: [id], onDelete: Restrict)
+  collegeId         String          @map("academicFacultyId")
+  name              String
+  code              String          @unique
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  programmes      Programme[]
+  studentProfiles StudentProfile[]
+  facultyProfiles FacultyProfile[]
+  hodProfiles     HodProfile[]
+  courses         Course[]
+
+  @@index([collegeId])
+
+  @@unique([collegeId, name])
+}
+
+model Programme {
+  id           String     @id @default(cuid())
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  departmentId String
+  name         String
+  code         String     @unique
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Reference link chosen explicitly by DAPU — never inferred from names (spec §65).
+  // Read-only pointer: CCMAS data cannot change this programme or its curricula.
+  ccmasProgramme   CCMASProgramme? @relation(fields: [ccmasProgrammeId], references: [id], onDelete: SetNull)
+  ccmasProgrammeId String?
+
+  studentProfiles StudentProfile[]
+  curricula                Curriculum[]
+  levelAdvisorAssignments  LevelAdvisorAssignment[]
+  academicRules            AcademicRule[]
+
+  @@unique([departmentId, name])
+  @@index([departmentId])
+  @@map("Program")
+}
+
+// ---------------------------------------------------------------------------
+// Role profiles
+//
+// One profile model per role that has E-Learning-specific data. `role`
+// itself (the source of truth for who is a student/faculty/hod/dapu) lives
+// on the Core database's User — see the header comment above. Dean/VC get
+// no profile yet (AGENTS.md §29): there's nothing to scope them by until
+// their functionality is actually specified.
+// ---------------------------------------------------------------------------
+
+model StudentProfile {
+  id                 String          @id @default(cuid())
+  // Core database User.id — application-level reference only, see header.
+  userId             String          @unique
+  department         Department      @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  departmentId       String
+  programme          Programme?      @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  programmeId        String?         @map("programId")
+  level              Int
+  matricNumber       String?         @unique
+  // The session this student was admitted in — not necessarily their
+  // *current* session (see AcademicSession.isCurrent for that).
+  admissionSession   AcademicSession @relation("StudentAdmissionSession", fields: [admissionSessionId], references: [id], onDelete: Restrict)
+  admissionSessionId String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([departmentId])
+  @@index([programmeId])
+}
+
+// FacultyProfile covers every `role = faculty` user, including one who
+// additionally serves as a Level Adviser (AGENTS.md §5/§20) — that's a
+// responsibility layered on top of the faculty identity, not a separate
+// role or a separate profile model.
+//
+// isLevelAdviser/levelAdviserOf are the deliberately-simple Phase 1 fields
+// the spec calls for. They record only the *current* responsibility, not
+// history — when Level Adviser approvals (Phase 4) are built, replace/
+// supplement these with a proper `LevelAdviserAssignment` model
+// (facultyId, departmentId, level, academicSessionId, semesterId) so past
+// assignments remain queryable instead of being overwritten. Not created
+// yet per AGENTS.md §39: building it before the workflow that uses it
+// would be guessing at its shape.
+model FacultyProfile {
+  id             String     @id @default(cuid())
+  userId         String     @unique
+  department     Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  departmentId   String
+  staffId        String?    @unique
+  // Level Advisor state is DERIVED from LevelAdvisorAssignment and kept in step by
+  // services/e-learning/hod/level-advisors.ts (never edited directly):
+  //   isLevelAdviser  = this faculty member has a Level Advisor assignment in the CURRENT session
+  //   levelAdvisorId  = that assignment (unique: an assignment belongs to at most one faculty member)
+  //   levelAdviserOf  = its level (kept for the older adviser screens)
+  // A DB CHECK enforces isLevelAdviser <=> levelAdvisorId IS NOT NULL. Lecturer/HOD
+  // responsibilities live in their own tables, so they can coexist with this.
+  isLevelAdviser Boolean    @default(false)
+  levelAdviserOf Int?
+  levelAdvisorId String?    @unique
+  // Restrict, not SetNull: nulling the pointer while isLevelAdviser stays true would break the CHECK, and an
+  // assignment that someone currently holds shouldn't be deletable anyway (assignments are history).
+  levelAdvisor   LevelAdvisorAssignment? @relation("CurrentAdvisorAssignment", fields: [levelAdvisorId], references: [id], onDelete: Restrict)
+  // Every assignment this person has ever held (all sessions) — the history.
+  advisorAssignments LevelAdvisorAssignment[] @relation("AdvisorAssignments")
+  // Materials this faculty member uploaded (see CourseMaterial).
+  courseMaterials    CourseMaterial[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([departmentId])
+  @@index([isLevelAdviser])
+}
+
+// One HOD per department at a time, in the same "current responsibility,
+// not history" spirit as FacultyProfile above — fine for Phase 1 per
+// AGENTS.md §6 (HOD is a primary role, not a flag), revisit with a proper
+// historical assignment model alongside Phase 5 (HOD) if past HODs need to
+// stay queryable.
+model HodProfile {
+  id           String     @id @default(cuid())
+  userId       String     @unique
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  departmentId String     @unique
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+// DAPU is university-wide academic administration (AGENTS.md §25) — no
+// departmental scope, so nothing beyond the identity link is needed yet.
+model DapuProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — Courses, registration, learning resources, results
+//
+// Courses/CourseAssignment/CourseRegistration/Result all reference
+// students and faculty by `userId` only (Core database, see the header
+// comment at the top of this file) — never a relation across databases
+// (AGENTS.md §35/§38).
+// ---------------------------------------------------------------------------
+
+model Course {
+  id           String       @id @default(cuid())
+  code         String       @unique
+  title        String
+  description  String?
+  creditUnits  Int          @map("creditUnit")
+  // Optional: shared courses (GST, MTH, PHY…) belong to no single department.
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId String?
+  isActive     Boolean      @default(true)
+  // No level/semester here on purpose (spec §21): a Course is reusable
+  // identity. Placement is CurriculumCourse's job.
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  assignments       CourseAssignment[]
+  learningResources LearningResource[]
+  syllabuses        Syllabus[]
+  registrationItems CourseRegistrationItem[]
+  results           Result[]
+  timetableEntries  TimetableEntry[]
+  curriculumCourses CurriculumCourse[]
+
+  @@index([departmentId])
+}
+
+// Who taught a course in a given session/semester — historical by design
+// (AGENTS.md §40: a course can have different lecturers across semesters,
+// so this is never overwritten, only added to). Assigning these is a
+// Phase 5 (HOD) workflow; the model exists now because Phase 2's "My
+// Courses" (AGENTS.md §13) needs to display the lecturer.
+model CourseAssignment {
+  id                String          @id @default(cuid())
+  course            Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId          String
+  // Core database User.id of the assigned faculty member.
+  facultyUserId     String
+  academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  academicSessionId String
+  semester          Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  semesterId        String
+  createdAt         DateTime        @default(now())
+
+  @@unique([courseId, academicSessionId, semesterId])
+  @@index([facultyUserId])
+}
+
+enum ResourceType {
+  NOTE
+  DOCUMENT
+  ASSIGNMENT
+  OTHER
+}
+
+model LearningResource {
+  id                String          @id @default(cuid())
+  course            Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId          String
+  academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  academicSessionId String
+  semester          Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  semesterId        String
+  type              ResourceType
+  title             String
+  fileUrl           String?
+  // Core database User.id of the faculty member who uploaded it.
+  uploadedByUserId  String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([courseId, academicSessionId, semesterId])
+}
+
+// One syllabus per course per session/semester (AGENTS.md §13 — "Syllabus
+// should be associated with the relevant course"), kept separate from
+// LearningResource since it's a single canonical document per offering,
+// not an open-ended list of uploads.
+model Syllabus {
+  id                String          @id @default(cuid())
+  course            Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId          String
+  academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  academicSessionId String
+  semester          Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  semesterId        String
+  content           String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([courseId, academicSessionId, semesterId])
+}
+
+// AGENTS.md §15's state machine.
+enum RegistrationStatus {
+  // Retired: selecting courses is frontend-only now; nothing is stored until "Register Courses".
+  DRAFT
+  // Retired: replaced by PENDING_LEVEL_ADVISOR (existing rows were moved).
+  SUBMITTED
+  // Registered by the student; waiting on the Level Advisor.
+  PENDING_LEVEL_ADVISOR
+  // Level Advisor approved; waiting on the HOD.
+  PENDING_HOD
+  // Retired: there is no DAPU approval step. DAPU only controls the registration period.
+  PENDING_DAPU
+  // HOD approved: the registration is final and the courses appear under My Courses.
+  APPROVED
+  REJECTED
+}
+
+// One registration per student per session/semester — courses are added/
+// removed via CourseRegistrationItem while status is DRAFT (or, within the
+// Add/Drop timeframe, APPROVED), never by creating a second registration
+// row for the same session/semester.
+model CourseRegistration {
+  id                String             @id @default(cuid())
+  // Core database User.id of the student.
+  studentUserId     String
+  academicSession   AcademicSession    @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  academicSessionId String
+  semester          Semester           @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  semesterId        String
+  status            RegistrationStatus @default(DRAFT)
+  submittedAt       DateTime?
+  decidedAt         DateTime?
+  decisionNote      String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  items CourseRegistrationItem[]
+
+  @@unique([studentUserId, academicSessionId, semesterId])
+  @@index([status])
+}
+
+model CourseRegistrationItem {
+  id                   String             @id @default(cuid())
+  courseRegistration   CourseRegistration @relation(fields: [courseRegistrationId], references: [id], onDelete: Cascade)
+  courseRegistrationId String
+  course               Course             @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  courseId             String
+  createdAt            DateTime           @default(now())
+
+  @@unique([courseRegistrationId, courseId])
+}
+
+// AGENTS.md §32's workflow. Only PUBLISHED results are ever shown to the
+// student they belong to (see services/e-learning/student/results.ts) —
+// every earlier status is faculty/HOD/DAPU-internal.
+enum ResultStatus {
+  DRAFT
+  SUBMITTED
+  VALIDATED
+  APPROVED
+  PUBLISHED
+}
+
+model Result {
+  id                String          @id @default(cuid())
+  // Core database User.id of the student.
+  studentUserId     String
+  course            Course          @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  courseId          String
+  academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  academicSessionId String
+  semester          Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  semesterId        String
+  test1             Float?
+  test2             Float?
+  exam              Float?
+  // Continuous assessment total — usually test1+test2, but stored (not
+  // only derived) so a faculty member can override it directly (AGENTS.md
+  // §19's "Full CA").
+  fullCA            Float?
+  totalScore        Float?
+  grade             String?
+  gradePoint        Float?
+  status            ResultStatus    @default(DRAFT)
+  // Core database User.id of the faculty member who entered it.
+  enteredByUserId   String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([studentUserId, courseId, academicSessionId, semesterId])
+  @@index([studentUserId])
+  @@index([status])
+}
+
+// AGENTS.md §27 — DAPU-controlled deadlines, stored in the database rather
+// than hard-coded in frontend code. `semesterId` is required (not
+// optional): every timeframe type this system implements (course
+// registration, result upload/revalidation, change of course, make-up
+// application) is naturally per-semester in practice, and a nullable
+// column here would be unusable in `@@unique` — Postgres treats NULL as
+// never equal to NULL, so "one row per type+session+(no semester)" isn't
+// expressible as a unique constraint anyway.
+enum TimeFrameType {
+  COURSE_REGISTRATION
+  RESULT_UPLOAD
+  RESULT_REVALIDATION
+  CHANGE_OF_COURSE
+  MAKEUP_APPLICATION
+}
+
+model AcademicTimeFrame {
+  id                String          @id @default(cuid())
+  type              TimeFrameType
+  academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  academicSessionId String
+  semester          Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  semesterId        String
+  startDate         DateTime
+  endDate           DateTime
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([type, academicSessionId, semesterId])
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Faculty timetable
+//
+// Deliberately minimal: which course meets when/where, gated behind
+// `isApproved` (AGENTS.md §28 — DAPU reviews/approves before it becomes
+// visible to faculty/students; that review screen is Phase 6 and doesn't
+// exist yet, so isApproved just starts false and is flipped directly in
+// the database/seed for now). Which faculty member teaches it is NOT
+// duplicated here — it's resolved via CourseAssignment for the same
+// course+session+semester (AGENTS.md §40: one historical source of truth
+// for "who teaches this", not two).
+// ---------------------------------------------------------------------------
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+model TimetableEntry {
+  id                String          @id @default(cuid())
+  course            Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId          String
+  academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  academicSessionId String
+  semester          Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  semesterId        String
+  dayOfWeek         DayOfWeek
+  // Stored as "HH:MM" (24h) rather than DateTime — a timetable slot is a
+  // time-of-day, not a specific calendar date/timezone-sensitive instant.
+  startTime         String
+  endTime           String
+  venue             String
+  isApproved        Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([courseId, academicSessionId, semesterId])
+  @@index([isApproved])
+}
+
+// ===========================================================================
+// Academy foundation (docs: Academy spec §16-§38) — additive on top of the
+// tables above.
+//
+//   College → Department → Programme → AcademicSession → Semester
+//     → Curriculum → CurriculumCourse → Course
+//     → CourseOffering → StudentCourseRegistration
+//
+// Every *UserId column is a Core-database User.id (application-level
+// reference; no cross-database FK — see the header of this file).
+// ===========================================================================
+
+enum CurriculumStatus {
+  // Retired: there is no draft workflow. Kept only because Postgres can't drop an enum value in place; never assigned.
+  DRAFT
+  // DAPU pressed "Save Courses": the complete selected structure, ready to review and publish. Not yet with the HOD.
+  SAVED
+  VALIDATED
+  // Submitted by DAPU, awaiting HOD review ("Publish Course Structure"). Not visible to students.
+  PENDING_HOD
+  // HOD sent it back to DAPU with a note; editing it returns it to DRAFT.
+  RETURNED
+  // Retired: HOD approval now publishes directly (DAPU -> HOD -> students). Kept only because Postgres can't drop an enum value in place; never assigned.
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+// One canonical enum instead of isCore/isElective/… booleans (spec §20).
+enum CurriculumCourseType {
+  CORE
+  ELECTIVE
+  OPTIONAL
+}
+
+enum CurriculumCourseSource {
+  CCMAS
+  UNIVERSITY
+}
+
+// Container/identity for "this Programme, in this Session + Semester".
+// Individual courses hang off CurriculumCourse, never off this row.
+model Curriculum {
+  id                String           @id @default(cuid())
+  programme         Programme        @relation(fields: [programmeId], references: [id], onDelete: Restrict)
+  programmeId       String
+  academicSession   AcademicSession  @relation(fields: [academicSessionId], references: [id], onDelete: Restrict)
+  academicSessionId String
+  semester          Semester         @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  semesterId        String
+  name              String
+  version           Int              @default(1)
+  status            CurriculumStatus @default(SAVED)
+  createdByUserId   String
+  savedAt           DateTime?
+  passedToHodAt     DateTime?
+  hodNote           String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  publishedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  courses CurriculumCourse[]
+
+  @@unique([programmeId, academicSessionId, semesterId, version])
+  @@index([status])
+  @@index([academicSessionId, semesterId])
+}
+
+model CurriculumCourse {
+  id           String               @id @default(cuid())
+  curriculum   Curriculum           @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  curriculumId String
+  course       Course               @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  courseId     String
+  level        Int
+  creditUnits  Int
+  courseType   CurriculumCourseType @default(CORE)
+  // Where DAPU got it: picked from the CCMAS reference, or a university course/elective.
+  source                  CurriculumCourseSource @default(UNIVERSITY)
+  ccmasProgrammeCourse    CCMASProgrammeCourse?  @relation(fields: [ccmasProgrammeCourseId], references: [id], onDelete: SetNull)
+  ccmasProgrammeCourseId  String?
+  createdByUserId         String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  offering CourseOffering?
+
+  @@unique([curriculumId, courseId])
+  @@index([courseId])
+}
+
+// Credit-unit limits by units, not number of courses (spec §38).
+model AcademicRule {
+  id             String    @id @default(cuid())
+  programme      Programme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+  programmeId    String
+  level          Int
+  semester       Semester  @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  semesterId     String
+  minCreditUnits Int
+  maxCreditUnits Int
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([programmeId, level, semesterId])
+}
+
+// Faculty responsibility, not a role: Programme + Level + Session + Semester
+// → one faculty user (spec §27). Supersedes the "current only"
+// FacultyProfile.isLevelAdviser/levelAdviserOf flags.
+model LevelAdvisorAssignment {
+  id                String          @id @default(cuid())
+  faculty           FacultyProfile  @relation("AdvisorAssignments", fields: [facultyUserId], references: [userId], onDelete: Restrict)
+  facultyUserId     String
+  programme         Programme       @relation(fields: [programmeId], references: [id], onDelete: Restrict)
+  programmeId       String
+  // There is no Level table; a level is its number (100, 200, …).
+  level             Int
+  academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Restrict)
+  academicSessionId String
+  // Retired: an advisor serves a whole session, not one semester. Kept nullable so the
+  // value already stored on older rows isn't destroyed; new rows leave it null.
+  semester          Semester?       @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  semesterId        String?
+  createdByUserId   String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // The faculty member whose "current" advisor assignment this is (at most one — see FacultyProfile.levelAdvisorId).
+  currentFor        FacultyProfile? @relation("CurrentAdvisorAssignment")
+  changes           LevelAdvisorAssignmentChange[]
+
+  // One advisor per Programme + Level + Academic Session. Other sessions are separate rows, so history is kept.
+  @@unique([programmeId, level, academicSessionId])
+  @@index([facultyUserId])
+  @@index([academicSessionId])
+}
+
+// Who held an assignment and when it changed hands, so a change within a session never erases the past.
+model LevelAdvisorAssignmentChange {
+  id                 String                 @id @default(cuid())
+  assignment         LevelAdvisorAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignmentId       String
+  fromFacultyUserId  String?
+  toFacultyUserId    String
+  changedByUserId    String
+  changedAt          DateTime               @default(now())
+
+  @@index([assignmentId])
+}
+
+// The actual teaching instance of a CurriculumCourse (spec §22).
+model CourseOffering {
+  id                  String           @id @default(cuid())
+  curriculumCourse    CurriculumCourse @relation(fields: [curriculumCourseId], references: [id], onDelete: Restrict)
+  curriculumCourseId  String           @unique
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  lecturers     CourseOfferingLecturer[]
+  days          CourseOfferingDay[]
+  registrations StudentCourseRegistration[]
+  // Lecturer-uploaded learning content for THIS offering only (never the reusable Course), so it can't leak between sessions/semesters.
+  materials     CourseMaterial[]
+}
+
+enum OfferingLecturerRole {
+  COORDINATOR
+  LECTURER
+}
+
+// Coordinator is also one of the assigned lecturers; coordinator permission
+// derives from `role` here (spec §23) — there is no separate coordinator
+// column on CourseOffering to drift out of sync.
+model CourseOfferingLecturer {
+  id               String               @id @default(cuid())
+  courseOffering   CourseOffering       @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  courseOfferingId String
+  facultyUserId    String
+  role             OfferingLecturerRole @default(LECTURER)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@unique([courseOfferingId, facultyUserId])
+  @@index([facultyUserId])
+}
+
+// Possible teaching days — not a timetable (spec §24).
+model CourseOfferingDay {
+  id               String         @id @default(cuid())
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  courseOfferingId String
+  dayOfWeek        DayOfWeek
+
+  @@unique([courseOfferingId, dayOfWeek])
+}
+
+enum StudentRegistrationStatus {
+  PENDING_LEVEL_ADVISOR
+  PENDING_HOD
+  PENDING_DAPU
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+// A student's registration for one specific CourseOffering — preserves
+// history (offering → curriculum → session + semester) per spec §36/§37.
+// Runs alongside the legacy CourseRegistration until the workflow is moved
+// over (see docs/elearning/todo/roadmap.md).
+model StudentCourseRegistration {
+  id                      String                    @id @default(cuid())
+  studentUserId           String
+  courseOffering          CourseOffering            @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  courseOfferingId        String
+  status                  StudentRegistrationStatus @default(PENDING_LEVEL_ADVISOR)
+  submittedAt             DateTime                  @default(now())
+  levelAdvisorApprovedAt  DateTime?
+  hodApprovedAt           DateTime?
+  dapuApprovedAt          DateTime?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+
+  @@unique([studentUserId, courseOfferingId])
+  @@index([status])
+  @@index([courseOfferingId])
+}
+
+// ===========================================================================
+// NUC / CCMAS reference data (spec §49-§65)
+//
+// External minimum-standard reference, imported from JSON produced by
+// scripts/ccmas/extract_ccmas.py. Deliberately NOT linked by foreign key to
+// Course/Curriculum: reference data must never silently create or overwrite
+// DAPU's operational curriculum (spec §58).
+// ===========================================================================
+
+model CCMASDocument {
+  id            String   @id @default(cuid())
+  name          String
+  version       String
+  title         String?
+  source        String
+  fileReference String
+  sha256        String?
+  pageCount     Int?
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  disciplines CCMASDiscipline[]
+  courses     CCMASCourse[]
+  batches     CCMASImportBatch[]
+
+  @@unique([name, version])
+}
+
+model CCMASImportBatch {
+  id             String        @id @default(cuid())
+  document       CCMASDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId     String
+  jsonSha256     String
+  newCount       Int           @default(0)
+  updatedCount   Int           @default(0)
+  unchangedCount Int           @default(0)
+  warningCount   Int           @default(0)
+  createdAt      DateTime      @default(now())
+
+  @@index([documentId])
+}
+
+model CCMASDiscipline {
+  id          String        @id @default(cuid())
+  document    CCMASDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId  String
+  name        String
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  programmes CCMASProgramme[]
+
+  @@unique([documentId, name])
+}
+
+model CCMASProgramme {
+  id                 String          @id @default(cuid())
+  discipline         CCMASDiscipline @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+  disciplineId       String
+  name               String
+  // The course-code prefix the document's glossary assigns (null when the
+  // document lists none).
+  code               String?
+  degree             String?
+  overview           String?
+  philosophy         String?
+  objectives         String?
+  minimumCreditUnits Int?
+  sourcePageStart    Int?
+  sourcePageEnd      Int?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  courses CCMASProgrammeCourse[]
+  linkedProgrammes Programme[]
+
+  @@unique([disciplineId, name])
+}
+
+model CCMASCourse {
+  id          String        @id @default(cuid())
+  document    CCMASDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId  String
+  code        String
+  title       String
+  creditUnits Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  programmeCourses CCMASProgrammeCourse[]
+
+  @@unique([documentId, code])
+}
+
+// The same course code is listed by many programmes with slightly different
+// wording/units, so everything programme-specific (title as printed, units,
+// hours, outcomes, contents) lives here, with page references.
+model CCMASProgrammeCourse {
+  id              String         @id @default(cuid())
+  programme       CCMASProgramme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+  programmeId     String
+  course          CCMASCourse    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId        String
+  level           Int
+  // Null: the document's structure tables are per-level and do not say.
+  semester        String?
+  // Document status letter: C/E/R/O …
+  statusLetter    String
+  courseType      String
+  titleAsListed   String
+  creditUnits     Int
+  lectureHours    Int?
+  practicalHours  Int?
+  duration        String?
+  prerequisites   String?
+  description     String?
+  learningOutcomes String[]
+  sourcePage      Int
+  detailPage      Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([programmeId, courseId, level])
+  @@index([courseId])
+
+  curriculumCourses CurriculumCourse[]
+}
+
+// ===========================================================================
+// Course materials — files uploaded by the lecturers of ONE CourseOffering.
+//
+// The file lives in Supabase Storage (private bucket); this row holds only the safe reference
+// (bucket + path) and metadata — never a credential. A material covers a week range
+// (startWeek..endWeek); a single-week upload has startWeek = endWeek. It is ONE row however many
+// weeks it spans. DB CHECK constraints (prisma/elearning/constraints.sql) enforce
+// startWeek >= 1, endWeek >= startWeek and 0 < fileSize <= 8 MB.
+// ===========================================================================
+
+enum CourseMaterialType {
+  NOTES
+  ASSIGNMENT
+  QUIZ
+}
+
+model CourseMaterial {
+  id                       String             @id @default(cuid())
+  courseOffering           CourseOffering     @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  courseOfferingId         String
+  uploadedBy               FacultyProfile     @relation(fields: [uploadedByFacultyUserId], references: [userId], onDelete: Restrict)
+  uploadedByFacultyUserId  String
+  title                    String
+  description              String?
+  type                     CourseMaterialType
+  startWeek                Int
+  endWeek                  Int
+  fileName                 String
+  mimeType                 String
+  fileSize                 Int
+  storageBucket            String
+  storagePath              String             @unique
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  @@index([courseOfferingId, startWeek])
+  @@index([uploadedByFacultyUserId])
+}

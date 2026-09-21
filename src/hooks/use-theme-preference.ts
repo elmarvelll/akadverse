@@ -10,40 +10,51 @@
 // Defaults to dark mode: falls back to the OS-level color-scheme
 // preference only when the visitor has never explicitly toggled it here.
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 const THEME_STORAGE_KEY = "akadverse-theme";
+const THEME_EVENT = "akadverse-theme-change";
 
+// The saved choice, or the OS setting when nothing has been saved. Browser-only, so it is never used for the server render.
+function readDark(): boolean {
+  try {
+    const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === "light") return false;
+    if (saved === "dark") return true;
+  } catch {
+    // storage blocked (private mode etc.): fall back to the OS setting
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+function subscribe(onChange: () => void) {
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  window.addEventListener("storage", onChange); // another tab changed it
+  window.addEventListener(THEME_EVENT, onChange); // this tab changed it
+  media.addEventListener("change", onChange); // the OS setting changed (only matters while nothing is saved)
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(THEME_EVENT, onChange);
+    media.removeEventListener("change", onChange);
+  };
+}
+
+// The server render (and React's first client render while hydrating) always uses dark, so they are identical and there is no
+// hydration mismatch; the visitor's real preference is applied right after. Reading it with useSyncExternalStore instead of
+// "setState inside an effect" also avoids a second render pass and stays correct if the preference changes elsewhere.
 export function useThemePreference() {
-  // Start `true` (dark) so the very first paint (before this runs) matches
-  // what the effect below will very likely settle on, minimizing any
-  // flash of the wrong theme.
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const isDarkMode = useSyncExternalStore(subscribe, readDark, () => true);
 
-  // Runs once on mount to read the visitor's saved/OS preference. This has
-  // to be an effect (not computed during render) because localStorage and
-  // matchMedia are browser-only APIs unavailable during server rendering.
-  useEffect(() => {
-    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-
-    if (savedTheme === "light") {
-      setIsDarkMode(false);
-      return;
+  // Same shape as a useState setter (a value or an updater), so callers are unchanged. Only an explicit toggle is saved.
+  const setIsDarkMode = useCallback((next: boolean | ((current: boolean) => boolean)) => {
+    const value = typeof next === "function" ? next(readDark()) : next;
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, value ? "dark" : "light");
+    } catch {
+      // ignore: the choice just won't persist
     }
-    if (savedTheme === "dark") {
-      setIsDarkMode(true);
-      return;
-    }
-
-    // No explicit preference saved yet — fall back to the OS setting.
-    setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
+    window.dispatchEvent(new Event(THEME_EVENT));
   }, []);
-
-  // Persists every change so it's remembered next visit, and so it's
-  // shared with whichever of /login or /signup the visitor opens next.
-  useEffect(() => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? "dark" : "light");
-  }, [isDarkMode]);
 
   return { isDarkMode, setIsDarkMode } as const;
 }

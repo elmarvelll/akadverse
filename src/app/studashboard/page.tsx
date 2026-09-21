@@ -17,7 +17,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Zap, House, Bot, BookOpen, ShoppingBag, ShieldCheck, Loader2 } from "lucide-react";
@@ -54,11 +54,15 @@ const workspaces = [
   {
     id: 4,
     title: "E-Learning",
-    description: "Access courses, learning materials, and track academic progress. Includes learning dashboard, my learning, and learning resources.",
+    description: "Access courses, learning materials, and track academic progress. Includes learning dashboard, my courses, and learning resources.",
     icon: BookOpen,
     color: "text-green-500",
     bgColor: "bg-green-50",
-    path: "/studashboard/e-learning",
+    // Points at the standalone E-Learning system (its own layout/sidebar,
+    // own database — see prisma/elearning/schema.prisma), not a page under
+    // studashboard/** — E-Learning is a separate academic domain, not a
+    // Marketplace section (AGENTS.md §1/§45).
+    path: "/e-learning/student/dashboard",
   },
   {
     id: 5,
@@ -99,7 +103,9 @@ const getTimeOfDayGreeting = () => {
 
 const Page = () => {
   const router = useRouter();
-  const [timeOfDay, setTimeOfDay] = useState(getTimeOfDayGreeting());
+  // A plain per-render value: this page shows a spinner until the session has loaded on the client, so the greeting is never part
+  // of the server HTML and can't mismatch (facultydashboard does the same).
+  const timeOfDay = getTimeOfDayGreeting();
   const { user, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
@@ -111,7 +117,6 @@ const Page = () => {
     if (!isLoading && !isAuthenticated) {
       router.replace("/login");
     }
-    setTimeOfDay(getTimeOfDayGreeting());
   }, [isAuthenticated, isLoading, router]);
 
   // While the session is still resolving, show a lightweight spinner

@@ -46,7 +46,7 @@ const PUBLIC_PAGE_PATHS = ["/login", "/signup"];
 // Cron calling us on schedule (see vercel.json) — same situation, no
 // session cookie, authenticated instead via a shared secret checked in
 // src/lib/cron-auth.ts.
-const PUBLIC_API_PREFIXES = ["/api/auth", "/api/register", "/api/webhooks", "/api/cron"];
+const PUBLIC_API_PREFIXES = ["/api/auth", "/api/register", "/api/signup", "/api/webhooks", "/api/cron"];
 
 // Where a signed-in user's role sends them when they land on "/". Faculty
 // and admin routes are simple "coming soon" pages for now — see
@@ -60,11 +60,48 @@ const PUBLIC_API_PREFIXES = ["/api/auth", "/api/register", "/api/webhooks", "/ap
 // account lands on the same home as everyone else and, if `isAdmin` is
 // also true, sees the Admin card there
 // (src/app/studashboard/page.tsx) like any other admin-flagged user.
+//
+// hod/dapu/dean/vc have no Marketplace portal at all (Marketplace is
+// students-only, see the MARKETPLACE_PATH_PREFIXES check below), so "/"
+// sends them straight into their E-Learning portal. student and faculty
+// each land on their own hub page instead — src/app/studashboard/page.tsx
+// and src/app/facultydashboard/page.tsx respectively — a card grid of
+// their available workspaces (E-Learning included) rather than any one
+// workspace directly, the same pattern for both roles now. (Faculty's hub
+// used to be a bare "Coming soon" stub with no link out to
+// /e-learning/faculty/... anywhere on it, making the real Faculty portal
+// unreachable via normal sign-in — fixed by building the hub out properly
+// instead of skipping straight past it.)
 const ROLE_HOME_PATHS: Record<Role, string> = {
   student: "/studashboard",
   faculty: "/facultydashboard",
   admin: "/admindashboard",
   super_admin: "/studashboard",
+  hod: "/e-learning/hod/dashboard",
+  dapu: "/e-learning/dapu/dashboard",
+  dean: "/e-learning/dean",
+  vc: "/e-learning/vc",
+};
+
+// Marketplace is students-only (AGENTS.md §9) — this is the routing layer
+// of that three-level enforcement (nav hides the card; this blocks direct
+// navigation; src/lib/marketplace-auth.ts#requireStudent guards individual
+// API handlers so they never rely on this proxy check alone).
+const MARKETPLACE_PATH_PREFIXES = ["/studashboard/marketplace", "/api/marketplace"];
+
+// Which E-Learning role each top-level "/e-learning/<role>/..." (or
+// "/api/elearning/<role>/...") segment belongs to (AGENTS.md §33/§34) — a
+// non-matching signed-in role gets bounced to their own home rather than
+// trusting the URL. "/e-learning" with no role segment (or an unrecognized
+// one) just falls through to the generic "signed in -> let it through"
+// case below, since there's no role-specific gate to apply there.
+const ELEARNING_ROLE_PATH_SEGMENTS: Record<string, Role> = {
+  student: "student",
+  faculty: "faculty",
+  hod: "hod",
+  dapu: "dapu",
+  dean: "dean",
+  vc: "vc",
 };
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
@@ -95,8 +132,31 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(homePath, request.url));
   }
 
-  // Signed in and hitting anything else: let the request through.
   if (token) {
+    // Marketplace is students-only — reject/redirect anyone else who
+    // navigates there directly (AGENTS.md §9's "Routing" level).
+    const isMarketplacePath = MARKETPLACE_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    if (isMarketplacePath && token.role !== "student") {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Marketplace is only available to students." }, { status: 403 });
+      }
+      return NextResponse.redirect(new URL(ROLE_HOME_PATHS[token.role] ?? "/", request.url));
+    }
+
+    // E-Learning: the role in the URL's "/e-learning/<role>/..." (or
+    // "/api/elearning/<role>/...") segment must match the signed-in user's
+    // actual role (AGENTS.md §33 — "do not rely on the URL itself for
+    // security", enforced here rather than trusted).
+    const elearningMatch = pathname.match(/^\/(?:e-learning|api\/elearning)\/([^/]+)/);
+    const requiredRole = elearningMatch ? ELEARNING_ROLE_PATH_SEGMENTS[elearningMatch[1]] : undefined;
+    if (requiredRole && token.role !== requiredRole) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "You don't have access to this." }, { status: 403 });
+      }
+      return NextResponse.redirect(new URL(ROLE_HOME_PATHS[token.role] ?? "/", request.url));
+    }
+
+    // Signed in and hitting anything else: let the request through.
     return NextResponse.next();
   }
 

@@ -32,9 +32,9 @@ export function PasswordInput({ value, onChange, placeholder, isDarkMode, minLen
         onChange={onChange}
         required
         minLength={minLength}
-        className={`w-full pl-12 pr-11 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
+        className={`w-full pl-12 pr-11 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-base sm:text-sm ${
           isDarkMode
-            ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
+            ? "bg-[#171717] border-[#262626] text-white placeholder-[#a3a3a3]"
             : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
         }`}
       />
