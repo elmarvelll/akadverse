@@ -1,31 +1,28 @@
 // src/app/login/page.tsx
 //
 // The "sign in" page, reachable at /login. Visual design matches the
-// dark/light split-screen mockup you provided; the functional wiring is
-// unchanged from before:
+// dark/light split-screen mockup you provided; the functional wiring:
 //   - Email + password calls NextAuth's `signIn("credentials", ...)`,
-//     which runs the `authorize` function in src/lib/auth.ts.
+//     which runs the `authorize` function in src/lib/auth.ts. It is a normal
+//     email field: the person types their WHOLE email (any address they
+//     registered with). There is no role or domain selector here — that
+//     scheme exists only on the sign-up page. Whatever role the account
+//     has in the database (checked server-side) is what applies.
 //   - "Continue with Google" uses NextAuth's Google OAuth flow.
 //   - Honors ?callbackUrl=... appended by src/proxy.ts when it redirects
 //     an unauthenticated visitor here, and is also where src/lib/auth.ts's
 //     `pages.signIn` points.
-//
-// The mockup's role selector was commented out on the login page in the
-// version you sent (i.e. not visually present there), so it's left out of
-// this page too — see src/app/signup/page.tsx for the (cosmetic-only)
-// version of that selector.
 
 "use client";
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail } from "lucide-react";
 import { signIn } from "next-auth/react";
-import { LoginFormValues } from "@/types/auth";
 import { PasswordInput } from "../components/password-input";
 import { ThemeToggle } from "../components/theme-toggle";
 import { AuthVisualPanel } from "../components/auth-visual-panel";
+import { Mail } from "lucide-react";
 import { useThemePreference } from "@/hooks/use-theme-preference";
 
 // Small inline Google "G" logo used on the "Continue with Google" button.
@@ -63,14 +60,11 @@ function LoginForm() {
 
   const { isDarkMode, setIsDarkMode } = useThemePreference();
 
-  const [form, setForm] = useState<LoginFormValues>({ email: "", password: "" });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [error, setError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
-
-  const updateField = (key: keyof LoginFormValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((current) => ({ ...current, [key]: e.target.value }));
-  };
 
   // `redirect: false` means NextAuth returns a result object instead of
   // doing a full-page redirect itself, so we can show our own error
@@ -81,8 +75,8 @@ function LoginForm() {
     setError("");
 
     const res = await signIn("credentials", {
-      email: form.email,
-      password: form.password,
+      email: email.trim().toLowerCase(),
+      password,
       redirect: false,
     });
 
@@ -124,25 +118,34 @@ function LoginForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5 mb-8">
-            <div className="relative">
-              <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
-              <input
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={updateField("email")}
-                required
-                className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
-                  isDarkMode
-                    ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
-                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                }`}
-              />
+            <div>
+              <label htmlFor="login-email" className={`mb-1.5 block text-xs font-semibold ${isDarkMode ? "text-[#d4d4d4]" : "text-gray-800"}`}>
+                Email
+              </label>
+              <div className="relative">
+                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#a3a3a3]" : "text-gray-500"}`} size={20} />
+                <input
+                  id="login-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-base sm:text-sm ${
+                    isDarkMode ? "bg-[#171717] border-[#262626] text-white placeholder-[#a3a3a3]" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                  }`}
+                />
+              </div>
             </div>
 
             <PasswordInput
-              value={form.password}
-              onChange={updateField("password")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               isDarkMode={isDarkMode}
             />

@@ -25,10 +25,11 @@
 import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { unauthorized, forbidden } from "@/lib/service-error";
+import { isAdminEmail } from "@/lib/admin-identity";
 
 export async function requireAdmin(): Promise<Session> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) throw unauthorized();
-  if (!session.user.isAdmin) throw forbidden("Admin access required.");
+  if (!session.user.isAdmin && !isAdminEmail(session.user.email)) throw forbidden("Admin access required.");
   return session;
 }

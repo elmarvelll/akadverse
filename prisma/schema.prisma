@@ -18,11 +18,30 @@ datasource db {
 // to see. Every new account defaults to `student` (see User.role below) —
 // promoting someone to faculty/admin/super_admin is a manual step for now,
 // there's no self-service upgrade path yet.
+//
+// hod/dapu/dean/vc were added for the E-Learning academic system (see
+// docs/elearning/ — separate database, prisma/elearning/schema.prisma).
+// They sit in this enum rather than a second role field because `role` is
+// meant to be ONE AkadVerse-wide identity: it's what src/proxy.ts uses to
+// route a signed-in user home, and what gates Marketplace access (students
+// only — see src/proxy.ts's marketplace check and
+// src/lib/marketplace-auth.ts#requireStudent). `admin`/`super_admin` stay
+// Marketplace-only concepts (super_admin has no distinct portal; Marketplace
+// admin access is actually the independent `User.isAdmin` flag below) —
+// they're not part of the academic hierarchy the E-Learning spec describes.
+//
+// Level Adviser is deliberately NOT a role here — it's a responsibility a
+// `faculty` user can additionally hold (see ElearningFacultyProfile in the
+// E-Learning schema), not a separate identity.
 enum Role {
   student
   faculty
   admin
   super_admin
+  hod
+  dapu
+  dean
+  vc
 }
 
 model User {
@@ -508,6 +527,37 @@ model LateDeliveryFine {
 
   @@index([businessId])
   @@index([status])
+}
+
+// A student sign-up that has been submitted but whose email-ownership OTP has not been verified yet.
+// It exists because the flow is "verify OTP, THEN create the User": until then there is no User row for
+// the existing User.studentEmailOtp* columns (Marketplace deliverer flow) to live on, and a stateless token
+// cannot enforce max attempts / single use / resend cooldown / invalidating the previous code.
+// Deleted when the sign-up completes; expired rows are ignored and replaced. Holds only a hash of the OTP and
+// (for password sign-ups) the bcrypt hash of the password — never a plaintext secret. Service:
+// services/auth/student-signup/.
+model PendingSignup {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  role           Role     @default(student)
+  // "credentials" (email + password) or "google" (verified Google identity, no password).
+  authMethod     String
+  passwordHash   String?
+  firstName      String
+  lastName       String
+  // { matricNumber, departmentId, programmeId, level } — re-validated against the E-Learning DB when completing.
+  payload        Json
+  // When the email already belongs to a User with no student profile, the profile is attached to that User
+  // instead of creating another one.
+  existingUserId String?
+  otpHash        String
+  otpExpiresAt   DateTime
+  otpAttempts    Int      @default(0)
+  otpLastSentAt  DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([otpExpiresAt])
 }
 
 model EmailConnection {
@@ -1342,6 +1392,7 @@ model Review {
 enum NotificationScope {
   MARKETPLACE
   ADMIN
+  ELEARNING
 }
 
 model Notification {

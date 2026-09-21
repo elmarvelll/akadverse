@@ -9,16 +9,19 @@
 //   1. CredentialsProvider — classic email + password, checked against the
 //      `User` table with bcryptjs.
 //   2. GoogleProvider — "Continue with Google" / "Sign up with Google".
-//      Because both signup and login use signIn("google", ...), Google
-//      effectively works for both: if we don't recognize the email yet we
-//      create a new User row for them (see the `signIn` callback below),
-//      otherwise we just log them in.
+//      Google signs an EXISTING account in; a new Google user is
+//      only accepted with an institutional student email and is sent through the
+//      student sign-up (academic details + OTP) instead of being auto-created
+//      (see the `signIn` callback below).
 
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { isAdminEmail } from "@/lib/admin-identity";
+import { isEmailForRole } from "@/lib/account-domains";
+import { createGoogleSignupToken } from "@/services/auth/student-signup/google-signup-token";
 
 export const authOptions: NextAuthOptions = {
   // Used by NextAuth to sign/encrypt the session JWT. Must be set in .env.
@@ -62,7 +65,8 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const email = credentials.email as string;
+        // Normalised the same way every stored email is (trimmed, lower-case), so any casing the person types matches.
+        const email = (credentials.email as string).trim().toLowerCase();
         const password = credentials.password as string;
 
         // Look up the user by their unique email.
@@ -156,7 +160,12 @@ export const authOptions: NextAuthOptions = {
           // prisma/schema.prisma's comment on User.isAdmin). Checked by
           // src/lib/admin.ts#requireAdmin and used to show/hide the Admin
           // card on the home route (src/app/studashboard/page.tsx).
-          token.isAdmin = dbUser.isAdmin;
+          token.isAdmin = dbUser.isAdmin || isAdminEmail(dbUser.email);
+          // Keep the stored flag in step so admin user lists/queries agree
+          // with what the session says (server-side; the client can't cause this).
+          if (isAdminEmail(dbUser.email) && !dbUser.isAdmin) {
+            await prisma.user.update({ where: { id: dbUser.id }, data: { isAdmin: true } });
+          }
         }
       }
       return token;
@@ -173,7 +182,9 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name as string;
         session.user.firstName = token.firstName as string;
         session.user.role = token.role;
-        session.user.isAdmin = token.isAdmin as boolean;
+        // Derived from the server-signed token's email as well, so sessions that
+        // pre-date this rule pick it up without a fresh sign-in.
+        session.user.isAdmin = (token.isAdmin as boolean) || isAdminEmail(token.email);
       }
       return session;
     },
@@ -181,33 +192,23 @@ export const authOptions: NextAuthOptions = {
     // Runs right before a sign-in is completed. We use it to auto-create a
     // `User` row the first time someone signs in with Google, since Google
     // accounts never go through our /api/register endpoint.
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
         const email = user.email?.trim().toLowerCase();
         if (!email) return false; // reject sign-in if Google didn't give us an email
+        // Only an email Google itself has verified counts as an identity.
+        if ((profile as { email_verified?: boolean } | undefined)?.email_verified === false) return "/signup?error=google_unverified";
 
-        const existingUser = await prisma.user.findUnique({
-          where: { email },
-        });
+        const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+        if (existingUser) return true; // an existing account: a normal session, no OTP again
 
-        if (!existingUser) {
-          // Split Google's full display name into first/last name so it
-          // fits our `firstName`/`lastName` columns.
-          const nameParts = user.name?.trim().split(/\s+/) ?? [];
-          const firstName = nameParts[0] ?? "";
-          const lastName = nameParts.slice(1).join(" ");
-
-          await prisma.user.create({
-            data: {
-              firstName,
-              lastName,
-              email,
-              // No password for Google-created accounts — they can only
-              // sign in via Google unless they later set one explicitly.
-              password: "",
-            },
-          });
-        }
+        // A NEW Google user is never created here. Google alone doesn't grant access: it must be an institutional
+        // student address, and the sign-up still needs the student's academic details + an emailed OTP. The verified
+        // identity is handed to /signup in a short-lived, server-signed token (never a typed email).
+        if (!isEmailForRole(email, "student")) return "/signup?error=google_domain";
+        const nameParts = user.name?.trim().split(/\s+/) ?? [];
+        const token = await createGoogleSignupToken({ email, firstName: nameParts[0] ?? "", lastName: nameParts.slice(1).join(" ") });
+        return `/signup?google=${encodeURIComponent(token)}`;
       }
 
       // Returning true allows the sign-in to proceed.

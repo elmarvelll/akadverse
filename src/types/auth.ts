@@ -16,11 +16,11 @@ export interface SignupFormValues {
   // Optional — maps directly to the optional `location` column on the
   // Prisma `User` model.
   location?: string;
+  // Faculty and HOD sign-up only (validated server-side against the E-Learning database).
+  collegeId?: string;
+  departmentId?: string;
 }
 
-// Fields collected on the login form. Only email + password are needed;
-// NextAuth's CredentialsProvider takes it from here.
-export interface LoginFormValues {
-  email: string;
-  password: string;
-}
+// The login form no longer has its own type here: it builds the email from
+// a local part + account type (see src/lib/account-domains.ts) and tracks
+// password separately — see src/app/login/page.tsx.

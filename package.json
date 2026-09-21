@@ -4,10 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
-    "postinstall": "prisma generate",
+    "build": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma && next build",
+    "postinstall": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:elearning:generate": "prisma generate --schema=prisma/elearning/schema.prisma",
+    "db:elearning:push": "prisma db push --schema=prisma/elearning/schema.prisma",
+    "db:elearning:migrate": "prisma migrate dev --schema=prisma/elearning/schema.prisma",
+    "db:elearning:studio": "prisma studio --schema=prisma/elearning/schema.prisma",
+    "db:elearning:seed": "tsx scripts/elearning-seed.ts",
+    "storage:setup": "tsx scripts/setup-course-material-storage.ts",
+    "ccmas:extract": "python3 scripts/ccmas/extract_ccmas.py",
+    "db:ccmas:import": "tsx scripts/ccmas/import-ccmas.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -32,6 +40,7 @@
     "eslint-config-next": "16.3.3",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   },
   "allowScripts": {

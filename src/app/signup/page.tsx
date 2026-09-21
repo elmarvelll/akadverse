@@ -1,32 +1,20 @@
 // src/app/signup/page.tsx
 //
-// The "create account" page, reachable at /signup. Visual design matches
-// the dark/light split-screen mockup you provided; the functional wiring
-// underneath is unchanged from before:
-//   - Credentials signup POSTs to our own /api/register route (via the
-//     shared axios instance), which hashes the password and creates the
-//     User row (always as role "student" — see the comment in
-//     src/app/api/register/route.ts).
-//   - "Sign up with Google" uses NextAuth's Google OAuth flow; if the
-//     email doesn't exist yet, the `signIn` callback in src/lib/auth.ts
-//     creates the User row automatically.
-//
-// About the "Choose View Role" selector below: it's cosmetic. Every
-// account is created as "student" regardless of which pill is selected,
-// and after signup the app always routes through "/" so src/proxy.ts's
-// real role-based dispatch decides the destination — the selector doesn't
-// override that. This was a judgment call made without an explicit
-// answer from you on whether the selector should actually assign roles;
-// letting a signup request self-assign Faculty/Admin would undermine the
-// role system entirely, so this project defaults to the safe reading.
-// Flag it if you'd rather it work differently.
+// The "create account" page, reachable at /signup. The role selector (attached to the email field) decides the email
+// domain — see src/lib/account-domains.ts — and:
+//   - Student -> the full student flow (StudentSignup.tsx): academic details, emailed 6-digit OTP, then the account is
+//     created in the Main DB (User) and the E-Learning DB (StudentProfile). Also used for a NEW Google user arriving
+//     with ?google=<server-signed token> (see the signIn callback in src/lib/auth.ts).
+//   - Faculty / HOD / DAPU -> simple account form posting to /api/register (roles are never granted by this selector; see
+//     that route). Faculty and HOD also pick a College and Department (DAPU is university-wide).
+// The Role is its own dropdown field (Student / Faculty / HOD / DAPU); it fixes the email domain shown next to the email
+// input, and the full resulting email is always displayed under the field.
 
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { MapPin, User, Mail } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { isAxiosError } from "axios";
 import api from "@/lib/axios";
@@ -34,15 +22,11 @@ import { SignupFormValues } from "@/types/auth";
 import { PasswordInput } from "../components/password-input";
 import { ThemeToggle } from "../components/theme-toggle";
 import { AuthVisualPanel } from "../components/auth-visual-panel";
+import { EmailDomainInput } from "../components/email-domain-input";
+import { AuthSelect } from "../components/auth-select";
+import { StudentSignup } from "./StudentSignup";
 import { useThemePreference } from "@/hooks/use-theme-preference";
-
-// Purely a display/navigation preference (see the file-level comment
-// above) — NOT the role assigned to the created account.
-const roleOptions = [
-  { id: "student" as const, label: "Student" },
-  { id: "faculty" as const, label: "Faculty" },
-  { id: "admin" as const, label: "Admin" },
-];
+import { ACCOUNT_TYPES, buildEmail, type AccountTypeRole } from "@/lib/account-domains";
 
 // Small inline Google "G" logo used on the "Sign up with Google" button.
 function GoogleMark() {
@@ -69,26 +53,40 @@ export default function SignUpPage() {
   );
 }
 
+const GOOGLE_ERRORS: Record<string, string> = {
+  google_domain: "That Google account isn't a student account. Use your @stu.cu.edu.ng Google account to sign up as a student.",
+  google_unverified: "Google couldn't verify that email address. Please use a verified account.",
+};
+
 function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const googleToken = searchParams.get("google");
+  const urlError = GOOGLE_ERRORS[searchParams.get("error") ?? ""] ?? "";
   const { isDarkMode, setIsDarkMode } = useThemePreference();
 
-  const [form, setForm] = useState<SignupFormValues>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    location: "",
-  });
-  const [activeRole, setActiveRole] = useState<(typeof roleOptions)[number]["id"]>("student");
+  // Local part + role combine into the full email — the role picks the domain (AGENTS.md §8).
+  const [localPart, setLocalPart] = useState("");
+  const [accountType, setAccountType] = useState<AccountTypeRole>("student");
+  const isStudent = googleToken ? true : accountType === "student";
+  // Simple form for Faculty / HOD / DAPU (unchanged behaviour).
+  const [form, setForm] = useState<Omit<SignupFormValues, "email">>({ firstName: "", lastName: "", password: "", location: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const activeRoleIndex = roleOptions.findIndex((role) => role.id === activeRole);
+  // Faculty and HOD also choose a College and Department (dropdowns from the E-Learning database).
+  const needsDepartment = !isStudent && (accountType === "faculty" || accountType === "hod");
+  const [orgOptions, setOrgOptions] = useState<{ colleges: { id: string; code: string; name: string }[]; departments: { id: string; collegeId: string; name: string }[] } | null>(null);
+  const [collegeId, setCollegeId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  useEffect(() => {
+    if (!needsDepartment || orgOptions) return;
+    api.get("/signup/student/options").then((r) => setOrgOptions({ colleges: r.data.colleges, departments: r.data.departments })).catch(() => setError("Couldn't load the college and department options. Please refresh."));
+  }, [needsDepartment, orgOptions]);
+  const departmentsOfCollege = useMemo(() => orgOptions?.departments.filter((d) => d.collegeId === collegeId) ?? [], [orgOptions, collegeId]);
 
-  // Generic change handler for the plain text inputs (name/location/email).
-  const updateField = (key: keyof SignupFormValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const updateField = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((current) => ({ ...current, [key]: e.target.value }));
   };
 
@@ -96,26 +94,15 @@ function SignUpForm() {
     e.preventDefault();
     setStatus("loading");
     setError("");
-
     try {
-      await api.post("/register", form);
-      // Account created — send the user to sign in with their new
-      // credentials. Deliberately NOT routed by `activeRole`: see the
-      // file-level comment on why the role selector doesn't control
-      // navigation.
+      await api.post("/register", { ...form, email: buildEmail(localPart, accountType), ...(needsDepartment ? { collegeId, departmentId } : {}) } satisfies SignupFormValues);
       router.push("/login");
     } catch (err) {
-      const message =
-        (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) ||
-        "Sign up failed. Please try again.";
-      setError(message);
+      setError((isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "Sign up failed. Please try again.");
       setStatus("error");
     }
   };
 
-  // "Sign up with Google" — same NextAuth flow as login; whether it creates
-  // a new account or logs an existing one in is decided by the `signIn`
-  // callback in src/lib/auth.ts, not by anything on this page.
   const handleGoogle = async () => {
     try {
       setGoogleLoading(true);
@@ -124,6 +111,10 @@ function SignUpForm() {
       setGoogleLoading(false);
     }
   };
+
+  const fieldCls = `w-full px-4 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-base sm:text-sm ${
+    isDarkMode ? "bg-[#171717] border-[#262626] text-white placeholder-[#a3a3a3]" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+  }`;
 
   return (
     <div className={`min-h-screen font-sans relative overflow-hidden transition-colors ${isDarkMode ? "bg-black" : "bg-gray-100"}`}>
@@ -134,162 +125,105 @@ function SignUpForm() {
           isDarkMode ? "bg-black" : "bg-gray-100"
         }`}
       >
-        <div className="max-w-[430px] w-full mx-auto lg:mx-0 py-16 sm:py-10 flex flex-col items-center">
+        <div className="max-w-[430px] w-full min-w-0 mx-auto lg:mx-0 py-16 sm:py-10 flex flex-col items-center">
           <div className="mb-8 sm:mb-10 text-left flex flex-col items-center">
             <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 leading-tight text-center ${isDarkMode ? "text-white" : "text-gray-900"}`}>
               Join AkadVerse
             </h1>
-            <p className={`text-sm sm:text-base ${isDarkMode ? "text-[#9CA3AF]" : "text-gray-600"}`}>
-              Create your student marketplace account.
+            <p className={`text-sm sm:text-base text-center ${isDarkMode ? "text-[#c4c4c4]" : "text-gray-600"}`}>
+              {isStudent ? "Create your student account." : "Create your account."}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mb-8">
-            <div>
-              <p className={`mb-2 text-xs font-semibold uppercase tracking-widest ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`}>
-                Choose View Role
-              </p>
-              <div className={`relative grid grid-cols-3 rounded-xl p-1 ${isDarkMode ? "bg-[#0f0f0f]" : "bg-gray-100"}`}>
-                <span
-                  className={`absolute top-1 bottom-1 w-[calc((100%-0.5rem)/3)] rounded-lg transition-transform duration-300 ease-out ${
-                    isDarkMode ? "bg-blue-500/20 border border-blue-500/30" : "bg-white border border-blue-100 shadow-sm"
-                  }`}
-                  style={{ transform: `translateX(calc(${activeRoleIndex} * 100%))` }}
-                />
-                {roleOptions.map((role) => (
-                  <button
-                    key={role.id}
-                    type="button"
-                    onClick={() => setActiveRole(role.id)}
-                    className={`relative z-10 py-2 text-sm font-semibold transition-colors ${
-                      activeRole === role.id
-                        ? isDarkMode
-                          ? "text-white"
-                          : "text-blue-700"
-                        : isDarkMode
-                          ? "text-[#8a8a8a] hover:text-[#c8c8c8]"
-                          : "text-gray-500 hover:text-gray-800"
-                    }`}
-                  >
-                    {role.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="relative">
-                <User className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
-                <input
-                  type="text"
-                  placeholder="First Name"
-                  value={form.firstName}
-                  onChange={updateField("firstName")}
-                  required
-                  className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
-                    isDarkMode
-                      ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
-                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                  }`}
-                />
-              </div>
-
-              <div className="relative">
-                <User className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
-                <input
-                  type="text"
-                  placeholder="Last Name"
-                  value={form.lastName}
-                  onChange={updateField("lastName")}
-                  required
-                  className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
-                    isDarkMode
-                      ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
-                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                  }`}
-                />
-              </div>
-            </div>
-
-            <div className="relative">
-              <MapPin className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
-              <input
-                type="text"
-                placeholder="Location (optional)"
-                value={form.location}
-                onChange={updateField("location")}
-                className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
-                  isDarkMode
-                    ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
-                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                }`}
-              />
-            </div>
-
-            <div className="relative">
-              <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#737373]" : "text-gray-500"}`} size={20} />
-              <input
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={updateField("email")}
-                required
-                className={`w-full pl-12 pr-3 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm ${
-                  isDarkMode
-                    ? "bg-[#171717] border-[#262626] text-white placeholder-[#737373]"
-                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                }`}
-              />
-            </div>
-
-            <PasswordInput
-              value={form.password}
-              onChange={updateField("password")}
-              placeholder="Password (at least 8 characters)"
-              isDarkMode={isDarkMode}
-              minLength={8}
-            />
-
-            {error && (
-              <div className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-400 bg-red-900/20" : "text-red-700 bg-red-100"}`}>
-                {error}
-              </div>
+          <div className="w-full space-y-4 mb-8">
+            {urlError && (
+              <div role="alert" className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-300 bg-red-900/30" : "text-red-800 bg-red-100"}`}>{urlError}</div>
             )}
 
-            <button
-              type="submit"
-              disabled={status === "loading"}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-            >
-              {status === "loading" ? "Creating account…" : "Sign Up"}
-            </button>
+            {!googleToken && (
+              <AuthSelect
+                id="su-role"
+                label="Role"
+                placeholder="Select your role"
+                isDarkMode={isDarkMode}
+                value={accountType}
+                onChange={(v) => setAccountType(v as AccountTypeRole)}
+                options={ACCOUNT_TYPES.map((t) => ({ value: t.role, label: t.label }))}
+              />
+            )}
 
-            <div className="flex items-center gap-3 py-1">
-              <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
-              <span className={`text-xs ${isDarkMode ? "text-[#737373]" : "text-gray-400"}`}>or</span>
-              <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
-            </div>
+            {isStudent ? (
+              <StudentSignup
+                isDarkMode={isDarkMode}
+                localPart={localPart}
+                onLocalPartChange={setLocalPart}
+                accountType={accountType}
+                googleToken={googleToken}
+              />
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input type="text" aria-label="First name" placeholder="First name" value={form.firstName} onChange={updateField("firstName")} required className={fieldCls} />
+                  <input type="text" aria-label="Last name" placeholder="Last name" value={form.lastName} onChange={updateField("lastName")} required className={fieldCls} />
+                </div>
+                <input type="text" aria-label="Location (optional)" placeholder="Location (optional)" value={form.location} onChange={updateField("location")} className={fieldCls} />
+                {needsDepartment && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <AuthSelect
+                      id="su-college" label="College" placeholder="Select college" isDarkMode={isDarkMode} loading={!orgOptions && !error}
+                      value={collegeId} onChange={(v) => { setCollegeId(v); setDepartmentId(""); }}
+                      options={(orgOptions?.colleges ?? []).map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))}
+                    />
+                    <AuthSelect
+                      id="su-department" label="Department" placeholder="Select department" isDarkMode={isDarkMode}
+                      value={departmentId} onChange={setDepartmentId} disabled={!collegeId}
+                      options={departmentsOfCollege.map((d) => ({ value: d.id, label: d.name }))}
+                    />
+                  </div>
+                )}
+                <div>
+                  <span className={`mb-1.5 block text-xs font-semibold ${isDarkMode ? "text-[#d4d4d4]" : "text-gray-800"}`}>Email</span>
+                  <EmailDomainInput localPart={localPart} onLocalPartChange={setLocalPart} accountType={accountType} isDarkMode={isDarkMode} />
+                </div>
+                <PasswordInput value={form.password} onChange={updateField("password")} placeholder="Password (at least 8 characters)" isDarkMode={isDarkMode} minLength={8} />
+                {error && <div role="alert" className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-300 bg-red-900/30" : "text-red-800 bg-red-100"}`}>{error}</div>}
+                <button
+                  type="submit"
+                  disabled={status === "loading"}
+                  className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                >
+                  {status === "loading" ? "Creating account…" : "Sign Up"}
+                </button>
+              </form>
+            )}
 
-            <button
-              type="button"
-              onClick={handleGoogle}
-              disabled={googleLoading}
-              className={`w-full py-3 border rounded-full font-semibold text-sm flex items-center justify-center gap-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                isDarkMode
-                  ? "bg-[#171717] border-[#262626] text-white hover:bg-[#1f1f1f]"
-                  : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              {googleLoading ? "Redirecting…" : (<><GoogleMark /> Sign up with Google</>)}
-            </button>
+            {!googleToken && (
+              <>
+                <div className="flex items-center gap-3 py-1">
+                  <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
+                  <span className={`text-xs ${isDarkMode ? "text-[#a3a3a3]" : "text-gray-500"}`}>or</span>
+                  <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGoogle}
+                  disabled={googleLoading}
+                  className={`w-full py-3 border rounded-full font-semibold text-sm flex items-center justify-center gap-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isDarkMode ? "bg-[#171717] border-[#262626] text-white hover:bg-[#1f1f1f]" : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
+                  }`}
+                >
+                  {googleLoading ? "Redirecting…" : (<><GoogleMark /> Continue with Google</>)}
+                </button>
+              </>
+            )}
 
-            <p className={`text-sm text-center pt-1 ${isDarkMode ? "text-[#9CA3AF]" : "text-gray-600"}`}>
+            <p className={`text-sm text-center pt-1 ${isDarkMode ? "text-[#c4c4c4]" : "text-gray-600"}`}>
               Already have an account?{" "}
               <Link href="/login" className={`font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                 Sign in
               </Link>
             </p>
-          </form>
+          </div>
         </div>
       </div>
 
