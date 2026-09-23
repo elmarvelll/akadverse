@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "MarketplaceSettings" ADD COLUMN     "vendorDeliveryFee" DOUBLE PRECISION NOT NULL DEFAULT 1000,
+ADD COLUMN     "vendorServiceFeeAmount" DOUBLE PRECISION NOT NULL DEFAULT 100;

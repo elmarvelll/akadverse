@@ -1,0 +1,54 @@
+-- AlterTable
+ALTER TABLE `Business` ADD COLUMN `blocked` BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN `blockedAt` DATETIME(3) NULL,
+    ADD COLUMN `blockedBy` VARCHAR(191) NULL,
+    ADD COLUMN `blockedReason` TEXT NULL,
+    ADD COLUMN `verified` BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN `verifiedAt` DATETIME(3) NULL,
+    ADD COLUMN `verifiedBy` VARCHAR(191) NULL;
+
+-- AlterTable
+ALTER TABLE `OrderEvent` MODIFY `type` ENUM('ORDER_CREATED', 'SELLER_NOTIFIED', 'SELLER_ACCEPTED', 'SELLER_REJECTED', 'SELLER_AUTO_REJECTED', 'SELLER_PROCESSING', 'SELLER_MARKED_READY', 'SELLER_DROPPED_OFF', 'SELLER_MISSED_DROPOFF_DEADLINE', 'DELIVERER_ASSIGNED', 'DELIVERER_PICKUP_OTP_ISSUED', 'DELIVERER_PICKUP_OTP_VERIFIED', 'DELIVERER_CONFIRMED_PICKUP', 'HANDED_TO_DELIVERER', 'OUT_FOR_DELIVERY', 'BUYER_DELIVERY_OTP_ISSUED', 'BUYER_OTP_VERIFICATION_ATTEMPTED', 'BUYER_OTP_VERIFIED', 'DELIVERY_ATTEMPTED', 'DELIVERY_FAILED', 'DELIVERY_RETRY_SCHEDULED', 'RETURNED_TO_DROPOFF', 'DELIVERED', 'PARTIALLY_DELIVERED', 'ITEM_CANCELLED', 'REFUND_INITIATED', 'REFUND_COMPLETED', 'PAYOUT_PENDING', 'PAYOUT_PROCESSING', 'PAYOUT_SUCCESS', 'PAYOUT_FAILED', 'LATE_DELIVERY_FINE_ISSUED', 'LATE_DELIVERY_FINE_PAID', 'BUSINESS_DELIVERY_RESTRICTED', 'BUSINESS_DELIVERY_UNRESTRICTED', 'DISPUTE_OPENED', 'DISPUTE_RESOLVED') NOT NULL;
+
+-- CreateTable
+CREATE TABLE `BusinessReport` (
+    `id` VARCHAR(191) NOT NULL,
+    `businessId` VARCHAR(191) NOT NULL,
+    `reporterId` VARCHAR(191) NOT NULL,
+    `reason` TEXT NOT NULL,
+    `status` ENUM('PENDING', 'REVIEWED') NOT NULL DEFAULT 'PENDING',
+    `reviewedAt` DATETIME(3) NULL,
+    `reviewedBy` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `BusinessReport_businessId_idx`(`businessId`),
+    INDEX `BusinessReport_status_idx`(`status`),
+    INDEX `BusinessReport_createdAt_idx`(`createdAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `AdminActionLog` (
+    `id` VARCHAR(191) NOT NULL,
+    `adminId` VARCHAR(191) NOT NULL,
+    `action` VARCHAR(191) NOT NULL,
+    `targetType` VARCHAR(191) NOT NULL,
+    `targetId` VARCHAR(191) NOT NULL,
+    `message` TEXT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `AdminActionLog_adminId_idx`(`adminId`),
+    INDEX `AdminActionLog_targetType_targetId_idx`(`targetType`, `targetId`),
+    INDEX `AdminActionLog_createdAt_idx`(`createdAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateIndex
+CREATE INDEX `Business_verified_idx` ON `Business`(`verified`);
+
+-- CreateIndex
+CREATE INDEX `Business_blocked_idx` ON `Business`(`blocked`);
+
+-- AddForeignKey
+ALTER TABLE `BusinessReport` ADD CONSTRAINT `BusinessReport_businessId_fkey` FOREIGN KEY (`businessId`) REFERENCES `Business`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
