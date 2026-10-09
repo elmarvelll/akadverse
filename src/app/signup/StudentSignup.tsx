@@ -18,7 +18,7 @@ import api from "@/lib/axios";
 import { EmailDomainInput } from "../components/email-domain-input";
 import { PasswordInput } from "../components/password-input";
 import { AuthSelect } from "../components/auth-select";
-import { OtpInput } from "../components/otp-input";
+import { SignupOtpStep } from "./SignupOtpStep";
 import type { AccountTypeRole } from "@/lib/account-domains";
 
 interface Options {
@@ -61,12 +61,9 @@ export function StudentSignup({
   const [level, setLevel] = useState("");
 
   const [step, setStep] = useState<"details" | "otp">("details");
-  const [pending, setPending] = useState<{ id: string; email: string; mode: "create" | "link" } | null>(null);
-  const [code, setCode] = useState("");
+  const [pending, setPending] = useState<{ id: string; email: string; mode: "create" | "link"; cooldown: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [cooldown, setCooldown] = useState(0);
-  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     api.get<Options>("/signup/student/options").then((r) => setOptions(r.data)).catch(() => setOptionsError("Couldn't load the academic options."));
@@ -83,13 +80,6 @@ export function StudentSignup({
       })
       .catch((e) => setGoogleError(messageOf(e, "Your Google sign-up link expired. Please continue with Google again.")));
   }, [googleToken]);
-
-  // Resend countdown (ticks only while a cooldown is running).
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooldown]);
 
   const departments = useMemo(() => options?.departments.filter((d) => d.collegeId === collegeId) ?? [], [options, collegeId]);
   const programmes = useMemo(() => options?.programmes.filter((p) => p.departmentId === departmentId) ?? [], [options, departmentId]);
@@ -109,9 +99,7 @@ export function StudentSignup({
         firstName, lastName, matricNumber: matric, collegeId, departmentId, programmeId, level: Number(level),
         ...(googleToken ? { googleToken } : { localPart, password }),
       });
-      setPending({ id: data.pendingId, email: data.email, mode: data.mode });
-      setCooldown(data.resendAfterSeconds);
-      setCode("");
+      setPending({ id: data.pendingId, email: data.email, mode: data.mode, cooldown: data.resendAfterSeconds });
       setStep("otp");
     } catch (err) {
       setError(messageOf(err, "Couldn't start sign-up. Please try again."));
@@ -120,44 +108,15 @@ export function StudentSignup({
     }
   };
 
-  const verify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pending || busy) return; // ignore a second submit while one is running
-    setBusy(true);
-    setError("");
-    try {
-      await api.post("/signup/student/verify", { pendingId: pending.id, code });
-    } catch (err) {
-      setError(messageOf(err, "Couldn't verify the code. Please try again."));
-      setBusy(false);
-      return;
-    }
-    // The account now exists in both databases: start a normal session.
+  // The account now exists in both databases: start a normal session.
+  const afterVerified = async () => {
+    if (!pending) return;
     if (googleToken) {
       await signIn("google", { callbackUrl: "/" });
       return;
     }
     const res = await signIn("credentials", { email: pending.email, password, redirect: false });
-    if (res?.error) {
-      router.push("/login");
-      return;
-    }
-    router.push("/");
-  };
-
-  const resend = async () => {
-    if (!pending || resending || cooldown > 0) return;
-    setResending(true);
-    setError("");
-    try {
-      const { data } = await api.post("/signup/student/resend", { pendingId: pending.id });
-      setCooldown(data.resendAfterSeconds);
-      setCode("");
-    } catch (err) {
-      setError(messageOf(err, "Couldn't send a new code."));
-    } finally {
-      setResending(false);
-    }
+    router.push(res?.error ? "/login" : "/");
   };
 
   const primary = "w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed mt-2";
@@ -168,29 +127,22 @@ export function StudentSignup({
   // ------------------------------- step 2: the code ----------------------------------------------------------------
   if (step === "otp" && pending) {
     return (
-      <form onSubmit={verify} className="space-y-4" data-testid="otp-step">
-        <p className={`text-sm ${muted}`}>
-          We sent a 6-digit code to <strong className={`break-all ${isDarkMode ? "text-white" : "text-gray-900"}`}>{pending.email}</strong>. Enter it below to finish creating your account.
-        </p>
-        {pending.mode === "link" && (
+      <SignupOtpStep
+        key={pending.id}
+        isDarkMode={isDarkMode}
+        email={pending.email}
+        pendingId={pending.id}
+        initialCooldown={pending.cooldown}
+        verifyPath="/signup/student/verify"
+        resendPath="/signup/student/resend"
+        onVerified={afterVerified}
+        onBack={() => { setStep("details"); setError(""); }}
+        notice={pending.mode === "link" && (
           <p className={`text-sm rounded-lg p-3 ${isDarkMode ? "bg-blue-500/15 text-blue-200" : "bg-blue-50 text-blue-900"}`}>
             You already have an AkadVerse account with this email. We&apos;ll add your student profile to it — your existing password stays the same.
           </p>
         )}
-        <OtpInput value={code} onChange={setCode} isDarkMode={isDarkMode} disabled={busy} />
-        {errorBox}
-        <button type="submit" disabled={busy || code.length !== 6} className={primary}>
-          {busy ? "Verifying…" : "Verify and create account"}
-        </button>
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <button type="button" onClick={resend} disabled={cooldown > 0 || busy || resending} aria-busy={resending} className={`font-semibold underline disabled:no-underline disabled:opacity-60 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-            {resending ? "Sending a new code…" : cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
-          </button>
-          <button type="button" disabled={busy || resending} onClick={() => { setStep("details"); setError(""); }} className={`underline ${muted}`}>
-            Change my details
-          </button>
-        </div>
-      </form>
+      />
     );
   }
 

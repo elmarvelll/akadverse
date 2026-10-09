@@ -1,6 +1,7 @@
-// services/auth/student-signup/config.ts
+// services/auth/signup-otp/config.ts
 //
-// Tunables for the student sign-up OTP. One place so the API, the emails and the tests agree.
+// Tunables for the sign-up OTP (every account type: Student, Faculty, HOD, DAPU). One place so the APIs, the emails and
+// the tests agree.
 
 export const SIGNUP_OTP_TTL_MS = 5 * 60 * 1000; // a code is valid for 5 minutes
 export const SIGNUP_OTP_MAX_ATTEMPTS = 5; // wrong guesses allowed per issued code
@@ -11,7 +12,7 @@ export const MAX_PASSWORD_LENGTH = 72; // bcrypt ignores anything beyond 72 byte
 export const STUDENT_ROLE = "student" as const;
 
 // Circuit breaker for the public "start sign-up" endpoint. Every new sign-up sends one e-mail, and the endpoint is unauthenticated,
-// so a script could otherwise mail arbitrary @stu.cu.edu.ng addresses (Resend cost + sender reputation). This caps how many NEW
+// so a script could otherwise mail arbitrary institutional addresses (Resend cost + sender reputation). This caps how many NEW
 // pending sign-ups can be created in a window across the whole site — high enough for a real busy day, low enough to bound abuse.
 // (A per-IP limit would need shared state; put a WAF / rate-limit rule on /api/signup in front of this for that.)
 export const MAX_NEW_SIGNUPS_PER_WINDOW = 500;

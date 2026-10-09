@@ -48,7 +48,7 @@ Rules that hold across tiers:
 | `curriculum/load-curriculum.ts` | `loadCurriculum`, `label` | Load one curriculum + display label. |
 | `curriculum/level-advisor-checklist.ts` | `levelAdvisorChecklist` | Levels of a curriculum that still have no Level Adviser (DAPU publish + HOD approve). |
 | `course-materials/offering-access.ts` | `loadOffering`, `requireLecturer`, `BUCKET`, `slug` | Building blocks for course documents: load an offering, and check a faculty member is assigned to *that* offering. |
-| `course-materials/resolve-download.ts` | `resolveDownload`, `assertStudentRegistered` | Who may open a document, and the 60-second signed URL. |
+| `course-materials/resolve-download.ts` | `resolveDownload`, `assertStudentRegistered` | Who may open a document, and the 60-second signed URL (download, or `inline` for in-page viewing). |
 
 ## `dapu/`
 
@@ -103,6 +103,7 @@ Rules that hold across tiers:
 | File | Exports | Purpose |
 |---|---|---|
 | `registered-courses.ts` | `getRegisteredCourses` | The student's APPROVED courses, with offering + lecturers (My Learning). |
+| `study-zone.ts` | `getStudyCourses`, `getStudyWorkspace` | Study Zone read model: registered courses, and one course as weeks → documents (built on `getRegisteredCourses` + `getOfferingDetail`). |
 | `registration.ts` | `findRegistration`, `getRegistrationHistory`, `getEligibleCourses`, `getRegistrationView`, `registerCourses`, `addCourse`, `removeCourse` | The registration workflow. |
 | `signup-academics.ts` | `getSignupOptions`, `resolveAcademicSelection`, `normalizeMatricNumber`, `assertMatricAvailable`, `createStudentProfile`, `SIGNUP_SCOPE` | Sign-up dropdown data (testing-phase scope by code), server-side validation of College → Department → Programme → Level, and creation of the `StudentProfile`. |
 | `results.ts` | `getResultsBySemester`, `getAllResultsGrouped`, `getAcademicHistory`, `getGpaCgpaSummary` | PUBLISHED results, GPA/CGPA, history. |

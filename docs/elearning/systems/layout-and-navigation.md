@@ -11,8 +11,8 @@ One common Header + Sidebar + Main content shell (§10) for every E-Learning rol
 - `src/app/e-learning/_components/Sidebar.tsx` (client) — expand/collapse state, active-route highlight (`usePathname`). **Builds its own nav tree** from the `role`/`isLevelAdviser` props (see below), rather than receiving a built tree.
 - `src/app/e-learning/_components/nav-config.ts` — `getStudentNav()`, `getFacultyNav(isLevelAdviser)`, `getHodNav()`, `getDapuNav()`, `getDeanNav()`/`getVcNav()` (both return `[]` — §29, no functionality to navigate to). Each returns `NavSection[]`, either a direct link or an expandable group of `NavLeaf`s (icon + label + href).
 
-- `src/app/e-learning/_components/Shell.tsx` (client) — the responsive frame (see below). Owns the mobile drawer's open state.
-- `Sidebar.tsx` supports one nested level (a group inside a group, e.g. Course Control inside Academic Essentials) and renders a group with no pages (Student **Study Zone**) as a plain label.
+- `src/app/e-learning/_components/Shell.tsx` (client) — the responsive frame (see below). Owns the mobile drawer's open state and the desktop sidebar's collapsed state.
+- `Sidebar.tsx` supports one nested level (a group inside a group, e.g. Course Control inside Academic Essentials) and renders a group with no pages as a plain label. A direct-link section may set `activeOnSubpaths` to stay highlighted below its own path (Student **Study Zone**).
 
 ## Responsive design
 
@@ -20,7 +20,7 @@ Every E-Learning page works from 320px up. The techniques, all in shared code so
 
 | Concern | Technique |
 |---|---|
-| Navigation | `Shell.tsx`: below `lg` the sidebar is an **off-canvas drawer** (opened from the header's menu button, closed by the backdrop, `Escape`, or navigating; page scroll is locked while open; hidden from keyboard/screen readers when closed). From `lg` it is a fixed 18rem (`lg:w-72`) column, wide enough that the longest section names (e.g. "Academic Essentials") stay on one line; section headers and nested-group labels are also `whitespace-nowrap`, so a label never breaks onto a second line. |
+| Navigation | `Shell.tsx`: below `lg` the sidebar is a 16rem **off-canvas drawer** (opened from the header's menu button, closed by the backdrop, `Escape`, or navigating; page scroll is locked while open; hidden from keyboard/screen readers when closed). From `lg` it is a **sticky, collapsible** column: 16rem (`lg:w-64`) expanded — down from 18rem, still wide enough that every role's longest labels ("View Course Structures", nested "Registration Status") stay on one line, checked in a browser for student/faculty/HOD/DAPU with every group open — or a 4rem icon rail collapsed. The toggle sits at the top of the sidebar; in the rail a direct link stays a link and a group's icon re-expands the sidebar with that group open. The width animates (`transition-[width]`) and `<main>` is `flex-1`, so content reclaims the space. The choice is stored in the `elearning-sidebar` cookie (`SIDEBAR_COOKIE` in `nav-config.ts`), which `layout.tsx` reads so the first paint already matches. Section headers and nested-group labels are `whitespace-nowrap`, so a label never breaks onto a second line. |
 | Header | Compact on phones: name/role badge/"Sign out" text appear from `sm`/`md` up; icons remain. |
 | Content width | `<main>` is `min-w-0` with `p-4 sm:p-6`, so wide content can never stretch the page. |
 | Tables | Each table sits in an `overflow-x-auto` wrapper with a `min-w-[…]` so it scrolls inside its card instead of squashing or widening the page. |
@@ -31,6 +31,10 @@ Every E-Learning page works from 320px up. The techniques, all in shared code so
 | Week slider | Horizontal scroll-snap strip with prev/next buttons (touch-friendly). |
 
 **Verified** with `scripts/verify-responsive.ts`: headless Chrome loads all 44 E-Learning pages (student, faculty, HOD, DAPU, with temporary long-title/long-file-name fixtures) at 320, 375 and 768px as real test accounts, and fails on any page-level horizontal scroll or any element sticking out of the viewport outside its own scroll container; it also checks the mobile drawer opens and closes. Last run: 126 of 126 passed. Not covered: real touch devices, landscape phones, and the Dean/VC placeholder pages (which only show a short notice).
+
+## Stacking order
+
+The shell's only z-indexes: header `z-10` (fixed), mobile backdrop `z-20`, mobile drawer `z-30`, and from `lg` the sticky sidebar `z-20`, so page content can never paint over the sidebar or its toggle. Pages that need a local z-index (Study Zone's active week tab) wrap themselves in `isolate` so it can't leak into this order.
 
 ## Why Sidebar builds its own tree instead of receiving one
 

@@ -1,4 +1,5 @@
-// Student sign-up, end to end at the service layer, against BOTH real databases (Main + E-Learning).
+// Sign-up for every account type (Student; Faculty / HOD / DAPU in 9b), end to end at the service layer, against BOTH
+// real databases (Main + E-Learning).
 // The OTP e-mail sender is replaced with a capture function, so no real e-mail is sent and the code can be read.
 // Every record it creates is removed afterwards.
 //
@@ -12,12 +13,15 @@ import { ACCOUNT_TYPES, isEmailForRole } from "../src/lib/account-domains";
 import { getStudentSignupOptions } from "../services/auth/student-signup/get-signup-options";
 import { startStudentSignup, type StartStudentSignupInput } from "../services/auth/student-signup/start-student-signup";
 import { verifyStudentSignup } from "../services/auth/student-signup/verify-student-signup";
-import { resendStudentSignupOtp } from "../services/auth/student-signup/resend-student-signup-otp";
+import { resendSignupOtp as resendStudentSignupOtp, resendSignupOtp as resendStaff } from "../services/auth/signup-otp/resend-signup-otp";
 import { createGoogleSignupToken } from "../services/auth/student-signup/google-signup-token";
-import { hashOtp } from "../services/auth/student-signup/otp";
-import { SIGNUP_OTP_MAX_ATTEMPTS } from "../services/auth/student-signup/config";
+import { hashOtp } from "../services/auth/signup-otp/otp";
+import { SIGNUP_OTP_MAX_ATTEMPTS } from "../services/auth/signup-otp/config";
 import { POST as registerPost } from "../src/app/api/register/route";
 import { createStaffProfile } from "../services/auth/staff-signup/create-staff-profile";
+import { startStaffSignup, type StartStaffSignupInput } from "../services/auth/staff-signup/start-staff-signup";
+import { verifyStaffSignup } from "../services/auth/staff-signup/verify-staff-signup";
+import { roleGrantedAtSignup } from "../services/auth/staff-signup/staff-role";
 
 let passed = 0, failed = 0;
 const ok = (n: string, c: boolean, x = "") => { if (c) passed++; else failed++; console.log(`${c ? "PASS" : "FAIL"}  ${n}${x ? " — " + x : ""}`); };
@@ -172,30 +176,44 @@ async function main() {
     ok("the returning Google user signs in with NO further OTP (callback returns true)", (await g(dEmail)) === true);
     ok("an existing pre-flow account (the retained Gmail admin) can still sign in with Google", (await g("marvelousifezue31@gmail.com")) === true);
 
-    // ---- 9. the old register endpoint can't be used to bypass the flow ----------------------------------------------------------
-    const reg = (email: string) => registerPost(new Request("http://x/api/register", { method: "POST", body: JSON.stringify({ firstName: "A", lastName: "B", email, password: "longenough1" }) }) as never);
-    ok("/api/register refuses a student-domain email (must use the verified sign-up)", (await reg(`zz${tag}@stu.cu.edu.ng`)).status === 400);
-    ok("/api/register refuses Gmail / unrelated domains", (await reg(`zz${tag}@gmail.com`)).status === 400 && (await reg(`zz${tag}@x.com`)).status === 400);
-    ok("…and created nothing", !(await core.user.findUnique({ where: { email: `zz${tag}@stu.cu.edu.ng` } })));
+    // ---- 9. the old register endpoint can no longer create ANY account (every type verifies its email now) -----------------
+    ok("/api/register is retired: 410, creates nothing", (await registerPost()).status === 410);
 
-    // ---- 9b. Faculty / HOD sign-up: College + Department ----------------------------------------------------------------------
-    const staffReg = (role: "faculty" | "hod" | "dapu", n: string, extra: object = {}) =>
-      registerPost(new Request("http://x/api/register", { method: "POST", body: JSON.stringify({ firstName: "Staff", lastName: "Member", email: `zzstaff${n}${tag}@${role === "faculty" ? "faculty.cu.edu.ng" : role === "hod" ? "hodeie.cu.stu.ng" : "dapu.cu.edu.ng"}`, password: "longenough1", ...extra }) }) as never);
+    // ---- 9b. Faculty / HOD / DAPU sign-up: OTP to that exact address, then the account ----------------------------------
+    const staffEmail = (role: "faculty" | "hod" | "dapu", n: string) => `zzstaff${n}${tag}@${role === "faculty" ? "faculty.cu.edu.ng" : role === "hod" ? "hodeie.cu.stu.ng" : "dapu.cu.edu.ng"}`;
+    const staffIn = (role: "faculty" | "hod" | "dapu", n: string, extra: Partial<StartStaffSignupInput> = {}): StartStaffSignupInput =>
+      ({ accountType: role, localPart: local(staffEmail(role, n)), firstName: "Staff", lastName: "Member", password: "longenough1", ...extra });
     const hodsBefore = await db.hodProfile.count(), facBefore = await db.facultyProfile.count();
-    ok("Faculty sign-up without college/department is refused", (await staffReg("faculty", "1")).status === 400);
-    ok("HOD sign-up without college/department is refused", (await staffReg("hod", "1")).status === 400);
-    ok("a department that isn't in the chosen college is refused", (await staffReg("faculty", "2", { collegeId: otherCollege.id, departmentId: dept.id })).status === 400);
-    ok("a department outside the testing scope is refused", (await staffReg("faculty", "3", { collegeId: (await db.college.findFirstOrThrow({ where: { id: otherDept.collegeId } })).id, departmentId: otherDept.id })).status === 400);
+    await rejects("Faculty sign-up without college/department is refused", 400, () => startStaffSignup(staffIn("faculty", "1"), capture));
+    await rejects("HOD sign-up without college/department is refused", 400, () => startStaffSignup(staffIn("hod", "1"), capture));
+    await rejects("a department that isn't in the chosen college is refused", 400, () => startStaffSignup(staffIn("faculty", "2", { collegeId: otherCollege.id, departmentId: dept.id }), capture));
+    await rejects("a department outside the testing scope is refused", 400, async () => startStaffSignup(staffIn("faculty", "3", { collegeId: (await db.college.findFirstOrThrow({ where: { id: otherDept.collegeId } })).id, departmentId: otherDept.id }), capture));
+    await rejects("a local part that smuggles in another domain is refused", 400, () => startStaffSignup(staffIn("faculty", "x", { localPart: "evil@gmail.com" }), capture));
+    await rejects("an unknown account type is refused (Student/VC/Dean can't use the staff flow)", 400, () => startStaffSignup(staffIn("faculty", "y", { accountType: "vc" as never }), capture));
     const goodStaff = { collegeId: college.id, departmentId: dept.id };
-    const rf = await staffReg("faculty", "4", goodStaff);
-    const rh = await staffReg("hod", "5", goodStaff);
-    ok("valid Faculty and HOD sign-ups (with college + department) are accepted", rf.status === 201 && rh.status === 201);
-    const fu = await core.user.findUniqueOrThrow({ where: { email: `zzstaff4${tag}@faculty.cu.edu.ng` } });
-    const hu = await core.user.findUniqueOrThrow({ where: { email: `zzstaff5${tag}@hodeie.cu.stu.ng` } });
-    ok("choosing 'Faculty'/'HOD' grants NO role: both accounts are plain students", fu.role === "student" && hu.role === "student");
+
+    for (const [role, n, extra] of [["faculty", "4", goodStaff], ["hod", "5", goodStaff], ["dapu", "6", {}]] as const) {
+      const label = role === "hod" ? "HOD" : role === "dapu" ? "DAPU" : "Faculty";
+      const email = staffEmail(role, n);
+      const before = sent.length;
+      const st = await startStaffSignup(staffIn(role, n, extra), capture);
+      ok(`${label}: an OTP was generated and sent to exactly ${email}`, sent.length === before + 1 && sent[sent.length - 1].to === email && st.email === email && /^\d{6}$/.test(lastCode(email)));
+      ok(`${label}: no account exists until the code is verified`, !(await core.user.findUnique({ where: { email } })));
+      const pend = await core.pendingSignup.findUniqueOrThrow({ where: { email } });
+      ok(`${label}: only a hash of the code is stored`, pend.otpHash === hashOtp(lastCode(email), email) && pend.otpHash !== lastCode(email) && pend.passwordHash !== "longenough1");
+      await rejects(`${label}: a wrong code is refused`, 400, () => verifyStaffSignup(st.pendingId, lastCode(email) === "000000" ? "111111" : "000000"), /isn't right/);
+      await elapse(email);
+      const rs = await resendStaff(st.pendingId, capture);
+      ok(`${label}: resend sends a NEW code to the same address`, rs.email === email && sent[sent.length - 1].to === email);
+      await verifyStaffSignup(st.pendingId, lastCode(email));
+      const u = await core.user.findUniqueOrThrow({ where: { email } });
+      ok(`${label}: the correct code creates the account (and the pending sign-up is gone)`, !!u && !(await core.pendingSignup.findUnique({ where: { email } })));
+      ok(`${label}: choosing the role grants NO role — the account keeps the default (student)`, u.role === "student");
+      await rejects(`${label}: the same code can't be used again`, 404, () => verifyStaffSignup(st.pendingId, lastCode(email)));
+    }
+    await rejects("signing up again with an existing email is refused before any email is sent", 409, () => startStaffSignup(staffIn("faculty", "4", goodStaff), capture));
     ok("…and no staff profile was created, so nobody can claim a department's HOD slot by signing up", (await db.hodProfile.count()) === hodsBefore && (await db.facultyProfile.count()) === facBefore);
-    ok("DAPU sign-up needs no college/department (university-wide)", (await staffReg("dapu", "6")).status === 201);
-    ok("a Gmail address can no longer register through the old endpoint", (await staffReg("faculty", "7", { ...goodStaff, email: `zzstaff7${tag}@gmail.com` })).status === 400);
+    ok("dev-test exception: only marvelousifezue31@<staff domain> outside production gets the real role", roleGrantedAtSignup("marvelousifezue31@faculty.cu.edu.ng") === "faculty" && roleGrantedAtSignup("marvelousifezue31@hodeie.cu.stu.ng") === "hod" && roleGrantedAtSignup("marvelousifezue31@dapu.cu.edu.ng") === "dapu" && roleGrantedAtSignup("someoneelse@faculty.cu.edu.ng") === null && roleGrantedAtSignup("marvelousifezue31x@faculty.cu.edu.ng") === null && roleGrantedAtSignup("marvelousifezue31@stu.cu.edu.ng") === null);
     // profile creation for an account whose role really is faculty / hod
     const staffUser = await core.user.create({ data: { firstName: "P", lastName: "Q", email: `zzstaff8${tag}@faculty.cu.edu.ng`, password: "x", role: "faculty" } });
     await createStaffProfile(staffUser.id, "faculty", dept.id);

@@ -7,11 +7,12 @@ Last verified 2026-09-14. Phase numbers match §44.
 | Phase | Status | Notes |
 |---|---|---|
 | 1 — Foundation | ✅ Done | Separate DB/client, session/semester, role handling, all four profiles, layout/sidebar, proxy/session/role/scope authorization. |
-| 2 — Student | ✅ Done | Dashboard, My Learning (replaced My Courses/Learning Resources/Syllabus; Study Zone left empty), Records & Analytics (Results, GPA/CGPA, Academic History), Course Control. |
+| 2 — Student | ✅ Done | Dashboard, My Learning (replaced My Courses/Learning Resources/Syllabus; Study Zone was later rebuilt — see below), Records & Analytics (Results, GPA/CGPA, Academic History), Course Control. |
 | 3 — Faculty | ✅ Done | Dashboard + timetable, My Subjects (assigned offerings, weekly content, document upload), Results Record entry+submit. |
 | 4 — Level Adviser | ✅ Done | Registrations view, Approvals (approve/reject), department+level scoped. |
 | 5 — HOD | ✅ Done | Lecturer/Level-Adviser assignment (+ history), registration + result-upload approvals, results by level/course/student. |
 | 5b — Course documents | ✅ Done | Lecturer upload → Supabase Storage, secure signed access; see [`../systems/course-materials-system.md`](../systems/course-materials-system.md). |
+| Study Zone (frontend) | ✅ Done | Course picker, week tabs, document viewer (PDF in the browser's viewer; PPTX slides and DOCX pages rendered in-panel from the files themselves, no new dependencies), collapsible sidebar, Stewart chat UI. **Stewart is a mock** — AI integration and saved conversations are not built. See [`../systems/study-zone-system.md`](../systems/study-zone-system.md). |
 | 6 — DAPU | ✅ Done | Session/semester admin, 5 time-frame types, timetable review/approve, course catalog. |
 | Service layer | ✅ Done | All logic moved to `services/e-learning/<tier>/`; see [`../services.md`](../services.md). Open item: `dapu/offerings.ts` is unused and needs a keep/delete decision. |
 | 7 — Dean/VC | 🚫 Deliberately not started | See [`../decisions/dean-vc-not-implemented.md`](../decisions/dean-vc-not-implemented.md) — waiting on explicit requirements, per §29/§44. |

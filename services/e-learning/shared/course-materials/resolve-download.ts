@@ -8,7 +8,8 @@ import { forbidden, notFound } from "@/lib/service-error";
 import { createSignedDownloadUrl } from "@/lib/storage/supabase-storage";
 import { loadOffering, requireLecturer } from "@/services/e-learning/shared/course-materials/offering-access";
 
-export async function resolveDownload(user: { id: string; role: string }, materialId: string) {
+// `inline` asks for a URL the browser displays rather than saves (Study Zone's in-page PDF viewer); authorization is identical.
+export async function resolveDownload(user: { id: string; role: string }, materialId: string, { inline = false }: { inline?: boolean } = {}) {
   const m = await elearningDb.courseMaterial.findUnique({ where: { id: materialId } });
   if (!m) throw notFound("That material doesn't exist.");
   const o = await loadOffering(m.courseOfferingId);
@@ -23,7 +24,7 @@ export async function resolveDownload(user: { id: string; role: string }, materi
   } else {
     throw forbidden("You don't have access to this material.");
   }
-  const url = await createSignedDownloadUrl(m.storageBucket, m.storagePath, m.fileName, 60);
+  const url = await createSignedDownloadUrl(m.storageBucket, m.storagePath, inline ? null : m.fileName, 60);
   return { url, fileName: m.fileName };
 }
 

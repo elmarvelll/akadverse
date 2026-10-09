@@ -16,10 +16,12 @@
 // component reference isn't ("Functions cannot be passed directly to
 // Client Components").
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireElearningSession, isElearningRole } from "@/services/e-learning/shared/auth";
 import { elearningDb } from "@/lib/db/elearning";
 import Shell from "./_components/Shell";
+import { SIDEBAR_COOKIE } from "./_components/nav-config";
 
 export default async function ElearningLayout({ children }: { children: React.ReactNode }) {
   const session = await requireElearningSession().catch(() => null);
@@ -36,8 +38,11 @@ export default async function ElearningLayout({ children }: { children: React.Re
       ? ((await elearningDb.facultyProfile.findUnique({ where: { userId: session.user.id } }))?.isLevelAdviser ?? false)
       : false;
 
+  // The desktop sidebar's collapsed/expanded choice, read here so the first paint already matches it (no flash).
+  const sidebarCollapsed = (await cookies()).get(SIDEBAR_COOKIE)?.value === "collapsed";
+
   return (
-    <Shell role={role} name={session.user.firstName || session.user.name} isLevelAdviser={isLevelAdviser}>
+    <Shell role={role} name={session.user.firstName || session.user.name} isLevelAdviser={isLevelAdviser} initialCollapsed={sidebarCollapsed}>
       {children}
     </Shell>
   );

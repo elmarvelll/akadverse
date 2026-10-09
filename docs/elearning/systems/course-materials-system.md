@@ -38,7 +38,7 @@ A document is one **clickable row** (`src/app/e-learning/_components/DocumentLin
 | Student | the student's programme matches, and they hold an **`APPROVED`** `CourseRegistration` containing the course for the offering's session + semester |
 | anyone else / not signed in | `403` / `401`; unknown document `404`; file gone from Storage `404` with a clear message |
 
-On success the route returns `{ url }` — a **60-second signed Supabase URL** — and the browser fetches the file directly from Supabase. The service-role key and the storage path are never sent to the browser.
+With `?inline=1` (Study Zone's PDF viewer) the signed URL omits Supabase's `download=` parameter so the browser displays the file instead of saving it; authorization is identical. On success the route returns `{ url }` — a **60-second signed Supabase URL** — and the browser fetches the file directly from Supabase. The service-role key and the storage path are never sent to the browser.
 
 ## Where things are
 

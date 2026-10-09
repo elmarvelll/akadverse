@@ -56,7 +56,8 @@ export async function removeObject(bucket: string, path: string) {
 }
 
 // A short-lived link to view/download one object. Issued only after the caller has been authorized.
-export async function createSignedDownloadUrl(bucket: string, path: string, downloadName: string, expiresInSeconds = 60) {
+// With a `downloadName` the browser saves the file under that name; with null it's served inline (e.g. a PDF shown in-page).
+export async function createSignedDownloadUrl(bucket: string, path: string, downloadName: string | null, expiresInSeconds = 60) {
   const { key, api } = config();
   const raw = await fetch(`${api}/object/sign/${encodeURIComponent(bucket)}/${encodePath(path)}`, { method: "POST", headers: { ...authHeaders(key), "Content-Type": "application/json" }, body: JSON.stringify({ expiresIn: expiresInSeconds }) });
   // The record exists but the file is gone from Storage: say so plainly instead of a generic upstream error.
@@ -64,6 +65,7 @@ export async function createSignedDownloadUrl(bucket: string, path: string, down
   const res = await call(raw, "create download URL");
   const body = (await res.json()) as { signedURL: string };
   const signed = body.signedURL.startsWith("http") ? body.signedURL : `${api}${body.signedURL.startsWith("/") ? "" : "/"}${body.signedURL}`;
+  if (downloadName === null) return signed;
   return `${signed}${signed.includes("?") ? "&" : "?"}download=${encodeURIComponent(downloadName)}`;
 }
 

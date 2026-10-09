@@ -15,7 +15,7 @@
 import { createRequire } from "node:module";
 import { prisma as core } from "../src/lib/prisma";
 import { elearningDb as db } from "../src/lib/db/elearning";
-import { hashOtp } from "../services/auth/student-signup/otp";
+import { hashOtp } from "../services/auth/signup-otp/otp";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3100";
 const puppeteer = createRequire(`${process.env.PP_DIR}/`)("puppeteer-core");
