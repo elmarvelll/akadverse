@@ -41,6 +41,11 @@ export const DASHBOARD_HREF = {
   vc: "/e-learning/vc",
 } as const;
 
+// Remembers the desktop sidebar's collapsed/expanded choice ("collapsed" | "expanded"). Written by Shell.tsx, read by
+// layout.tsx. Defined here, not in Shell.tsx: a server component importing a value from a "use client" module gets a
+// client reference, not the string.
+export const SIDEBAR_COOKIE = "elearning-sidebar";
+
 export function getDashboardHref(role: keyof typeof DASHBOARD_HREF): string {
   return DASHBOARD_HREF[role];
 }
@@ -59,6 +64,8 @@ export interface NavSection {
   // A section with no `href` and no `children` isn't valid — every section
   // is either a direct link (Dashboard) or an expandable group (Study Zone).
   href?: string;
+  // A direct link that should also stay highlighted on the pages below it (Study Zone -> one course's workspace).
+  activeOnSubpaths?: boolean;
   children?: NavLeaf[];
 }
 
@@ -81,8 +88,7 @@ export function getStudentNav(): NavSection[] {
         { label: "My Learning", icon: BookOpen, href: "/e-learning/student/my-learning" },
       ],
     },
-    // Intentionally empty for now: a placeholder group with no pages yet.
-    { label: "Study Zone", icon: Library, children: [] },
+    { label: "Study Zone", icon: Library, href: "/e-learning/student/study-zone", activeOnSubpaths: true },
     {
       label: "Records & Analytics",
       icon: GraduationCap,

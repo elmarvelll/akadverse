@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Dashboard, **Academic Essentials** (Course Control + **My Learning**), an intentionally empty **Study Zone**, and **Records & Analytics** (Results / GPA-CGPA / Academic History) — §12-§14. Course Control is documented separately: [`course-control-system.md`](course-control-system.md); how documents are uploaded and opened: [`course-materials-system.md`](course-materials-system.md).
+Dashboard, **Academic Essentials** (Course Control + **My Learning**), **Study Zone** (documented separately: [`study-zone-system.md`](study-zone-system.md)), and **Records & Analytics** (Results / GPA-CGPA / Academic History) — §12-§14. Course Control is documented separately: [`course-control-system.md`](course-control-system.md); how documents are uploaded and opened: [`course-materials-system.md`](course-materials-system.md).
 
 ## Actors
 
@@ -15,11 +15,11 @@ Dashboard
 Academic Essentials
   ├─ Course Control      (Course Registration · Add / Drop Course · Registration Status)
   └─ My Learning
-Study Zone               (empty placeholder — no pages yet)
+Study Zone               (direct link — course picker → study workspace)
 Records & Analytics      (Results · GPA / CGPA · Academic History)
 ```
 
-Defined in `src/app/e-learning/_components/nav-config.ts`; `Sidebar.tsx` supports one nested level (Course Control inside Academic Essentials) and renders an empty group (Study Zone) as a plain label. The former Study Zone pages (My Courses, Learning Resources, Syllabus) were removed, not relocated — My Courses became My Learning, and course content now lives on each course's page.
+Defined in `src/app/e-learning/_components/nav-config.ts`; `Sidebar.tsx` supports one nested level (Course Control inside Academic Essentials) and renders an empty group as a plain label. Study Zone is a direct link that stays highlighted on its sub-pages (`activeOnSubpaths`). The former Study Zone pages (My Courses, Learning Resources, Syllabus) were removed, not relocated — My Courses became My Learning, and course content now lives on each course's page.
 
 ## "My Learning" scope — the one rule everything else here depends on
 

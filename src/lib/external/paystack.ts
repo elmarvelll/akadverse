@@ -22,7 +22,9 @@ const PAYSTACK_BASE_URL = "https://api.paystack.co";
 // header via HMAC using this same key) doesn't need its own copy of this
 // selection logic.
 export function getPaystackSecretKey(): string {
-  const key = process.env.NODE_ENV === "production" ? process.env.PAYSTACK_SECRET_KEY : process.env.PAYSTACK_TEST_SECRET_KEY;
+  // const key = process.env.NODE_ENV === "production" ? process.env.PAYSTACK_SECRET_KEY : process.env.PAYSTACK_TEST_SECRET_KEY;
+    const key = process.env.PAYSTACK_TEST_SECRET_KEY;
+
 
   if (!key) {
     throw new Error("Paystack secret key is not configured.");

@@ -5,28 +5,25 @@
 //   - Student -> the full student flow (StudentSignup.tsx): academic details, emailed 6-digit OTP, then the account is
 //     created in the Main DB (User) and the E-Learning DB (StudentProfile). Also used for a NEW Google user arriving
 //     with ?google=<server-signed token> (see the signIn callback in src/lib/auth.ts).
-//   - Faculty / HOD / DAPU -> simple account form posting to /api/register (roles are never granted by this selector; see
-//     that route). Faculty and HOD also pick a College and Department (DAPU is university-wide).
+//   - Faculty / HOD / DAPU -> StaffSignup.tsx: details, the same emailed 6-digit OTP, then the account is created (roles are
+//     never granted by this selector; see services/auth/staff-signup/staff-role.ts). Faculty and HOD also pick a College
+//     and Department (DAPU is university-wide).
 // The Role is its own dropdown field (Student / Faculty / HOD / DAPU); it fixes the email domain shown next to the email
 // input, and the full resulting email is always displayed under the field.
 
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { isAxiosError } from "axios";
-import api from "@/lib/axios";
-import { SignupFormValues } from "@/types/auth";
-import { PasswordInput } from "../components/password-input";
 import { ThemeToggle } from "../components/theme-toggle";
 import { AuthVisualPanel } from "../components/auth-visual-panel";
-import { EmailDomainInput } from "../components/email-domain-input";
 import { AuthSelect } from "../components/auth-select";
 import { StudentSignup } from "./StudentSignup";
+import { StaffSignup } from "./StaffSignup";
 import { useThemePreference } from "@/hooks/use-theme-preference";
-import { ACCOUNT_TYPES, buildEmail, type AccountTypeRole } from "@/lib/account-domains";
+import { ACCOUNT_TYPES, type AccountTypeRole } from "@/lib/account-domains";
 
 // Small inline Google "G" logo used on the "Sign up with Google" button.
 function GoogleMark() {
@@ -59,7 +56,6 @@ const GOOGLE_ERRORS: Record<string, string> = {
 };
 
 function SignUpForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const googleToken = searchParams.get("google");
   const urlError = GOOGLE_ERRORS[searchParams.get("error") ?? ""] ?? "";
@@ -69,39 +65,7 @@ function SignUpForm() {
   const [localPart, setLocalPart] = useState("");
   const [accountType, setAccountType] = useState<AccountTypeRole>("student");
   const isStudent = googleToken ? true : accountType === "student";
-  // Simple form for Faculty / HOD / DAPU (unchanged behaviour).
-  const [form, setForm] = useState<Omit<SignupFormValues, "email">>({ firstName: "", lastName: "", password: "", location: "" });
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [error, setError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
-
-  // Faculty and HOD also choose a College and Department (dropdowns from the E-Learning database).
-  const needsDepartment = !isStudent && (accountType === "faculty" || accountType === "hod");
-  const [orgOptions, setOrgOptions] = useState<{ colleges: { id: string; code: string; name: string }[]; departments: { id: string; collegeId: string; name: string }[] } | null>(null);
-  const [collegeId, setCollegeId] = useState("");
-  const [departmentId, setDepartmentId] = useState("");
-  useEffect(() => {
-    if (!needsDepartment || orgOptions) return;
-    api.get("/signup/student/options").then((r) => setOrgOptions({ colleges: r.data.colleges, departments: r.data.departments })).catch(() => setError("Couldn't load the college and department options. Please refresh."));
-  }, [needsDepartment, orgOptions]);
-  const departmentsOfCollege = useMemo(() => orgOptions?.departments.filter((d) => d.collegeId === collegeId) ?? [], [orgOptions, collegeId]);
-
-  const updateField = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((current) => ({ ...current, [key]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setStatus("loading");
-    setError("");
-    try {
-      await api.post("/register", { ...form, email: buildEmail(localPart, accountType), ...(needsDepartment ? { collegeId, departmentId } : {}) } satisfies SignupFormValues);
-      router.push("/login");
-    } catch (err) {
-      setError((isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "Sign up failed. Please try again.");
-      setStatus("error");
-    }
-  };
 
   const handleGoogle = async () => {
     try {
@@ -111,10 +75,6 @@ function SignUpForm() {
       setGoogleLoading(false);
     }
   };
-
-  const fieldCls = `w-full px-4 py-3 border rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-base sm:text-sm ${
-    isDarkMode ? "bg-[#171717] border-[#262626] text-white placeholder-[#a3a3a3]" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-  }`;
 
   return (
     <div className={`min-h-screen font-sans relative overflow-hidden transition-colors ${isDarkMode ? "bg-black" : "bg-gray-100"}`}>
@@ -161,40 +121,13 @@ function SignUpForm() {
                 googleToken={googleToken}
               />
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input type="text" aria-label="First name" placeholder="First name" value={form.firstName} onChange={updateField("firstName")} required className={fieldCls} />
-                  <input type="text" aria-label="Last name" placeholder="Last name" value={form.lastName} onChange={updateField("lastName")} required className={fieldCls} />
-                </div>
-                <input type="text" aria-label="Location (optional)" placeholder="Location (optional)" value={form.location} onChange={updateField("location")} className={fieldCls} />
-                {needsDepartment && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <AuthSelect
-                      id="su-college" label="College" placeholder="Select college" isDarkMode={isDarkMode} loading={!orgOptions && !error}
-                      value={collegeId} onChange={(v) => { setCollegeId(v); setDepartmentId(""); }}
-                      options={(orgOptions?.colleges ?? []).map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))}
-                    />
-                    <AuthSelect
-                      id="su-department" label="Department" placeholder="Select department" isDarkMode={isDarkMode}
-                      value={departmentId} onChange={setDepartmentId} disabled={!collegeId}
-                      options={departmentsOfCollege.map((d) => ({ value: d.id, label: d.name }))}
-                    />
-                  </div>
-                )}
-                <div>
-                  <span className={`mb-1.5 block text-xs font-semibold ${isDarkMode ? "text-[#d4d4d4]" : "text-gray-800"}`}>Email</span>
-                  <EmailDomainInput localPart={localPart} onLocalPartChange={setLocalPart} accountType={accountType} isDarkMode={isDarkMode} />
-                </div>
-                <PasswordInput value={form.password} onChange={updateField("password")} placeholder="Password (at least 8 characters)" isDarkMode={isDarkMode} minLength={8} />
-                {error && <div role="alert" className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-300 bg-red-900/30" : "text-red-800 bg-red-100"}`}>{error}</div>}
-                <button
-                  type="submit"
-                  disabled={status === "loading"}
-                  className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-                >
-                  {status === "loading" ? "Creating account…" : "Sign Up"}
-                </button>
-              </form>
+              <StaffSignup
+                key={accountType}
+                isDarkMode={isDarkMode}
+                localPart={localPart}
+                onLocalPartChange={setLocalPart}
+                accountType={accountType as Exclude<AccountTypeRole, "student">}
+              />
             )}
 
             {!googleToken && (

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-One AkadVerse-wide login (NextAuth — `src/lib/auth.ts`) serves both Marketplace and E-Learning. This doc covers **sign-up**: the Role field that fixes the email domain, the student sign-up with an emailed OTP, and how a new student is created across the two databases. **Login is a normal email + password form that accepts any email** — it has no role or domain selector.
+One AkadVerse-wide login (NextAuth — `src/lib/auth.ts`) serves both Marketplace and E-Learning. This doc covers **sign-up**: the Role field that fixes the email domain, the emailed OTP that **every account type** (Student, Faculty, HOD, DAPU) must enter before its account exists, and how a new student is created across the two databases. **Login is a normal email + password form that accepts any email** — it has no role or domain selector.
 
 ## Actors
 
@@ -20,6 +20,24 @@ Everyone signs in through `/login`. Sign-up is at `/signup`.
 | DAPU | `DAPU.cu.edu.ng` |
 
 The HOD domain is intentionally inconsistent with the others (`.cu.stu.ng` vs `.cu.edu.ng`) — exactly what §8 specifies; do not "fix" it. Domains are stored/compared lower-case. The **server never trusts the browser's display**: `buildEmail` rebuilds the address from the local part + role and `isEmailForRole` re-checks the domain (and that the local part contains no `@`/spaces, so a domain can't be smuggled in).
+
+## Email verification (OTP) — every account type
+
+Every sign-up verifies ownership of the exact address being signed up, through one shared mechanism, `services/auth/signup-otp/`:
+
+| File | Role |
+|---|---|
+| `issue-signup-otp.ts` | After the caller validated the details: resend cooldown, site-wide circuit breaker, store a `PendingSignup` (hashed code + details), email the code to that address. |
+| `claim-signup-otp.ts` | Expiry, attempt limit, constant-time check, atomic one-time claim (with `release()` for a failed account write). |
+| `resend-signup-otp.ts` | A fresh code to the pending sign-up's own email. |
+| `otp.ts`, `config.ts`, `send-otp-email.ts` | HMAC hashing, tunables, the (role-neutral) email. |
+
+| Account type | API | Services |
+|---|---|---|
+| Student | `/api/signup/student/{start,verify,resend}` | `services/auth/student-signup/` |
+| Faculty, HOD, DAPU | `/api/signup/staff/{start,verify,resend}` | `services/auth/staff-signup/` |
+
+UI: `src/app/signup/StudentSignup.tsx` and `StaffSignup.tsx`, both ending in the shared `SignupOtpStep.tsx`. **`/api/register` is retired** (410): until 2026-10-05 it created Faculty/HOD/DAPU accounts with no email verification. VC and Dean can't sign up (not selectable, refused by the staff flow).
 
 ## Student sign-up (Main DB `User` + E-Learning `StudentProfile`)
 
@@ -40,7 +58,7 @@ E-Learning DB) → first/last name, matric number, password → "Send verificati
 - **`PendingSignup`** (Main DB) is the one table added for this: the flow is "verify OTP, then create the User", so before verification there is no `User` row for the OTP to live on, and a stateless token can't enforce attempts/cooldown/single use. Rows are deleted on success and after 24 h.
 - **Two-database safety**: everything is validated before the first write; the User is created first with a pre-generated id, then the StudentProfile; if the profile write fails, the User created in that call is deleted and the OTP is released so the student can retry; an existing account with no profile ("link" mode) only gets a profile attached (no second User, password untouched); an existing account with a non-student role, or a student who is already registered, is refused.
 - **Faculty and HOD sign-up** also asks for a **College** and a **Department** (dropdowns from the E-Learning DB, same testing-phase scope); DAPU is university-wide and asks for neither. They are required and re-validated on the server (`resolveDepartmentSelection`: the department must belong to the college and be in scope). **Choosing them grants nothing**: the role is never set by the form (still the database / the dev-only exception), and a profile is created (`services/auth/staff-signup/create-staff-profile.ts`) only for an account whose role really is faculty/hod, in the chosen department. A HOD profile is unique per department and approvals are routed to "the HOD of a department", so it is never created when the department already has one — the sign-up is refused up front instead. Consequence to be aware of: for an ordinary sign-up the chosen department is validated but not stored, because there is no approval step or table for a pending staff affiliation yet.
-- **`/api/register`** is now only for Faculty/HOD/DAPU domains. It refuses student-domain emails (they must use the verified flow) and any non-institutional domain.
+- **Faculty / HOD / DAPU sign-up** (`start-staff-signup.ts` → OTP → `verify-staff-signup.ts`): the email is rebuilt from local part + account type and re-checked; Faculty/HOD's College → Department is re-validated; an existing email is refused before any email is sent. On a correct code the User is created with the schema's **default role** (choosing Faculty/HOD/DAPU never grants it — `staff-role.ts`), except the dev-test exception below, which also gets its Faculty/HOD profile in the chosen department.
 
 ## Google
 
@@ -55,11 +73,11 @@ E-Learning DB) → first/last name, matric number, password → "Send verificati
 
 ## Verified
 
-`scripts/verify-student-signup.ts` (service level, both real databases: domain rules, academic validation, OTP send/wrong/attempts/expiry/cooldown/resend/reuse, User + StudentProfile linking, duplicates, link mode, two-database rollback, Google callback, `/api/register` bypass) and `scripts/verify-signup-browser.ts` (real Chrome at phone/tablet/desktop in dark and light: Role field and fixed domain, dropdowns, readable contrast, no overflow, full sign-up flow through the UI, plain login). Not verified: real email delivery (tests replace the sender / disable Resend) and the live Google OAuth round-trip (no browser Google account) — the callback logic is unit-tested, the redirect itself is not.
+`scripts/verify-student-signup.ts` (service level, both real databases: domain rules, academic validation, OTP send/wrong/attempts/expiry/cooldown/resend/reuse, User + StudentProfile linking, duplicates, link mode, two-database rollback, Google callback, `/api/register` retired; Faculty/HOD/DAPU: OTP sent to the exact address, wrong/resend/reuse, account only after the code, no role granted, dev-test exception) and `scripts/verify-signup-browser.ts` (real Chrome at phone/tablet/desktop in dark and light: Role field and fixed domain, dropdowns, readable contrast, no overflow, full sign-up flow through the UI, plain login). Not verified: real email delivery (tests replace the sender / disable Resend) and the live Google OAuth round-trip (no browser Google account) — the callback logic is unit-tested, the redirect itself is not.
 
 ## The dev-test exception (§7)
 
-`src/app/api/register/route.ts`'s `DEV_TEST_LOCAL_PART = "marvelousifezue31"`. If, and only if, **both**:
+`services/auth/staff-signup/staff-role.ts`'s `DEV_TEST_LOCAL_PART = "marvelousifezue31"` (moved from the retired `/api/register`). If, and only if, **both**:
 
 1. `process.env.NODE_ENV !== "production"`, **and**
 2. the new account's email local part is exactly `marvelousifezue31`,

@@ -10,7 +10,7 @@ A role-based academic portal at `/e-learning/<role>/...` for six roles — Stude
 
 ## Who uses it
 
-- **Student** — dashboard, Course Control (Course Registration, Add/Drop, Registration Status), **My Learning** (registered courses, syllabus/outcomes, weekly documents), Records & Analytics (Results, GPA/CGPA, Academic History). Study Zone is an empty placeholder.
+- **Student** — dashboard, Course Control (Course Registration, Add/Drop, Registration Status), **My Learning** (registered courses, syllabus/outcomes, weekly documents), Records & Analytics (Results, GPA/CGPA, Academic History), and **Study Zone** (a course's weeks as document tabs, an in-page document viewer, and Stewart — a mocked AI study assistant).
 - **Faculty** — dashboard (timetable), **My Subjects** (assigned offerings, weekly content, document upload), Results Record (entry + submit).
 - **Level Adviser** — not a role, a responsibility a Faculty account can additionally hold (`FacultyProfile.isLevelAdviser`); reviews/approves registrations for their own department+level.
 - **HOD** — reviews/approves course structures (approval publishes them), assigns lecturers (several + one coordinator) and Level Advisers (with history), approves registrations and result uploads, views results by level/course/student — scoped to their own department.
@@ -27,6 +27,7 @@ A role-based academic portal at `/e-learning/<role>/...` for six roles — Stude
 | Common layout/sidebar, role-based nav | [`systems/layout-and-navigation.md`](systems/layout-and-navigation.md) |
 | Academic calendar (session/semester/time frames) | [`systems/academic-calendar-system.md`](systems/academic-calendar-system.md) |
 | Student portal (My Learning, Records & Analytics) | [`systems/student-portal-system.md`](systems/student-portal-system.md) |
+| Study Zone (week tabs, document viewer, Stewart mock) | [`systems/study-zone-system.md`](systems/study-zone-system.md) |
 | Course Control (registration/add-drop/status) | [`systems/course-control-system.md`](systems/course-control-system.md) |
 | Course documents (upload to Supabase Storage, secure access) | [`systems/course-materials-system.md`](systems/course-materials-system.md) |
 | Faculty portal (My Subjects, results, timetable) | [`systems/faculty-portal-system.md`](systems/faculty-portal-system.md) |

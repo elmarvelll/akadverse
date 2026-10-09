@@ -1,4 +1,4 @@
-// services/auth/student-signup/otp.ts
+// services/auth/signup-otp/otp.ts
 //
 // Sign-up OTP primitives. Reuses the shared 6-digit generator from src/lib/otp.ts (cryptographically random) and stores
 // only a keyed hash of the code (HMAC-SHA256 with the server secret, bound to the email), so a database leak does not

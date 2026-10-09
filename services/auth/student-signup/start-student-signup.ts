@@ -10,13 +10,13 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { elearningDb } from "@/lib/db/elearning";
-import { badRequest, conflict, tooManyRequests } from "@/lib/service-error";
+import { badRequest, conflict } from "@/lib/service-error";
 import { buildEmail, isEmailForRole, isValidLocalPart } from "@/lib/account-domains";
 import { assertMatricAvailable, normalizeMatricNumber, resolveAcademicSelection } from "@/services/e-learning/student/signup-academics";
-import { MAX_NEW_SIGNUPS_PER_WINDOW, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, NEW_SIGNUP_WINDOW_MS, PENDING_SIGNUP_RETENTION_MS, SIGNUP_OTP_RESEND_COOLDOWN_MS, SIGNUP_OTP_TTL_MS, STUDENT_ROLE } from "./config";
-import { generateOtp, hashOtp } from "./otp";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, STUDENT_ROLE } from "@/services/auth/signup-otp/config";
+import { issueSignupOtp } from "@/services/auth/signup-otp/issue-signup-otp";
 import { readGoogleSignupToken } from "./google-signup-token";
-import { sendSignupOtpEmail, type OtpSender } from "./send-otp-email";
+import { sendSignupOtpEmail, type OtpSender } from "@/services/auth/signup-otp/send-otp-email";
 
 export interface StartStudentSignupInput {
   firstName: string;
@@ -83,43 +83,19 @@ export async function startStudentSignup(input: StartStudentSignupInput, send: O
   }
   await assertMatricAvailable(matricNumber, existingUserId ?? undefined);
 
-  // ---- resend cooldown + housekeeping -------------------------------------------------------------------------------
-  await prisma.pendingSignup.deleteMany({ where: { createdAt: { lt: new Date(Date.now() - PENDING_SIGNUP_RETENTION_MS) } } });
-  const pending = await prisma.pendingSignup.findUnique({ where: { email } });
-  if (!pending) {
-    // A brand-new sign-up (not a resend for one already in progress): apply the site-wide circuit breaker.
-    const recent = await prisma.pendingSignup.count({ where: { createdAt: { gte: new Date(Date.now() - NEW_SIGNUP_WINDOW_MS) } } });
-    if (recent >= MAX_NEW_SIGNUPS_PER_WINDOW) throw tooManyRequests("Sign-up is very busy right now. Please try again in a few minutes.");
-  }
-  if (pending) {
-    const wait = pending.otpLastSentAt.getTime() + SIGNUP_OTP_RESEND_COOLDOWN_MS - Date.now();
-    if (wait > 0) throw tooManyRequests(`Please wait ${Math.ceil(wait / 1000)} seconds before requesting another code.`);
-  }
-
-  // ---- issue the OTP (replaces any earlier one for this email) --------------------------------------------------------
-  const code = generateOtp();
-  const now = new Date();
-  const data = {
-    role: STUDENT_ROLE,
-    authMethod: isGoogle ? "google" : "credentials",
-    passwordHash,
-    firstName,
-    lastName,
-    payload: { matricNumber, collegeId: college.id, departmentId: department.id, programmeId: programme.id, level },
-    existingUserId,
-    otpHash: hashOtp(code, email),
-    otpExpiresAt: new Date(now.getTime() + SIGNUP_OTP_TTL_MS),
-    otpAttempts: 0,
-    otpLastSentAt: now,
-  };
-  const row = await prisma.pendingSignup.upsert({ where: { email }, create: { email, ...data }, update: data });
-  await send(email, code);
-
-  return {
-    pendingId: row.id,
+  // ---- issue the OTP to this exact address (shared with every account type) ------------------------------------------
+  const issued = await issueSignupOtp(
     email,
-    mode: existingUserId ? ("link" as const) : ("create" as const),
-    expiresInSeconds: Math.round(SIGNUP_OTP_TTL_MS / 1000),
-    resendAfterSeconds: Math.round(SIGNUP_OTP_RESEND_COOLDOWN_MS / 1000),
-  };
+    {
+      role: STUDENT_ROLE,
+      authMethod: isGoogle ? "google" : "credentials",
+      passwordHash,
+      firstName,
+      lastName,
+      payload: { matricNumber, collegeId: college.id, departmentId: department.id, programmeId: programme.id, level },
+      existingUserId,
+    },
+    send,
+  );
+  return { ...issued, mode: existingUserId ? ("link" as const) : ("create" as const) };
 }
