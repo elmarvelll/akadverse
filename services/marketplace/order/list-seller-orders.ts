@@ -8,10 +8,13 @@ import { prisma } from "@/lib/prisma";
 import { classifySellerOrder } from "@/services/marketplace/order/seller-order-sections.service";
 import { getSellerDropoffDeadline, hasMissedDropoffDeadline } from "@/services/marketplace/delivery/dropoff-deadline.service";
 import type { BusinessOrderSummary } from "@/types/order";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function listSellerOrders(businessId: string): Promise<BusinessOrderSummary[]> {
   const orders = await prisma.order.findMany({
-    where: { businessId },
+    // Paid orders only — the seller never sees (or can act on) a checkout
+    // that was abandoned, failed, or is still awaiting payment.
+    where: { businessId, ...PAID_ORDER },
     select: {
       id: true,
       status: true,
@@ -39,7 +42,8 @@ export async function listSellerOrders(businessId: string): Promise<BusinessOrde
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    // Newest first; id breaks ties deterministically.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   });
 
   return orders.map((order) => {

@@ -10,8 +10,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
-import { AlertCircle, Clock, Loader2, XCircle } from "lucide-react";
+import { AlertCircle, Ban, Clock, Loader2, XCircle } from "lucide-react";
 import api from "@/lib/axios";
 import BusinessSidebar from "./BusinessSidebar";
 import { BusinessContext } from "./BusinessContext";
@@ -22,6 +23,7 @@ type GateState = "loading" | "approved" | "pending" | "rejected" | "not-found" |
 export default function BusinessApprovalGate({ id, children }: { id: string; children: React.ReactNode }) {
   const [state, setState] = useState<GateState>("loading");
   const [business, setBusiness] = useState<BusinessDetail | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +39,23 @@ export default function BusinessApprovalGate({ id, children }: { id: string; chi
         else setState("pending");
       } catch (err) {
         if (cancelled) return;
-        setState(isAxiosError(err) && err.response?.status === 404 ? "not-found" : "error");
+        if (isAxiosError(err) && err.response?.status === 404) {
+          // Not a Business the signed-in user owns. Before saying so, check
+          // whether it is THEIR School Vendor (same table, different
+          // dashboard): older notifications/links pointed vendors at this
+          // Business route. The vendor profile endpoint is owner-scoped, so
+          // this can only ever redirect an owner to their own vendor — it
+          // grants nothing to anyone else.
+          try {
+            await api.get(`/marketplace/vendor/${id}/profile`);
+            if (!cancelled) router.replace(`/studashboard/marketplace/vendor-dashboard/${id}`);
+            return; // stay on the loading state while the redirect happens
+          } catch {
+            if (!cancelled) setState("not-found");
+            return;
+          }
+        }
+        setState("error");
       }
     };
 
@@ -45,7 +63,7 @@ export default function BusinessApprovalGate({ id, children }: { id: string; chi
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, router]);
 
   if (state === "loading") {
     return (
@@ -95,10 +113,27 @@ export default function BusinessApprovalGate({ id, children }: { id: string; chi
 
   return (
     <BusinessContext.Provider value={business}>
+      {business?.blocked && <BlockedBanner name={business.name} reason={business.blockedReason} />}
       <div className="flex flex-col sm:flex-row gap-8 flex-1 min-w-0">
         <BusinessSidebar id={id} />
         <div className="flex-1 min-w-0">{children}</div>
       </div>
     </BusinessContext.Provider>
+  );
+}
+
+function BlockedBanner({ name, reason }: { name: string; reason: string | null | undefined }) {
+  return (
+    <div role="alert" className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      <Ban size={18} className="mt-0.5 shrink-0" aria-hidden />
+      <div className="min-w-0">
+        <p className="font-semibold">{name} has been blocked by an administrator.</p>
+        {reason && <p className="mt-0.5 break-words">Reason: {reason}</p>}
+        <p className="mt-1 text-red-700">
+          It is hidden from buyers and can&apos;t receive new orders. Orders already paid for still need to be fulfilled. Check your email
+          for details on contacting support.
+        </p>
+      </div>
+    </div>
   );
 }

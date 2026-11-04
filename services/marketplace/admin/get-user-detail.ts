@@ -10,6 +10,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "@/lib/service-error";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function getUserDetail(userId: string) {
   const user = await prisma.user.findUnique({
@@ -24,7 +25,7 @@ export async function getUserDetail(userId: string) {
       location: true,
       createdAt: true,
       businesses: { select: { id: true, name: true, approvalStatus: true }, orderBy: { createdAt: "desc" } },
-      _count: { select: { orders: true } },
+      _count: { select: { orders: { where: PAID_ORDER } } },
       deliverer: { select: { status: true } },
     },
   });

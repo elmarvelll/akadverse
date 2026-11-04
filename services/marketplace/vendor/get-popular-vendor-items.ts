@@ -14,7 +14,7 @@ export async function getPopularVendorItems(limit = 8): Promise<ProductSearchRes
   const take = limit > 0 ? Math.min(limit, 40) : 8;
 
   const products = await prisma.product.findMany({
-    where: { business: { approvalStatus: "APPROVED", type: "SCHOOL_VENDOR", paused: false } },
+    where: { business: { approvalStatus: "APPROVED", type: "SCHOOL_VENDOR", paused: false, blocked: false } },
     select: { id: true, name: true, category: true, price: true, secure_url: true, business: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
     take,

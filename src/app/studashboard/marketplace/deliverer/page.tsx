@@ -17,6 +17,7 @@ import { isAxiosError } from "axios";
 import { AlertCircle, CalendarClock, Loader2, Package, Truck } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import api from "@/lib/axios";
+import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
 
 interface Handoff {
   id: string;
@@ -164,9 +165,7 @@ export default function DelivererDashboardPage() {
   const pendingHandoffs = handoffs.filter((h) => !h.delivererConfirmedPickupAt);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNavbar />
-      <div className="pt-16 max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+    <MarketplacePageShell width="5xl" className="space-y-10">
         <h1 className="text-2xl font-bold text-gray-900">Delivery Dashboard</h1>
 
         {error && <div className="text-sm p-3 rounded-lg text-red-700 bg-red-100">{error}</div>}
@@ -299,7 +298,6 @@ export default function DelivererDashboardPage() {
             </div>
           )}
         </section>
-      </div>
-    </div>
+    </MarketplacePageShell>
   );
 }

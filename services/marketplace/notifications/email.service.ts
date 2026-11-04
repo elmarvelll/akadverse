@@ -51,26 +51,51 @@ export interface SendEmailInput {
 // state change, payout, or cron run that triggered the notification. Every
 // call site in this codebase should be a fire-and-forget `void sendEmail(...)`
 // or an awaited-but-ignored-on-failure call for exactly this reason.
-export async function sendEmail({ to, subject, html, type }: SendEmailInput): Promise<void> {
+export async function sendEmail(input: SendEmailInput): Promise<void> {
+  await sendEmailWithResult(input);
+}
+
+export type SendEmailResult = { ok: true; providerMessageId: string | null } | { ok: false; error: string };
+
+// Same as sendEmail (never throws, logs the outcome) but reports whether
+// Resend ACCEPTED the message, for the outbox (email-outbox.ts) to record
+// and retry. Acceptance is not inbox delivery — bounces/spam filtering
+// happen later and are only visible in the Resend dashboard.
+export async function sendEmailWithResult({ to, subject, html, type }: SendEmailInput): Promise<SendEmailResult> {
   const client = getClient();
   if (!client) {
     // No RESEND_API_KEY configured (e.g. local dev without the env var
     // set) — log instead of silently doing nothing, so a missing key is
     // obvious in the logs rather than looking like a delivered email.
     console.warn(`[email] RESEND_API_KEY not set — would have sent "${type}" ("${subject}") to ${to}`);
-    return;
+    return { ok: false, error: "RESEND_API_KEY is not configured." };
   }
 
   try {
     const result = await client.emails.send({ from: FROM_ADDRESS, to, subject, html });
     if (result.error) {
       console.error(`[email] Resend rejected "${type}" ("${subject}") to ${to}:`, result.error);
-      return;
+      return { ok: false, error: `${result.error.name ?? "error"}: ${result.error.message ?? "rejected by provider"}` };
     }
     console.log(`[email] sent "${type}" ("${subject}") to ${to}${result.data?.id ? ` (id: ${result.data.id})` : ""}`);
+    return { ok: true, providerMessageId: result.data?.id ?? null };
   } catch (err) {
     console.error(`[email] failed to send "${type}" ("${subject}") to ${to}:`, err);
+    return { ok: false, error: err instanceof Error ? err.message : "Unknown email provider error." };
   }
+}
+
+// Every value interpolated into a template that a user typed (business
+// names, reasons, product names) goes through this — the templates are HTML.
+export function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// Absolute links in emails. NEXTAUTH_URL is already required for auth and is
+// the app's public origin; APP_BASE_URL can override it if they ever differ.
+export function appUrl(path: string): string {
+  const base = (process.env.APP_BASE_URL || process.env.NEXTAUTH_URL || "").trim().replace(/\/+$/, "");
+  return base ? `${base}${path}` : path;
 }
 
 function layout(title: string, bodyHtml: string): string {
@@ -93,16 +118,42 @@ function layout(title: string, bodyHtml: string): string {
 // the recipient address), keeping these pure "build the content" functions.
 // ---------------------------------------------------------------------------
 
-export function newOrderEmail(params: { businessName: string; orderId: string; itemSummary: string; totalAmount: number }) {
+// Sent to the business/vendor owner once, after payment is verified and the
+// order finalized (services/marketplace/checkout/notify-order-paid.ts, via
+// the email outbox). Deliberately carries no buyer contact details or
+// address: a Business seller hands off at the central drop-off and a vendor
+// hands off to a deliverer, so neither needs them to fulfil the order.
+export function newOrderEmail(params: {
+  businessName: string;
+  orderId: string;
+  paymentReference: string;
+  items: { name: string; variantName?: string | null; quantity: number; lineTotal: number }[];
+  totalAmount: number;
+  currency: string;
+  deliveryInfo: string | null;
+  nextStep: string;
+  orderUrl: string;
+}) {
+  const money = (amount: number) => `${params.currency === "NGN" ? "₦" : `${params.currency} `}${amount.toLocaleString("en-NG")}`;
+  const rows = params.items
+    .map(
+      (item) =>
+        `<tr><td style="padding:4px 0;">${item.quantity} × ${escapeHtml(item.name)}${item.variantName ? ` <span style="color:#666;">(${escapeHtml(item.variantName)})</span>` : ""}</td><td style="padding:4px 0; text-align:right;">${money(item.lineTotal)}</td></tr>`
+    )
+    .join("");
   return {
     type: "new_order",
-    subject: `New order! ${params.orderId.slice(0, 8)}`,
-    html: layout("New order!", `
-      <p>You have a new order on <strong>${params.businessName}</strong>.</p>
-      <p><strong>Order:</strong> ${params.orderId}</p>
-      <p><strong>Items:</strong><br/>${params.itemSummary}</p>
-      <p><strong>Total:</strong> ₦${params.totalAmount.toLocaleString()}</p>
-      <p>Please accept or reject this order within 24 hours.</p>
+    subject: `New paid order on ${params.businessName} — #${params.orderId.slice(0, 8)}`,
+    html: layout("New paid order", `
+      <p>You have a new <strong>paid</strong> order on <strong>${escapeHtml(params.businessName)}</strong>.</p>
+      <p style="margin:0;"><strong>Order:</strong> #${params.orderId.slice(0, 8)} <span style="color:#666;">(${params.orderId})</span></p>
+      <p style="margin:4px 0 16px;"><strong>Payment reference:</strong> ${escapeHtml(params.paymentReference)}</p>
+      <table style="width:100%; border-collapse:collapse; font-size:14px;">${rows}
+        <tr><td style="padding-top:8px; border-top:1px solid #eee;"><strong>Total</strong></td><td style="padding-top:8px; border-top:1px solid #eee; text-align:right;"><strong>${money(params.totalAmount)}</strong></td></tr>
+      </table>
+      ${params.deliveryInfo ? `<p><strong>Delivery:</strong> ${escapeHtml(params.deliveryInfo)}</p>` : ""}
+      <p>${escapeHtml(params.nextStep)}</p>
+      <p><a href="${params.orderUrl}" style="display:inline-block; background:#2563eb; color:#fff; padding:10px 16px; border-radius:8px; text-decoration:none;">Open your orders</a></p>
     `),
   };
 }
@@ -355,13 +406,37 @@ export function newBusinessRegistrationEmail(params: { businessName: string; own
   };
 }
 
-export function businessApprovedEmail(params: { businessName: string; businessId: string }) {
+export function businessApprovedEmail(params: { businessName: string; businessId: string; dashboardUrl?: string }) {
   return {
     type: "business_approved",
     subject: "Your business has been approved",
     html: layout("Business approved", `
-      <p><strong>${params.businessName}</strong> has been approved and is now live on the marketplace.</p>
-      <p>You can now access your business dashboard and start listing products.</p>
+      <p><strong>${escapeHtml(params.businessName)}</strong> has been approved and is now live on the marketplace.</p>
+      <p>You can now access your dashboard and start listing products.</p>
+      ${params.dashboardUrl ? `<p><a href="${params.dashboardUrl}" style="display:inline-block; background:#2563eb; color:#fff; padding:10px 16px; border-radius:8px; text-decoration:none;">Open your dashboard</a></p>` : ""}
+    `),
+  };
+}
+
+// Sent once to the owner's account email when an admin blocks their business
+// (services/marketplace/admin/block-business.ts, via the email outbox).
+// Carries only the reason the admin entered for the owner — never internal
+// admin notes, the admin's identity, or report details. There is no formal
+// appeal process, so none is described: the owner is pointed at support.
+export function businessBlockedEmail(params: { businessName: string; reason: string; supportContact: string | null }) {
+  const support = params.supportContact
+    ? /^https?:\/\//i.test(params.supportContact)
+      ? `<a href="${escapeHtml(params.supportContact)}">${escapeHtml(params.supportContact)}</a>`
+      : `<a href="mailto:${escapeHtml(params.supportContact)}">${escapeHtml(params.supportContact)}</a>`
+    : null;
+  return {
+    type: "business_blocked",
+    subject: `Your AkadVerse Marketplace account "${params.businessName}" has been blocked`,
+    html: layout("Account blocked", `
+      <p>Your Marketplace business account <strong>${escapeHtml(params.businessName)}</strong> has been blocked by an AkadVerse administrator.</p>
+      <p><strong>Reason:</strong> ${escapeHtml(params.reason)}</p>
+      <p>While it is blocked, your storefront and products are hidden from buyers and you cannot receive new orders. Orders that were already paid for are not affected — please continue to fulfil them. Your products, order history, and payout records are kept.</p>
+      <p>${support ? `If you believe this is a mistake or would like clarification, contact support at ${support}.` : "If you believe this is a mistake or would like clarification, please contact AkadVerse support."}</p>
     `),
   };
 }

@@ -21,6 +21,7 @@ export async function getVendorStorefront(businessId: string) {
       availabilityEnd: true,
       secure_url: true,
       approvalStatus: true,
+      blocked: true,
       type: true,
       paused: true,
       pausedReason: true,
@@ -35,7 +36,7 @@ export async function getVendorStorefront(businessId: string) {
   // Not found (not just forbidden) — same convention as
   // get-public-product-detail.ts: a pending/rejected/non-vendor business
   // is indistinguishable from not existing to a public visitor.
-  if (!vendor || vendor.type !== "SCHOOL_VENDOR" || vendor.approvalStatus !== "APPROVED") {
+  if (!vendor || vendor.type !== "SCHOOL_VENDOR" || vendor.approvalStatus !== "APPROVED" || vendor.blocked) {
     throw notFound("Vendor not found.");
   }
 

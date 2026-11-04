@@ -20,6 +20,7 @@ import { useCart } from "../../_components/useCart";
 import { useVendorCart } from "../../_components/useVendorCart";
 import MarketplaceFooter from "../../_components/MarketplaceFooter";
 import api from "@/lib/axios";
+import { BackLink } from "../../_components/MarketplacePageShell";
 
 const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 });
 
@@ -73,6 +74,11 @@ export default function VendorStorefrontPage({ params }: { params: Promise<{ id:
           vendor={{ items: vendorCart.items, subtotal: vendorCart.subtotal, onUpdateQuantity: vendorCart.updateQuantity, onRemove: vendorCart.removeItem, status: vendorCart.status }}
         />
         <ProductDetailModal productId={detailProductId} onClose={() => setDetailProductId(null)} onAdded={refreshCarts} />
+
+        {/* Storefront pages had no way back except the browser button. */}
+        <nav aria-label="Breadcrumb" className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+          <BackLink />
+        </nav>
 
         {status === "loading" && (
           <div className="flex justify-center py-24">

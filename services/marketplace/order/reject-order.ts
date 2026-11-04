@@ -12,12 +12,13 @@ import { recordOrderEvent } from "@/services/marketplace/order/record-order-even
 import { refundOrderItem } from "@/services/marketplace/escrow/refund-order-item";
 import { sendEmail, sellerRejectedEmail } from "@/services/marketplace/notifications/email.service";
 import { createNotification } from "@/services/marketplace/notifications/notification.service";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function rejectOrder(businessId: string, orderId: string, actorUserId: string, reason: string) {
   if (!reason.trim()) throw badRequest("A rejection reason is required.");
 
   const order = await prisma.order.findFirst({
-    where: { id: orderId, businessId },
+    where: { id: orderId, businessId, ...PAID_ORDER },
     select: {
       id: true,
       status: true,

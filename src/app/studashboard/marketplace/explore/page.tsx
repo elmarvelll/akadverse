@@ -18,7 +18,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowLeft, Loader2, SearchX, Sparkles, X } from "lucide-react";
+import { AlertCircle, Loader2, SearchX, Sparkles, X } from "lucide-react";
 import api from "@/lib/axios";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import MarketplaceNavbar from "../_components/MarketplaceNavbar";
@@ -33,6 +33,7 @@ import { useVendorCart } from "../_components/useVendorCart";
 import { productCategories, skillCategories } from "@/services/marketplace/shared/categories";
 import type { MarketplaceSide } from "@/services/marketplace/shared/types";
 import type { ProductSearchResult } from "@/types/search";
+import { BackLink } from "../_components/MarketplacePageShell";
 
 const allCategories = [...productCategories, ...skillCategories];
 
@@ -327,13 +328,9 @@ function ExplorePageInner() {
         <ProductDetailModal productId={detailProductId} onClose={() => setDetailProductId(null)} onAdded={refreshCarts} />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-          <Link
-            href="/studashboard/marketplace"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition mb-6"
-          >
-            <ArrowLeft size={16} />
-            Back to Marketplace
-          </Link>
+          <nav aria-label="Breadcrumb" className="mb-6">
+            <BackLink />
+          </nav>
 
           {hasActiveSearch ? (
             <>

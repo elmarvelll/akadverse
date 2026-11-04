@@ -11,6 +11,7 @@ import { recordOrderEvent } from "@/services/marketplace/order/record-order-even
 import { refundOrderItem } from "@/services/marketplace/escrow/refund-order-item";
 import { sendEmail, sellerRejectedEmail } from "@/services/marketplace/notifications/email.service";
 import { createNotification } from "@/services/marketplace/notifications/notification.service";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 const RESPONSE_DEADLINE_MS = 24 * 60 * 60 * 1000;
 const AUTO_REJECT_REASON = "Seller took too long to respond.";
@@ -19,7 +20,10 @@ export async function runSellerResponseSweep(): Promise<{ autoRejected: number }
   const cutoff = new Date(Date.now() - RESPONSE_DEADLINE_MS);
 
   const overdueOrders = await prisma.order.findMany({
-    where: { status: "PENDING_SELLER", createdAt: { lte: cutoff } },
+    // PAID orders only. Unpaid checkout attempts also sit at PENDING_SELLER;
+    // before this filter they were auto-"rejected" and the buyer was emailed
+    // about a refund for money that was never taken.
+    where: { status: "PENDING_SELLER", createdAt: { lte: cutoff }, ...PAID_ORDER },
     select: {
       id: true,
       userId: true,

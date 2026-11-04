@@ -5,6 +5,11 @@
 // and only then records the material. The 8 MB limit is checked here for a fast message AND again on
 // the server (this check is a convenience, not the protection).
 //
+// A week can hold ANY number of documents (main note, supplementary reading, worked examples, …): every upload creates
+// its own record and its own uniquely-named file, and never replaces an existing one. The form makes that visible —
+// it says how many documents the chosen week already has, and it stays on the same week after an upload so several
+// documents for one week can be added back to back (it used to jump back to Week 1 after every upload).
+//
 // Feedback while it runs: three stages are shown (preparing -> uploading with a real percentage -> saving), the form is
 // locked so nothing can be edited or resubmitted mid-upload, and the outcome is announced (success or a clear error).
 
@@ -31,7 +36,19 @@ function putWithProgress(url: string, file: File, mime: string, onProgress: (per
   });
 }
 
-export default function UploadMaterial({ offeringId, totalWeeks }: { offeringId: string; totalWeeks: number }) {
+export default function UploadMaterial({
+  offeringId,
+  totalWeeks,
+  initialWeek = 1,
+  documentsPerWeek = {},
+}: {
+  offeringId: string;
+  totalWeeks: number;
+  // Preselected week (the "Add document" link on a week passes it).
+  initialWeek?: number;
+  // How many documents each week already has (week number -> count), to show next to the week field.
+  documentsPerWeek?: Record<number, number>;
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, start] = useTransition();
@@ -40,13 +57,16 @@ export default function UploadMaterial({ offeringId, totalWeeks }: { offeringId:
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [range, setRange] = useState(false);
+  const [week, setWeek] = useState(() => Math.min(Math.max(1, Math.trunc(initialWeek) || 1), Math.max(1, totalWeeks)));
+  const [uploadedTitle, setUploadedTitle] = useState("");
+  const existing = documentsPerWeek[week] ?? 0;
 
   function submit(formData: FormData) {
     if (pending) return; // never start a second upload while one is running
     setError(null);
     setDone(false);
     const file = formData.get("file") as File | null;
-    const startWeek = Number(formData.get("startWeek"));
+    const startWeek = week;
     const endWeek = range ? Number(formData.get("endWeek")) : startWeek;
     const meta = {
       courseOfferingId: offeringId,
@@ -75,8 +95,11 @@ export default function UploadMaterial({ offeringId, totalWeeks }: { offeringId:
       setStage("saving");
       const saved = await confirmUploadAction({ ...meta, path: signed.path });
       if (!saved.ok) return fail(saved.error);
+      // Clear the file/title for the next document but KEEP the week, so adding several documents to one week doesn't
+      // require re-entering it each time (and can't silently land the next one in Week 1).
       formRef.current?.reset();
       setRange(false);
+      setUploadedTitle(meta.title.trim());
       setDone(true);
       setStage("idle");
       router.refresh();
@@ -105,11 +128,26 @@ export default function UploadMaterial({ offeringId, totalWeeks }: { offeringId:
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-medium text-gray-900">{range ? "From week" : "Week"}
-            <input name="startWeek" type="number" min={1} max={totalWeeks} defaultValue={1} required className={`${field} mt-1`} />
+            <input
+              name="startWeek"
+              type="number"
+              min={1}
+              max={totalWeeks}
+              value={week}
+              onChange={(e) => setWeek(Math.min(Math.max(1, Math.trunc(Number(e.target.value)) || 1), Math.max(1, totalWeeks)))}
+              required
+              aria-describedby="upload-week-hint"
+              className={`${field} mt-1`}
+            />
+            <span id="upload-week-hint" className="mt-1 block text-xs font-normal text-gray-700">
+              {existing === 0
+                ? `Week ${week} has no documents yet.`
+                : `Week ${week} already has ${existing} document${existing === 1 ? "" : "s"} — this one will be added alongside ${existing === 1 ? "it" : "them"}. Nothing is replaced.`}
+            </span>
           </label>
           {range && (
             <label className="text-sm font-medium text-gray-900">To week
-              <input name="endWeek" type="number" min={1} max={totalWeeks} defaultValue={1} required className={`${field} mt-1`} />
+              <input name="endWeek" type="number" min={week} max={totalWeeks} defaultValue={week} required className={`${field} mt-1`} />
             </label>
           )}
         </div>
@@ -131,7 +169,7 @@ export default function UploadMaterial({ offeringId, totalWeeks }: { offeringId:
         </div>
       )}
       {error && <p role="alert" className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">{error}</p>}
-      {done && <p role="status" className="mt-4 rounded-xl border border-green-300 bg-green-50 p-3 text-sm text-green-900">Material uploaded.</p>}
+      {done && <p role="status" className="mt-4 rounded-xl border border-green-300 bg-green-50 p-3 text-sm text-green-900">{uploadedTitle ? `"${uploadedTitle}" uploaded.` : "Material uploaded."} You can add another document to Week {week} now.</p>}
       <button type="submit" disabled={pending} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-70">
         {pending && <Loader2 size={14} className="animate-spin" aria-hidden />}
         {pending ? stageText.replace(/….*/, "…") || "Uploading…" : "Upload material"}

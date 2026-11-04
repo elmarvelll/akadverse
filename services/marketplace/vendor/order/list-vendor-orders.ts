@@ -13,19 +13,22 @@
 //
 // Includes each order's delivery date + timeframe (via its
 // VendorDeliveryBooking) so the frontend can group "September 10 -> 5-6PM
-// -> Order #1001…" (spec §8) and orders are returned oldest-first within
-// the underlying query so a slot's orders are already in creation order
-// once grouped (spec §9) — never re-sorted by name/customer.
+// -> Order #1001…" (spec §8). Orders are returned NEWEST-first (createdAt
+// desc, id desc) and the frontend keeps that order — never re-sorted by
+// name/customer.
 
 import { prisma } from "@/lib/prisma";
 import { requireOwnedVendor } from "@/services/marketplace/vendor/shared/require-owned-vendor";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function listVendorOrders(businessId: string) {
   await requireOwnedVendor(businessId);
 
   const [orders, handoffs] = await Promise.all([
     prisma.order.findMany({
-      where: { businessId },
+      // Paid orders only — an abandoned/failed/unpaid checkout never reaches
+      // the vendor (order/shared/paid-order.ts).
+      where: { businessId, ...PAID_ORDER },
       select: {
         id: true,
         status: true,
@@ -49,9 +52,12 @@ export async function listVendorOrders(businessId: string) {
           },
         },
       },
-      // Oldest first (spec §9) — the vendor works through a slot's orders
-      // in the order they were created, never reverse-chronological.
-      orderBy: { createdAt: "asc" },
+      // Newest first, by the authoritative creation timestamp (NOT the
+      // scheduled delivery date), sorted in the database; id is the
+      // deterministic tie-break for identical timestamps. Supersedes the
+      // earlier oldest-first rule — see
+      // docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md, section E.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     }),
     // Every currently-uncollected handoff for this vendor — used to show
     // "deliverer assigned, here's the pickup code" instead of a

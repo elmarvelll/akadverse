@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function getFeaturedVendors() {
   const vendors = await prisma.business.findMany({
-    where: { approvalStatus: "APPROVED", type: "SCHOOL_VENDOR", paused: false },
+    where: { approvalStatus: "APPROVED", type: "SCHOOL_VENDOR", paused: false, blocked: false },
     select: {
       id: true,
       name: true,

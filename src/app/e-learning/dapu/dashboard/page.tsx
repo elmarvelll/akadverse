@@ -6,6 +6,7 @@
 // dashboard depends on it. Course structure/timeframe/timetable have their
 // own sidebar sections.
 
+import Link from "next/link";
 import { requireElearningRole } from "@/services/e-learning/shared/auth";
 import { getCurrentAcademicContext } from "@/services/e-learning/shared/academic-calendar";
 import { listSessions } from "@/services/e-learning/dapu/academic-calendar";
@@ -22,6 +23,7 @@ export default async function DapuDashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Welcome, {session.user.firstName}</h1>
         <p className="text-gray-500 text-sm mt-1">Academic-wide administration.</p>
+        <Link href="/e-learning/dapu/ai-ingestion" className="text-sm text-blue-700 underline">Lecture note AI processing</Link>
       </div>
 
       <div className="rounded-2xl border border-gray-100 bg-white p-5">

@@ -20,6 +20,7 @@ import ImageUploadField from "../_components/ImageUploadField";
 import BankDetailsFields from "../_components/BankDetailsFields";
 import DeliveryDaysField from "../_components/DeliveryDaysField";
 import type { BusinessFormValues, BusinessSummary } from "@/types/business";
+import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
@@ -98,9 +99,7 @@ export default function CreateBusinessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNavbar />
-      <div className="pt-16 max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+    <MarketplacePageShell width="2xl">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Create your business</h1>
         <p className="text-gray-500 mb-8">Set up a storefront to sell products on the marketplace.</p>
 
@@ -281,7 +280,6 @@ export default function CreateBusinessPage() {
             {status === "submitting" ? "Creating…" : "Create"}
           </button>
         </form>
-      </div>
-    </div>
+    </MarketplacePageShell>
   );
 }

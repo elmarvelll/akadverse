@@ -1,5 +1,7 @@
 # System: Checkout & Payment
 
+> **Update 2026-10-13:** Checkout now reserves stock at initialize behind a `CheckoutPayment` attempt, hides unpaid orders, validates amount/currency on verify, and adds `POST /checkout/cancel`. The lifecycle, status codes, and the statements below about stock never being decremented, the pending-status idempotency check, and whole-cart clearing are superseded — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+
 ## Purpose
 
 Turns a paid-for cart into real, per-business `Order`/`OrderItem` rows, and confirms payment with Paystack in a way that's correct regardless of which of two possible confirmation paths actually fires first.

@@ -6,11 +6,19 @@
 // isn't unique. Called by
 // src/app/api/marketplace/checkout/initialize/route.controller.ts.
 //
-// Stock is re-validated and decremented HERE, inside the same transaction
-// as order creation — not just at add-to-cart time, which can be stale by
-// checkout (another buyer could have bought the remaining stock in
-// between). Whichever stock source a cart line uses (its selected
-// variant's, or the product's own) is what gets checked/decremented.
+// These Order rows are the INTERNAL side of a payment attempt, not customer
+// orders yet: they're created with paymentStatus "pending", hidden from every
+// order list (see order/shared/paid-order.ts), and only become real orders
+// when Paystack confirms payment (confirm-payment-by-reference.ts).
+//
+// Stock is re-validated and RESERVED here, inside the same transaction as
+// order creation — a conditional decrement (shared/stock-reservation.ts), so
+// concurrent checkouts can never oversell. The reservation is recorded as a
+// CheckoutPayment row (same transaction) with an expiry; if the payment is
+// cancelled, fails, or expires it is released exactly once
+// (release-checkout-reservation.ts). The amount the buyer must pay is
+// computed here from database prices and stored on that row — verification
+// later compares Paystack's reported amount against it.
 
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
@@ -19,6 +27,8 @@ import { getCartForUser } from "@/services/marketplace/cart/get-cart-for-user";
 import { getEstimatedDeliveryForBusiness } from "@/services/marketplace/delivery/estimated-delivery.service";
 import { SERVICE_FEE_RATE } from "./shared/service-fee";
 import { EmptyCartError } from "./shared/empty-cart-error";
+import { reserveLine } from "./shared/stock-reservation";
+import { CHECKOUT_CURRENCY, reservationExpiry, toKobo } from "./shared/checkout-payment-config";
 
 export { EmptyCartError };
 
@@ -56,8 +66,10 @@ export async function createOrdersForCheckout(userId: string, location: string) 
       // already keep unapproved businesses out of reach for a NEW add, but
       // a stale cart line is still possible, so this is checked again
       // here as the actual point of no return.
-      const business = await tx.business.findUnique({ where: { id: businessId }, select: { approvalStatus: true, type: true } });
-      if (business?.approvalStatus !== "APPROVED") {
+      const business = await tx.business.findUnique({ where: { id: businessId }, select: { approvalStatus: true, type: true, blocked: true } });
+      // An admin-blocked business can't take new orders (its existing
+      // orders/history are untouched) — enforced here, not just hidden in the UI.
+      if (business?.approvalStatus !== "APPROVED" || business.blocked) {
         throw conflict(`${items[0].sellerName} isn't currently accepting orders.`);
       }
       // A School Vendor's items never flow through Business checkout — see
@@ -67,23 +79,15 @@ export async function createOrdersForCheckout(userId: string, location: string) 
         throw conflict(`${items[0].sellerName} orders must go through the Vendor checkout.`);
       }
 
-      // Re-check + decrement stock for every line before creating
-      // anything for this business — a real gap this closes: stock was
-      // previously only ever clamped at add-to-cart time, never
-      // re-verified here.
+      // Reserve stock for every line before creating anything for this
+      // business. Conditional decrement: if another checkout took the last
+      // units first, the update matches no row and the whole transaction
+      // (every earlier reservation in it included) rolls back.
       for (const item of items) {
-        if (item.variantId) {
-          const variant = await tx.productVariant.findUnique({ where: { id: item.variantId }, select: { stock: true } });
-          if (!variant || variant.stock < item.quantity) {
-            throw conflict(`${item.productName}${item.variantName ? ` (${item.variantName})` : ""} no longer has enough stock.`);
-          }
-          await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { decrement: item.quantity } } });
-        } else {
-          const product = await tx.product.findUnique({ where: { id: item.productId }, select: { stock: true } });
-          if (!product || product.stock < item.quantity) {
-            throw conflict(`${item.productName} no longer has enough stock.`);
-          }
-          await tx.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity } } });
+        if (!Number.isInteger(item.quantity) || item.quantity < 1) throw conflict(`${item.productName} has an invalid quantity.`);
+        const reserved = await reserveLine(tx, { productId: item.productId, variantId: item.variantId, sideId: null, quantity: item.quantity });
+        if (!reserved) {
+          throw conflict(`${item.productName}${item.variantName ? ` (${item.variantName})` : ""} no longer has enough stock.`);
         }
       }
 
@@ -115,14 +119,29 @@ export async function createOrdersForCheckout(userId: string, location: string) 
       created.push(order);
     }
 
-    // The cart itself is deliberately NOT cleared here — these orders are
-    // still "pending payment" at this point (see paymentStatus: "pending"
-    // above). It's only cleared once payment actually confirms, in
-    // confirm-payment-by-reference.ts, same as before this change.
-    return created;
-  });
+    const subtotal = created.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalAmount = subtotal + subtotal * SERVICE_FEE_RATE;
+    const amountKobo = toKobo(totalAmount);
+    if (amountKobo <= 0) throw conflict("This order has nothing to pay for.");
 
-  const subtotal = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    // The payment attempt: what must be paid, which cart lines it covers
+    // (only those are cleared on success — the cart is left intact until
+    // then, so a cancelled payment loses nothing), and when the stock
+    // reservation above lapses.
+    await tx.checkoutPayment.create({
+      data: {
+        reference,
+        userId,
+        kind: "BUSINESS",
+        amountKobo,
+        currency: CHECKOUT_CURRENCY,
+        cartItemIds: cartItems.map((item) => item.id),
+        expiresAt: reservationExpiry(),
+      },
+    });
 
-  return { reference, totalAmount: subtotal + subtotal * SERVICE_FEE_RATE, orderIds: orders.map((o) => o.id) };
+    return { created, totalAmount, amountKobo };
+  }, { maxWait: 10000, timeout: 20000 });
+
+  return { reference, totalAmount: orders.totalAmount, amountKobo: orders.amountKobo, orderIds: orders.created.map((o) => o.id) };
 }

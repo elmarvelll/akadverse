@@ -32,7 +32,17 @@ export function todayInSchoolTimezone(now: Date = new Date()): Date {
 // VendorDeliveryBooking.bookedFor's existing convention). Throws a
 // service-error `badRequest` on any violation — callers don't need to
 // re-validate.
-export function parseAndValidateDeliveryDate(dateStr: string | undefined | null, now: Date = new Date()): Date {
+// How far ahead a VENDOR may configure its own schedule (close a date, add
+// a custom date, set a date's capacity). Longer than the customer booking
+// window above on purpose: a vendor plans closures weeks ahead, even though
+// customers can only book MAX_ADVANCE_BOOKING_DAYS out.
+export const MAX_SCHEDULE_CONFIG_DAYS = 90;
+
+export function parseAndValidateDeliveryDate(
+  dateStr: string | undefined | null,
+  now: Date = new Date(),
+  maxDaysAhead: number = MAX_ADVANCE_BOOKING_DAYS
+): Date {
   const trimmed = dateStr?.trim();
   if (!trimmed) {
     // No date supplied — default to today, same as the pre-date-selection
@@ -60,9 +70,9 @@ export function parseAndValidateDeliveryDate(dateStr: string | undefined | null,
   }
 
   const maxDate = new Date(today);
-  maxDate.setUTCDate(maxDate.getUTCDate() + MAX_ADVANCE_BOOKING_DAYS);
+  maxDate.setUTCDate(maxDate.getUTCDate() + maxDaysAhead);
   if (parsed.getTime() > maxDate.getTime()) {
-    throw badRequest(`Delivery date cannot be more than ${MAX_ADVANCE_BOOKING_DAYS} days from now.`);
+    throw badRequest(`Delivery date cannot be more than ${maxDaysAhead} days from now.`);
   }
 
   return parsed;

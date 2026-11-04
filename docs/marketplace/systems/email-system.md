@@ -1,5 +1,7 @@
 # System: Email
 
+> **Update 2026-10-13:** The paid-order email and the new business-blocked email now go through an outbox (`EmailDelivery`, `services/marketplace/notifications/email-outbox.ts`) with dedupe and retry; `newOrderEmail` was rewritten. The "never retried" description below no longer applies to those two — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+
 ## Purpose
 
 Every transactional email the Marketplace sends — new order, acceptance, ready-for-pickup, delivery OTP, failure/retry, refund, late-fine restriction, payout outcome, deliverer daily digest, deliverer approval.

@@ -27,9 +27,11 @@ export async function addToCart(userId: string, input: AddToCartInput): Promise<
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { id: true, stock: true, variants: { select: { id: true } }, business: { select: { type: true } } },
+    select: { id: true, stock: true, variants: { select: { id: true } }, business: { select: { type: true, approvalStatus: true, blocked: true } } },
   });
-  if (!product) throw notFound("Product not found.");
+  // Unapproved or admin-blocked businesses are indistinguishable from "not
+  // found" to a buyer — same convention as get-public-product-detail.ts.
+  if (!product || product.business.approvalStatus !== "APPROVED" || product.business.blocked) throw notFound("Product not found.");
   // A School Vendor's products go through the separate Vendor cart/checkout
   // (slot booking, shared delivery fee, flat service fee — see
   // docs/marketplace/decisions/vendor-extends-business.md), never this

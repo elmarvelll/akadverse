@@ -7,7 +7,7 @@
 // Thin route — see ./route.controller.ts.
 
 import { NextRequest } from "next/server";
-import { getCapacity, putCapacity } from "./route.controller";
+import { deleteCapacityOverride, getCapacity, putCapacity } from "./route.controller";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,4 +17,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return putCapacity(request, id);
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return deleteCapacityOverride(request, id);
 }
