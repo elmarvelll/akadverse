@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runController, readJsonBody } from "@/lib/controller-helpers";
 import { badRequest } from "@/lib/service-error";
-import { listVendorCapacity, upsertVendorCapacity } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
+import { clearVendorCapacityOverride, listVendorCapacity, upsertVendorCapacity } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
 
 export async function getCapacity(request: NextRequest, businessId: string): Promise<NextResponse> {
   return runController(async () => {
@@ -23,5 +23,17 @@ export async function putCapacity(request: NextRequest, businessId: string): Pro
     if (!body.slotId) throw badRequest("slotId is required.");
     const row = await upsertVendorCapacity(businessId, body.slotId, Number(body.capacity), body.date?.trim() || undefined);
     return NextResponse.json({ capacity: row });
+  });
+}
+
+// DELETE ?slotId=&date= -> drop one date's capacity override so that date
+// uses the recurring default again.
+export async function deleteCapacityOverride(request: NextRequest, businessId: string): Promise<NextResponse> {
+  return runController(async () => {
+    const slotId = request.nextUrl.searchParams.get("slotId")?.trim();
+    const date = request.nextUrl.searchParams.get("date")?.trim();
+    if (!slotId || !date) throw badRequest("slotId and date are required.");
+    await clearVendorCapacityOverride(businessId, slotId, date);
+    return NextResponse.json({ cleared: true });
   });
 }

@@ -1,5 +1,7 @@
 # System: Business Oversight — Verification & Blocking (Admin)
 
+> **Update 2026-10-13:** Blocking now emails and notifies the owner (once per block, retried on failure) and is enforced server-side for buyers (hidden from browse/search, no cart adds, no checkout). The "Notifications: None" and "what blocked prevents" statements below are superseded — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+
 ## Purpose
 
 Lets a `super_admin` mark a business as verified (a trust signal, admin-reviewed) and block a business (an admin-imposed restriction), independent of the pre-existing, unrelated `deliveryRestricted` flag.

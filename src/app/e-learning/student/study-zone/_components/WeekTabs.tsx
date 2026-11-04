@@ -55,7 +55,7 @@ export default function WeekTabs({ weeks, active, onSelect }: { weeks: StudyWeek
             aria-controls={WEEK_PANEL_ID}
             tabIndex={selected ? 0 : -1}
             onClick={() => onSelect(w.weekNumber)}
-            title={w.topic ? `Week ${w.weekNumber}: ${w.topic}` : `Week ${w.weekNumber}: no material yet`}
+            title={w.topic ? `Week ${w.weekNumber}: ${w.topic}${w.documents.length > 1 ? ` and ${w.documents.length - 1} more` : ""}` : `Week ${w.weekNumber}: no material yet`}
             className={`w-36 shrink-0 rounded-t-xl border px-3 pb-1.5 pt-1.5 text-left transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 ${
               selected
                 ? "relative z-[1] border-gray-200 border-b-white bg-white shadow-[inset_0_3px_0_#2563eb]"
@@ -63,7 +63,10 @@ export default function WeekTabs({ weeks, active, onSelect }: { weeks: StudyWeek
             }`}
           >
             <span className={`block text-[11px] font-bold uppercase leading-4 tracking-wide ${selected ? "text-blue-700" : "text-gray-700"}`}>Week {w.weekNumber}</span>
-            <span className={`block truncate text-[13px] leading-5 ${selected ? "font-medium text-gray-900" : empty ? "italic text-gray-600" : "text-gray-800"}`}>{w.topic ?? "No material"}</span>
+            <span className={`block truncate text-[13px] leading-5 ${selected ? "font-medium text-gray-900" : empty ? "italic text-gray-600" : "text-gray-800"}`}>{w.topic ?? "No material"}
+              {/* The tab names only the week's first document; say so when there are more, so a week with several notes doesn't look like it has one. */}
+              {w.documents.length > 1 && <span className="font-normal text-gray-600"> +{w.documents.length - 1} more</span>}
+            </span>
           </button>
         );
       })}

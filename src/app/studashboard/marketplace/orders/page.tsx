@@ -11,8 +11,8 @@
 import { useEffect, useState } from "react";
 import { isAxiosError } from "axios";
 import { AlertCircle, AlertTriangle, Loader2, Package } from "lucide-react";
-import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import api from "@/lib/axios";
+import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
 
 const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 });
 
@@ -162,9 +162,7 @@ export default function BuyerOrdersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNavbar />
-      <div className="pt-16 max-w-3xl mx-auto px-4 sm:px-6 py-10">
+    <MarketplacePageShell width="3xl">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Your orders</h1>
 
         {loadState === "loading" && (
@@ -216,7 +214,6 @@ export default function BuyerOrdersPage() {
             </section>
           </div>
         )}
-      </div>
-    </div>
+    </MarketplacePageShell>
   );
 }

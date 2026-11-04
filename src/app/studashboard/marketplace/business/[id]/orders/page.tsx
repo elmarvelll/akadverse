@@ -14,6 +14,7 @@ import { isAxiosError } from "axios";
 import { AlertCircle, AlertTriangle, Loader2, ShoppingBag } from "lucide-react";
 import api from "@/lib/axios";
 import type { BusinessOrderSummary } from "@/types/order";
+import DropoffActionPanel, { type DropoffPoint } from "../../_components/DropoffActionPanel";
 import type { SellerOrderSection } from "@/services/marketplace/order/seller-order-sections.service";
 
 const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 });
@@ -28,13 +29,7 @@ interface Fine {
   status: string;
 }
 
-interface MarketplaceSettingsDto {
-  dropoffWindowStart: string;
-  dropoffWindowEnd: string;
-  handoffWindowStart: string;
-  handoffWindowEnd: string;
-  dropoffLocation: string | null;
-}
+type MarketplaceSettingsDto = DropoffPoint;
 
 const SECTIONS: { key: SellerOrderSection; label: string }[] = [
   { key: "pending", label: "Pending" },
@@ -112,14 +107,15 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
     // the same initialize/verify pattern at a smaller scale. Kept inline
     // rather than factored into a shared hook given it's the only other
     // Paystack payment flow in the app right now.
-    const res = await api.post<{ reference: string; amountKobo: number }>(`/marketplace/businesses/${id}/fines/${fineId}/initialize`);
+    const res = await api.post<{ reference: string; amountKobo: number; publicKey?: string | null }>(`/marketplace/businesses/${id}/fines/${fineId}/initialize`);
     const PaystackPop = (window as unknown as { PaystackPop?: { setup: (opts: Record<string, unknown>) => { openIframe: () => void } } }).PaystackPop;
     if (!PaystackPop) {
       window.alert("Payment couldn't start — please refresh and try again.");
       return;
     }
     PaystackPop.setup({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_KEY,
+      // Server-chosen key (same test/live mode it verifies in).
+      key: res.data.publicKey || process.env.NEXT_PUBLIC_PAYSTACK_KEY,
       email: undefined,
       amount: res.data.amountKobo,
       ref: res.data.reference,
@@ -153,6 +149,8 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
           </button>
         </div>
       )}
+
+      {loadState !== "error" && <DropoffActionPanel orders={orders} point={settings} busyOrderId={busyOrderId} onRequestCode={confirmDropoff} />}
 
       <div className="flex gap-1.5 overflow-x-auto pb-1 mb-5">
         {SECTIONS.map((section) => {
@@ -275,50 +273,10 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
                     Mark ready
                   </button>
                 )}
-                {activeSection === "ready_for_pickup" && !order.dropoffOtp && !order.coordinatorReceivedAt && (
-                  <div className="w-full">
-                    {settings && (settings.dropoffWindowStart || settings.dropoffLocation) && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        Drop-off window: {settings.dropoffWindowStart}–{settings.dropoffWindowEnd}
-                        {settings.dropoffLocation && ` · ${settings.dropoffLocation}`}
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      disabled={busyOrderId === order.id}
-                      onClick={() => confirmDropoff(order.id)}
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition disabled:opacity-50"
-                    >
-                      Confirm drop-off
-                    </button>
-                  </div>
-                )}
-                {activeSection === "ready_for_pickup" && order.dropoffOtp && !order.coordinatorReceivedAt && (
-                  <div className="w-full">
-                    {settings && (settings.dropoffWindowStart || settings.dropoffLocation) && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        Drop-off window: {settings.dropoffWindowStart}–{settings.dropoffWindowEnd}
-                        {settings.dropoffLocation && ` · ${settings.dropoffLocation}`}
-                      </p>
-                    )}
-                    <p className="text-sm font-semibold text-gray-900 mb-1">
-                      Show this code to the Delivery Coordinator: {order.dropoffOtp.slice(0, 3)} {order.dropoffOtp.slice(3)}
-                    </p>
-                    {order.dropoffOtpExpiry && (
-                      <p className="text-xs text-gray-500 mb-2">Expires {new Date(order.dropoffOtpExpiry).toLocaleTimeString()}</p>
-                    )}
-                    <button
-                      type="button"
-                      disabled={busyOrderId === order.id}
-                      onClick={() => confirmDropoff(order.id)}
-                      className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-semibold transition disabled:opacity-50"
-                    >
-                      Reissue code
-                    </button>
-                  </div>
-                )}
-                {activeSection === "ready_for_pickup" && order.coordinatorReceivedAt && (
-                  <span className="text-xs text-gray-500 py-2">Received by Delivery Coordinator.</span>
+                {activeSection === "ready_for_pickup" && (
+                  <span className="text-xs text-gray-500 py-2">
+                    {order.coordinatorReceivedAt ? "Received by Delivery Coordinator." : "Drop-off steps for this order are in the panel at the top of this page."}
+                  </span>
                 )}
               </div>
             </div>

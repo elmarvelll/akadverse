@@ -1,5 +1,7 @@
 # System: Cron
 
+> **Update 2026-10-13:** Two new `CRON_SECRET`-guarded routes exist — `/api/cron/checkout-reconcile` and `/api/cron/email-retry` — deliberately not registered in `vercel.json`; the same work also runs after checkout requests — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+
 ## Purpose
 
 Scheduled, unattended enforcement of every time-based Marketplace rule: seller response deadlines, seller payouts, deliverer daily digests, and delivery retries.

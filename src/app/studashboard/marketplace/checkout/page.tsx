@@ -19,11 +19,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { isAxiosError } from "axios";
-import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, MapPin, ShoppingBag } from "lucide-react";
-import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
+import { AlertCircle, CheckCircle2, Loader2, MapPin, ShoppingBag } from "lucide-react";
 import api from "@/lib/axios";
-import { loadPaystackScript } from "./_components/loadPaystackScript";
+import { confirmPayment, openPaystackCheckout, reportCancelled } from "./_components/paystackCheckout";
 import type { CheckoutSummary, InitializeCheckoutResponse } from "@/types/checkout";
+import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
 
 const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 });
 
@@ -34,6 +34,8 @@ export default function CheckoutPage() {
   const [summary, setSummary] = useState<CheckoutSummary | null>(null);
   const [location, setLocation] = useState("");
   const [error, setError] = useState("");
+  // Neutral (non-error) feedback, e.g. after the buyer closes the payment popup.
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -63,29 +65,17 @@ export default function CheckoutPage() {
     }
 
     setError("");
+    setNotice("");
     setStatus("paying");
 
     try {
-      await loadPaystackScript();
       const res = await api.post<InitializeCheckoutResponse>("/marketplace/checkout/initialize", { location });
-      const { reference, amountKobo, email } = res.data;
+      const init = res.data;
 
-      const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
-      if (!publicKey || !window.PaystackPop) {
-        throw new Error("Payment isn't available right now.");
-      }
-
-      window.PaystackPop.setup({
-        key: publicKey,
-        email,
-        amount: amountKobo,
-        ref: reference,
-        currency: "NGN",
-        onClose: () => setStatus("ready"),
-        callback: (response) => {
-          verifyPayment(response.reference);
-        },
-      }).openIframe();
+      await openPaystackCheckout(init, (outcome) => {
+        if (outcome === "success") verifyPayment(init.reference);
+        else handlePopupClosed(init.reference);
+      });
     } catch (err) {
       const message =
         (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) ||
@@ -95,30 +85,42 @@ export default function CheckoutPage() {
     }
   };
 
+  // The popup reported success. That's only the browser's word — the server
+  // verifies with Paystack (amount, currency, reference) before any order
+  // becomes real. See _components/paystackCheckout.ts.
   const verifyPayment = async (reference: string) => {
     setStatus("verifying");
-    try {
-      await api.post("/marketplace/checkout/verify", { reference });
+    const outcome = await confirmPayment(reference);
+    if (outcome.kind === "success") {
       setStatus("success");
-    } catch (err) {
-      const message =
-        (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "We couldn't confirm your payment.";
-      setError(message);
+    } else if (outcome.kind === "unconfirmed") {
+      setNotice("");
+      setError(`${outcome.message} If you were charged, your order will be confirmed automatically — check My Orders shortly before paying again.`);
+      setStatus("payment-error");
+    } else {
+      setNotice("");
+      setError(outcome.message);
       setStatus("payment-error");
     }
   };
 
+  // The popup was closed without paying. The server checks with Paystack
+  // and releases what this attempt reserved; the cart is never touched, so
+  // the buyer can simply try again.
+  const handlePopupClosed = async (reference: string) => {
+    setStatus("verifying");
+    const result = await reportCancelled(reference);
+    if (result === "paid") {
+      setStatus("success");
+      return;
+    }
+    setError("");
+    setNotice("Payment cancelled — you haven't been charged and your cart is unchanged.");
+    setStatus("ready");
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNavbar />
-      <div className="pt-16 max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <Link
-          href="/studashboard/marketplace"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition mb-6"
-        >
-          <ArrowLeft size={16} />
-          Back to Marketplace
-        </Link>
+    <MarketplacePageShell width="2xl">
 
         {status === "loading" && (
           <div className="flex justify-center py-24">
@@ -224,7 +226,8 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {error && <div className="text-sm p-3 rounded-lg text-red-700 bg-red-100 mb-4">{error}</div>}
+            {error && <div role="alert" className="text-sm p-3 rounded-lg text-red-700 bg-red-100 mb-4">{error}</div>}
+            {notice && !error && <div role="status" className="text-sm p-3 rounded-lg text-gray-700 bg-gray-100 mb-4">{notice}</div>}
 
             <button
               type="button"
@@ -237,7 +240,6 @@ export default function CheckoutPage() {
             </button>
           </>
         )}
-      </div>
-    </div>
+    </MarketplacePageShell>
   );
 }

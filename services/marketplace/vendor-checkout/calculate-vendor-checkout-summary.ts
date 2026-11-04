@@ -20,9 +20,10 @@ import { prisma } from "@/lib/prisma";
 import { getVendorCartForUser } from "@/services/marketplace/vendor-cart/get-vendor-cart-for-user";
 import { getMarketplaceSettings } from "@/services/marketplace/admin/shared/marketplace-settings";
 import { isSlotBookable } from "@/services/marketplace/vendor-delivery/is-slot-bookable";
-import { todayInSchoolTimezone as schoolToday, parseAndValidateDeliveryDate } from "@/services/marketplace/vendor-delivery/validate-delivery-date";
+import { MAX_ADVANCE_BOOKING_DAYS, todayInSchoolTimezone as schoolToday, parseAndValidateDeliveryDate } from "@/services/marketplace/vendor-delivery/validate-delivery-date";
 import { countVendorBookingsForSlot } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
 import { resolveVendorCapacity } from "@/services/marketplace/vendor/capacity/resolve-vendor-capacity";
+import { loadVendorScheduleWindow } from "@/services/marketplace/vendor/capacity/vendor-delivery-schedule";
 import { calculateVendorFees, type VendorFeeBreakdown } from "./shared/vendor-fees";
 import type { VendorCartLineItem } from "@/types/vendor-cart";
 
@@ -44,6 +45,18 @@ export interface VendorCheckoutSummary {
   // against — echoes back whatever was requested (or today, if none was),
   // so the frontend can confirm it's showing the date it asked for.
   date: string;
+  // Every date in the booking window, flagged with whether it can actually
+  // be chosen: every vendor in the cart delivers that day AND at least one
+  // timeframe still has capacity and hasn't passed its cutoff. The date
+  // picker offers only `selectable` dates. Display only — initialize
+  // re-validates the chosen date and capacity inside its own transaction.
+  dates: VendorDateAvailability[];
+}
+
+export interface VendorDateAvailability {
+  date: string; // YYYY-MM-DD
+  selectable: boolean;
+  reason: "ok" | "not_delivering" | "fully_booked" | "closed_for_today";
 }
 
 // Re-exported for existing callers (create-vendor-orders-for-checkout.ts)
@@ -104,5 +117,21 @@ export async function calculateVendorCheckoutSummary(userId: string, dateStr?: s
     })
   );
 
-  return { items, fees, slots, date: bookedFor.toISOString().slice(0, 10) };
+  // Which dates in the booking window are worth offering. Batched (a fixed
+  // number of queries for the whole window) — see loadVendorScheduleWindow.
+  const now = new Date();
+  const window = await loadVendorScheduleWindow(businessIds, schoolToday(now), MAX_ADVANCE_BOOKING_DAYS + 1, now);
+  const dates: VendorDateAvailability[] = window.dates.map((date) => {
+    const iso = date.toISOString().slice(0, 10);
+    const openSlots = slotRows.filter((slot) => isSlotBookable(slot, now, date));
+    if (openSlots.length === 0) return { date: iso, selectable: false, reason: "closed_for_today" };
+    if (businessIds.length === 0) return { date: iso, selectable: true, reason: "ok" };
+    const days = businessIds.map((businessId) => window.day(businessId, date));
+    if (days.some((d) => !d.available)) return { date: iso, selectable: false, reason: "not_delivering" };
+    // A timeframe works only if EVERY vendor in the cart has room in it.
+    const hasRoom = openSlots.some((slot) => days.every((d) => d.slots.some((s) => s.slotId === slot.id && s.capacity - s.paid - s.reserved > 0)));
+    return hasRoom ? { date: iso, selectable: true, reason: "ok" } : { date: iso, selectable: false, reason: "fully_booked" };
+  });
+
+  return { items, fees, slots, date: bookedFor.toISOString().slice(0, 10), dates };
 }

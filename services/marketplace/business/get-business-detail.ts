@@ -8,6 +8,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "@/lib/service-error";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 const VERIFICATION_ORDER_THRESHOLD = 20;
 
@@ -24,6 +25,9 @@ async function loadOwnedBusinessWithStats(id: string, userId: string) {
       products: { select: { id: true } },
       deliveryDays: { select: { day: true } },
       orders: {
+        // Revenue/profit/order counts are over PAID orders only — unpaid
+        // checkout attempts were previously counted as revenue.
+        where: PAID_ORDER,
         select: {
           totalAmount: true,
           deliveryOutcome: true,
@@ -86,6 +90,10 @@ export async function getBusinessDetail(businessId: string, userId: string) {
     createdAt: business.createdAt.toISOString(),
     approvalStatus: business.approvalStatus,
     rejectionReason: business.rejectionReason,
+    // Admin block — shown to the owner as a banner; the reason is the one the
+    // admin entered for the owner (also emailed), never internal notes.
+    blocked: business.blocked,
+    blockedReason: business.blocked ? business.blockedReason : null,
     verified: business.verified,
     verificationRequestStatus,
     verificationRejectionReason: latestRequest?.status === "REJECTED" ? latestRequest.rejectionReason : null,

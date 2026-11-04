@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { requireElearningRole } from "@/services/e-learning/shared/auth";
 import { confirmUpload, requestUpload, type UploadMeta } from "@/services/e-learning/faculty/materials/upload-material";
 import { deleteMaterial } from "@/services/e-learning/faculty/materials/delete-material";
+import { retryMaterialIngestion } from "@/services/e-learning/ai-ingest/ingest-material";
 import { ServiceError } from "@/lib/service-error";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -36,6 +37,12 @@ export async function confirmUploadAction(meta: UploadMeta & { path: string }) {
     return {};
   });
   if (res.ok) revalidatePath(`/e-learning/faculty/my-subjects/${meta.courseOfferingId}`);
+  return res;
+}
+
+export async function retryIngestAction(offeringId: string, materialId: string) {
+  const res = await guard(async (id) => ({ status: await retryMaterialIngestion(id, materialId) }));
+  if (res.ok) revalidatePath(`/e-learning/faculty/my-subjects/${offeringId}`);
   return res;
 }
 

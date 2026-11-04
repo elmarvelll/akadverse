@@ -15,12 +15,13 @@ import { notFound, conflict } from "@/lib/service-error";
 import { requireOwnedVendor } from "@/services/marketplace/vendor/shared/require-owned-vendor";
 import { refundOrderItem } from "@/services/marketplace/escrow/refund-order-item";
 import { createNotification } from "@/services/marketplace/notifications/notification.service";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function markVendorOrderFailed(businessId: string, orderId: string, reason: string | undefined) {
   const { session } = await requireOwnedVendor(businessId);
 
   const order = await prisma.order.findFirst({
-    where: { id: orderId, businessId },
+    where: { id: orderId, businessId, ...PAID_ORDER },
     select: {
       id: true,
       userId: true,

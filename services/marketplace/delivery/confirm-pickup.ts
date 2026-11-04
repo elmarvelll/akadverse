@@ -13,6 +13,7 @@ import { notFound, conflict, badRequest } from "@/lib/service-error";
 import { verifyOtp } from "@/lib/otp";
 import { recordOrderEvent } from "@/services/marketplace/order/record-order-event";
 import { recomputeOrderDeliveryOutcome } from "@/services/marketplace/order/recompute-order-delivery-outcome";
+import { ownerDashboardPath } from "@/services/marketplace/business/owner-dashboard-path";
 import { createNotification } from "@/services/marketplace/notifications/notification.service";
 import { getMarketplaceSettings } from "@/services/marketplace/admin/shared/marketplace-settings";
 
@@ -82,7 +83,8 @@ export async function confirmPickup(delivererId: string, handoffId: string, supp
     type: "PICKUP_CONFIRMED",
     title: "Order picked up",
     message: `The deliverer has picked up your parcel from ${handoff.business.name}.`,
-    targetUrl: `/studashboard/marketplace/business/${handoff.businessId}/orders`,
+    // Vendor handoffs come through here too — link to the right dashboard.
+    targetUrl: ownerDashboardPath({ id: handoff.businessId, type: handoff.business.type }, "orders"),
     businessId: handoff.businessId,
   });
 

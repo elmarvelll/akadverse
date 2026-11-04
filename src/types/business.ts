@@ -68,6 +68,9 @@ export interface BusinessDetail extends BusinessSummary, Omit<BusinessFormValues
   stats: BusinessStats;
   deliveryRestricted: boolean;
   rejectionReason: string | null;
+  // Admin block (services/marketplace/admin/block-business.ts). Optional so older cached responses still type-check.
+  blocked?: boolean;
+  blockedReason?: string | null;
   verified: boolean;
   verificationRequestStatus: VerificationRequestStatus;
   verificationRejectionReason: string | null;

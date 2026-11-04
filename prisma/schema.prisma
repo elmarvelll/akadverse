@@ -98,6 +98,7 @@ model User {
   businessReports           BusinessReport[]
   notifications             Notification[]
   vendorDeliveryBookings    VendorDeliveryBooking[]
+  checkoutPayments          CheckoutPayment[]
 
   @@index([email])
   @@index([createdAt])
@@ -727,6 +728,8 @@ model Business {
   timeframeCapacities        VendorTimeframeCapacity[]
   // Date-specific overrides of the above — SCHOOL_VENDOR only.
   timeframeCapacityOverrides VendorTimeframeCapacityOverride[]
+  // Whole-date availability overrides (closed / extra delivery date) — SCHOOL_VENDOR only.
+  deliveryDateOverrides      VendorDeliveryDateOverride[]
 
   @@index([userId])
   @@index([industry])
@@ -1143,6 +1146,70 @@ model VendorDeliveryBooking {
   @@index([userId])
 }
 
+// One row per Paystack checkout reference — the internal "payment attempt"
+// that sits in front of the Order rows a checkout creates (see
+// docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md, section E). Orders created at
+// initialize stay `paymentStatus: "pending"` and are hidden from every
+// buyer/seller/admin order list until this row reaches PAID; the stock they
+// took at initialize is a *reservation* that expires at `expiresAt` and is
+// released exactly once (the PENDING -> FAILED/ABANDONED/EXPIRED transition
+// is a conditional update, so two releasers can never both restock).
+// `reference @unique` is what makes finalization idempotent: the webhook and
+// the browser's verify call race on `updateMany({ status: PENDING })`, and
+// only the caller that flips it finalizes orders and sends notifications.
+enum CheckoutPaymentStatus {
+  // Initialized; stock/capacity reserved; waiting for Paystack.
+  PENDING
+  // Verified server-side with Paystack (amount + currency matched); orders finalized.
+  PAID
+  // Paystack reported failed/reversed; reservation released.
+  FAILED
+  // Buyer closed the popup and Paystack confirmed nothing was paid; reservation released.
+  ABANDONED
+  // Reservation ran past expiresAt without a successful payment; released by the reconciler.
+  EXPIRED
+  // Paystack says paid but the payment can't be finalized automatically
+  // (amount/currency mismatch, or a late success after the reservation was
+  // released and stock/capacity is no longer available). Needs an admin.
+  NEEDS_REVIEW
+}
+
+enum CheckoutKind {
+  BUSINESS
+  VENDOR
+}
+
+model CheckoutPayment {
+  id                String                @id @default(uuid())
+  reference         String                @unique
+  userId            String
+  kind              CheckoutKind
+  status            CheckoutPaymentStatus @default(PENDING)
+  // What Paystack must report for this reference — computed server-side at
+  // initialize, never taken from the client. Kobo, so it's an exact Int.
+  amountKobo        Int
+  currency          String                @default("NGN")
+  // The CartItem ids snapshotted into this checkout. Only these lines are
+  // cleared on success, so anything added to the cart mid-payment survives.
+  cartItemIds       Json
+  expiresAt         DateTime
+  // Set in the same transaction that restocks — never restocked twice.
+  stockReleasedAt   DateTime?
+  paidAt            DateTime?
+  // Last status Paystack reported for this reference, and when.
+  providerStatus    String?
+  providerCheckedAt DateTime?
+  verifyAttempts    Int                   @default(0)
+  lastError         String?               @db.Text
+  reviewReason      String?               @db.Text
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt])
+  @@index([userId, status])
+}
+
 enum VendorBookingStatus {
   // Created inside the booking transaction before payment is confirmed —
   // counts toward slot capacity so two concurrent checkouts can't both
@@ -1254,6 +1321,35 @@ model VendorTimeframeCapacityOverride {
   @@unique([businessId, slotId, date])
   @@index([businessId, date])
   @@index([slotId, date])
+}
+
+// A vendor's delivery availability for one specific calendar date, overriding
+// its recurring delivery weekdays for that date only:
+//   available = false -> closed that day (e.g. "October 28: no delivery"),
+//                        whatever the weekday rule says;
+//   available = true  -> an extra/custom delivery date on a day the vendor
+//                        doesn't normally deliver.
+// The recurring rule itself is the vendor's BusinessDeliveryDay rows (the
+// same table Business sellers use for their delivery days): none = delivers
+// every day (how every vendor behaved before this existed), otherwise only
+// the listed weekdays. Per-timeframe capacity for the date still comes from
+// VendorTimeframeCapacityOverride / VendorTimeframeCapacity — an unavailable
+// date simply resolves to capacity 0 (see resolve-vendor-capacity.ts).
+// Changing any of this never moves or cancels an order that already exists
+// for a date; it only governs NEW bookings.
+model VendorDeliveryDateOverride {
+  id         String   @id @default(uuid())
+  businessId String
+  // Calendar date (UTC midnight), same convention as VendorDeliveryBooking.bookedFor.
+  date       DateTime
+  available  Boolean
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, date])
+  @@index([businessId, date])
 }
 
 // Admin-managed "who is on duty for this timeframe on this date" —
@@ -1411,6 +1507,38 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+// Transactional-email outbox for emails that must be sent exactly once and
+// retried on failure (paid-order owner email, business-blocked email — see
+// services/marketplace/notifications/email-outbox.ts). `dedupeKey @unique`
+// is the idempotency guard: a second enqueue for the same event (webhook +
+// verify race, admin double-click) hits the constraint and is skipped.
+// SENT means the provider (Resend) ACCEPTED the message — not that it
+// reached an inbox. Other, best-effort emails still use sendEmail() directly.
+enum EmailDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model EmailDelivery {
+  id                String              @id @default(uuid())
+  dedupeKey         String              @unique
+  type              String
+  to                String
+  subject           String
+  html              String              @db.Text
+  status            EmailDeliveryStatus @default(PENDING)
+  attempts          Int                 @default(0)
+  lastError         String?             @db.Text
+  providerMessageId String?
+  nextAttemptAt     DateTime            @default(now())
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status, nextAttemptAt])
 }
 
 model Skill {

@@ -10,13 +10,14 @@ import { notFound, badRequest, conflict } from "@/lib/service-error";
 import { logAdminAction } from "./shared/log-admin-action";
 import { sendEmail, businessVerificationRejectedEmail } from "@/services/marketplace/notifications/email.service";
 import { createNotification } from "@/services/marketplace/notifications/notification.service";
+import { ownerDashboardPath } from "@/services/marketplace/business/owner-dashboard-path";
 
 export async function rejectVerificationRequest(businessId: string, reason: string, adminUserId: string) {
   if (!reason.trim()) throw badRequest("A rejection reason is required.");
 
   const business = await prisma.business.findUnique({
     where: { id: businessId },
-    select: { id: true, name: true, userId: true, user: { select: { email: true } } },
+    select: { id: true, type: true, name: true, userId: true, user: { select: { email: true } } },
   });
   if (!business) throw notFound("Business not found.");
 
@@ -43,7 +44,8 @@ export async function rejectVerificationRequest(businessId: string, reason: stri
     type: "BUSINESS_VERIFICATION_REJECTED",
     title: "Verification not approved",
     message: `Your verification request for ${business.name} was not approved: ${reason.trim()}`,
-    targetUrl: `/studashboard/marketplace/business/${businessId}`,
+    // Business vs School Vendor dashboards are different routes — never hardcode one (owner-dashboard-path.ts).
+    targetUrl: ownerDashboardPath(business),
     businessId,
   });
 }

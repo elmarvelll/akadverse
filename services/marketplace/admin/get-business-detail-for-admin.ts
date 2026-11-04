@@ -14,6 +14,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "@/lib/service-error";
 import { listBusinessProducts } from "@/services/marketplace/product/list-business-products";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function getBusinessDetailForAdmin(businessId: string) {
   const business = await prisma.business.findUnique({
@@ -57,7 +58,7 @@ export async function getBusinessDetailForAdmin(businessId: string) {
       createdAt: true,
       deliveryDays: { select: { day: true } },
       user: { select: { id: true, firstName: true, lastName: true, email: true } },
-      _count: { select: { products: true, orders: true, reports: true } },
+      _count: { select: { products: true, orders: { where: PAID_ORDER }, reports: true } },
     },
   });
   if (!business) throw notFound("Business not found.");

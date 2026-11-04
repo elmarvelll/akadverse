@@ -13,6 +13,7 @@ import { isAxiosError } from "axios";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import api from "@/lib/axios";
+import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 type OtpState = "not_requested" | "sending" | "sent" | "verifying" | "verified" | "error";
@@ -109,9 +110,7 @@ export default function ApplyDelivererPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNavbar />
-      <div className="pt-16 max-w-lg mx-auto px-4 sm:px-6 py-10 sm:py-14">
+    <MarketplacePageShell width="lg">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Become a Deliverer</h1>
         <p className="text-gray-500 mb-8">Submit your details below. An admin will review and approve your application.</p>
 
@@ -298,7 +297,6 @@ export default function ApplyDelivererPage() {
             {status === "submitting" ? "Submitting…" : otpState !== "verified" ? "Verify your student email first" : "Submit application"}
           </button>
         </form>
-      </div>
-    </div>
+    </MarketplacePageShell>
   );
 }

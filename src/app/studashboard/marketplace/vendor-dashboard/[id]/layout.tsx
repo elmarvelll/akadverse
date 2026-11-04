@@ -10,11 +10,11 @@
 // conditional inside the Business dashboard. The public storefront lives
 // separately at studashboard/marketplace/vendor/[id] and is untouched.
 
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import VendorApprovalGate from "../_components/VendorApprovalGate";
+import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
 
+// Navbar offset + the shared "Back to Marketplace" control come from
+// MarketplacePageShell — see that file for why they must not be re-added here.
 export default async function VendorDashboardLayout({
   children,
   params,
@@ -25,19 +25,9 @@ export default async function VendorDashboardLayout({
   const { id } = await params;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNavbar />
-      <div className="pt-16 max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col">
-        <Link
-          href="/studashboard/marketplace"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition mb-6"
-        >
-          <ArrowLeft size={16} />
-          Back to Marketplace
-        </Link>
+    <MarketplacePageShell width="6xl" className="flex flex-col">
 
         <VendorApprovalGate id={id}>{children}</VendorApprovalGate>
-      </div>
-    </div>
+    </MarketplacePageShell>
   );
 }

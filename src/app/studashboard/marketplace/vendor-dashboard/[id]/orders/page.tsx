@@ -2,9 +2,10 @@
 //
 // The vendor's own Orders tab — no accept/reject controls (spec §6: a
 // vendor never accepts/rejects, payment confirmation auto-accepts).
-// Orders are grouped by delivery DATE -> TIMEFRAME (spec §8), each
-// timeframe's orders shown oldest-first (spec §9 — the authoritative
-// creation order from the backend, never re-sorted client-side). Per
+// The default "All orders" view is the backend's own order: NEWEST first by
+// order creation time (never re-sorted client-side, and never by delivery
+// date). The delivery-date tabs are filters over that same list, grouped by
+// TIMEFRAME (spec §8), each group still newest-first. Per
 // order: a ✓ check (mark ready — spec §11) and an ✗ X (couldn't fulfill /
 // refund — spec §11), both backend-persisted and disabled while their own
 // request is in flight (spec §30). No "Mark Read" and no "Deliverer
@@ -91,7 +92,7 @@ export default function VendorOrdersPage({ params }: { params: Promise<{ id: str
   // Group by delivery date -> timeframe. Orders with no booking (shouldn't
   // happen for a vendor order, but kept safe) fall under "Unscheduled".
   // Dates sort ascending (earliest delivery day first); slots sort by
-  // windowStart; orders within a slot are already oldest-first from the API.
+  // windowStart; orders within a slot keep the API's newest-first order.
   const grouped = useMemo(() => {
     const byDate = new Map<string, Map<string, { label: string; windowStart: string; orders: VendorOrder[] }>>();
     for (const order of orders) {
@@ -111,10 +112,10 @@ export default function VendorOrdersPage({ params }: { params: Promise<{ id: str
     }));
   }, [orders]);
 
-  // Derived, not effect-synced: defaults to the earliest date with orders
-  // until the vendor picks a different tab — avoids a setState-in-effect
-  // cascading render for what's really just a fallback default.
-  const effectiveActiveDate = activeDate ?? grouped[0]?.date ?? null;
+  // Defaults to "all" — every order, newest first — until the vendor picks a
+  // delivery-date tab. Falls back to "all" if the chosen date no longer has
+  // orders after a refresh.
+  const effectiveActiveDate = activeDate && grouped.some((g) => g.date === activeDate) ? activeDate : "all";
 
   const markReady = async (orderId: string) => {
     if (busy) return;
@@ -144,6 +145,90 @@ export default function VendorOrdersPage({ params }: { params: Promise<{ id: str
   };
 
   const activeGroup = grouped.find((g) => g.date === effectiveActiveDate);
+  const placedFormatter = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" });
+
+  // One order card — shared by the "All orders" list and the per-date groups.
+  const renderOrder = (order: VendorOrder, showDelivery: boolean) => {
+    const isBusy = busy?.orderId === order.id;
+    const completed = justCompleted?.orderId === order.id;
+    return (
+      <div
+        key={order.id}
+        className={`bg-white rounded-2xl border p-4 transition-all duration-300 ${
+          completed && justCompleted?.outcome === "ready"
+            ? "border-green-300 shadow-[0_0_0_3px_rgba(34,197,94,0.12)]"
+            : completed && justCompleted?.outcome === "failed"
+              ? "border-red-300 shadow-[0_0_0_3px_rgba(239,68,68,0.12)]"
+              : "border-gray-100"
+        }`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div>
+            <p className="font-medium text-gray-900 text-sm">
+              Order #{order.id.slice(0, 8)}
+            </p>
+            <p className="text-xs text-gray-400">
+              Placed {placedFormatter.format(new Date(order.createdAt))}
+              {showDelivery && order.bookedFor && ` · Delivery ${dateFormatter.format(new Date(order.bookedFor))}${order.slot ? `, ${order.slot.label}` : ""}`}
+            </p>
+            <p className="text-xs text-gray-500">
+              {order.fulfillmentStatus?.replace(/_/g, " ") ?? "Processing"}
+              {order.deliveryOutcome !== "PENDING" && ` · ${order.deliveryOutcome.replace(/_/g, " ").toLowerCase()}`}
+              {order.isDisputed && <span className="text-red-600 font-medium"> · Disputed</span>}
+            </p>
+          </div>
+          <p className="font-semibold text-gray-900">₦{nairaFormatter.format(order.totalAmount)}</p>
+        </div>
+
+        <ul className="space-y-1 mb-3">
+          {order.items.map((item) => (
+            <li key={item.id} className="text-sm text-gray-700 flex justify-between">
+              <span>
+                {item.quantity} x {item.productName}
+              </span>
+              <span className="text-gray-400">
+                {item.rejectedAt ? "Refunded" : (item.deliveryStatus?.replace(/_/g, " ") ?? "Preparing")}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {order.fulfillmentStatus === "PROCESSING" && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => markReady(order.id)}
+              aria-label="Mark ready"
+              className={`flex items-center justify-center w-9 h-9 rounded-full bg-green-50 hover:bg-green-100 text-green-600 transition disabled:opacity-50 active:scale-90 ${
+                completed && justCompleted?.outcome === "ready" ? "scale-110" : ""
+              }`}
+            >
+              {isBusy && busy?.action === "ready" ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} strokeWidth={3} />}
+            </button>
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => markFailed(order.id)}
+              aria-label="Mark failed"
+              className={`flex items-center justify-center w-9 h-9 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition disabled:opacity-50 active:scale-90 ${
+                completed && justCompleted?.outcome === "failed" ? "scale-110" : ""
+              }`}
+            >
+              {isBusy && busy?.action === "fail" ? <Loader2 size={16} className="animate-spin" /> : <X size={18} strokeWidth={3} />}
+            </button>
+            <span className="text-xs text-gray-400">Mark ready, or mark failed to refund</span>
+          </div>
+        )}
+        {order.fulfillmentStatus === "READY_FOR_PICKUP" && (
+          <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-green-50 text-green-700">
+            Ready — waiting for deliverer
+          </span>
+        )}
+      </div>
+    );
+  };
+
 
   return (
     <div>
@@ -187,11 +272,24 @@ export default function VendorOrdersPage({ params }: { params: Promise<{ id: str
 
       {loadState === "loaded" && orders.length > 0 && (
         <div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4" role="tablist" aria-label="Filter orders by delivery date">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={effectiveActiveDate === "all"}
+              onClick={() => setActiveDate(null)}
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
+                effectiveActiveDate === "all" ? "bg-purple-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              All orders · newest first
+            </button>
             {grouped.map((g) => (
               <button
                 key={g.date}
                 type="button"
+                role="tab"
+                aria-selected={effectiveActiveDate === g.date}
                 onClick={() => setActiveDate(g.date)}
                 className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
                   effectiveActiveDate === g.date ? "bg-purple-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -201,6 +299,8 @@ export default function VendorOrdersPage({ params }: { params: Promise<{ id: str
               </button>
             ))}
           </div>
+
+          {effectiveActiveDate === "all" && <div className="space-y-3">{orders.map((order) => renderOrder(order, true))}</div>}
 
           {activeGroup && (
             <div className="space-y-8">
@@ -218,82 +318,7 @@ export default function VendorOrdersPage({ params }: { params: Promise<{ id: str
                       </span>
                     </div>
                     <div className="space-y-3">
-                      {slot.orders.map((order, idx) => {
-                        const isBusy = busy?.orderId === order.id;
-                        const completed = justCompleted?.orderId === order.id;
-                        return (
-                          <div
-                            key={order.id}
-                            className={`bg-white rounded-2xl border p-4 transition-all duration-300 ${
-                              completed && justCompleted?.outcome === "ready"
-                                ? "border-green-300 shadow-[0_0_0_3px_rgba(34,197,94,0.12)]"
-                                : completed && justCompleted?.outcome === "failed"
-                                  ? "border-red-300 shadow-[0_0_0_3px_rgba(239,68,68,0.12)]"
-                                  : "border-gray-100"
-                            }`}
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                              <div>
-                                <p className="font-medium text-gray-900 text-sm">
-                                  #{idx + 1} · Order #{order.id.slice(0, 8)}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {order.fulfillmentStatus?.replace(/_/g, " ") ?? "Processing"}
-                                  {order.deliveryOutcome !== "PENDING" && ` · ${order.deliveryOutcome.replace(/_/g, " ").toLowerCase()}`}
-                                  {order.isDisputed && <span className="text-red-600 font-medium"> · Disputed</span>}
-                                </p>
-                              </div>
-                              <p className="font-semibold text-gray-900">₦{nairaFormatter.format(order.totalAmount)}</p>
-                            </div>
-
-                            <ul className="space-y-1 mb-3">
-                              {order.items.map((item) => (
-                                <li key={item.id} className="text-sm text-gray-700 flex justify-between">
-                                  <span>
-                                    {item.quantity} x {item.productName}
-                                  </span>
-                                  <span className="text-gray-400">
-                                    {item.rejectedAt ? "Refunded" : (item.deliveryStatus?.replace(/_/g, " ") ?? "Preparing")}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-
-                            {order.fulfillmentStatus === "PROCESSING" && (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  disabled={isBusy}
-                                  onClick={() => markReady(order.id)}
-                                  aria-label="Mark ready"
-                                  className={`flex items-center justify-center w-9 h-9 rounded-full bg-green-50 hover:bg-green-100 text-green-600 transition disabled:opacity-50 active:scale-90 ${
-                                    completed && justCompleted?.outcome === "ready" ? "scale-110" : ""
-                                  }`}
-                                >
-                                  {isBusy && busy?.action === "ready" ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} strokeWidth={3} />}
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={isBusy}
-                                  onClick={() => markFailed(order.id)}
-                                  aria-label="Mark failed"
-                                  className={`flex items-center justify-center w-9 h-9 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition disabled:opacity-50 active:scale-90 ${
-                                    completed && justCompleted?.outcome === "failed" ? "scale-110" : ""
-                                  }`}
-                                >
-                                  {isBusy && busy?.action === "fail" ? <Loader2 size={16} className="animate-spin" /> : <X size={18} strokeWidth={3} />}
-                                </button>
-                                <span className="text-xs text-gray-400">Mark ready, or mark failed to refund</span>
-                              </div>
-                            )}
-                            {order.fulfillmentStatus === "READY_FOR_PICKUP" && (
-                              <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-green-50 text-green-700">
-                                Ready — waiting for deliverer
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
+                      {slot.orders.map((order) => renderOrder(order, false))}
                     </div>
                   </div>
                 );

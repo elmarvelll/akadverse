@@ -9,10 +9,13 @@
 
 import { prisma } from "@/lib/prisma";
 import { formatEstimatedDelivery } from "@/services/marketplace/delivery/estimated-delivery.service";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function listBuyerOrders(userId: string) {
   const orders = await prisma.order.findMany({
-    where: { userId },
+    // Paid orders only: a cancelled/failed/expired checkout attempt is an
+    // internal record, never part of the buyer's order history.
+    where: { userId, ...PAID_ORDER },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

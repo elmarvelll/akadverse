@@ -1,5 +1,7 @@
 # Security: Known Gaps
 
+> **Update 2026-10-13:** Resolved since this list was written: stock reservation at checkout, cart clearing scope, the confirmation race, missing amount validation, and enforcement of `Business.blocked` for buyers. Still open: real Paystack refunds, rate limiting, transfer webhooks — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+
 This is a working-code assessment, not a "the app is insecure" claim — it lists things a maintainer should be aware of before scaling the Marketplace up, per the instruction to document real gaps rather than assume something is secure just because it currently works.
 
 - **No stock reservation at checkout.** `Product.stock` is never decremented by order creation or payment confirmation. Two buyers can both successfully pay for the last unit of a product; nothing in the code detects or prevents this. Fixing this needs either a stock decrement inside `createOrdersForCheckout`'s transaction (with a guard against going negative) or a reservation/hold mechanism.

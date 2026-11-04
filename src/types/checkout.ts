@@ -30,4 +30,9 @@ export interface InitializeCheckoutResponse {
   reference: string;
   amountKobo: number;
   email: string;
+  // Added with the payment-attempt lifecycle; optional so an older cached
+  // client bundle talking to a newer server (or vice versa) keeps working.
+  currency?: string;
+  // Paystack publishable key for the mode (test/live) the server verifies in.
+  publicKey?: string | null;
 }

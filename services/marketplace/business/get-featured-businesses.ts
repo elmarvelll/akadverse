@@ -11,7 +11,8 @@ export async function getFeaturedBusinesses() {
     // type: "BUSINESS" — keeps School Vendors out of "Top Businesses";
     // they have their own "School Vendors" section, see
     // services/marketplace/vendor/get-featured-vendors.ts.
-    where: { approvalStatus: "APPROVED", type: "BUSINESS" },
+    // blocked: false — an admin-blocked business is hidden from buyers.
+    where: { approvalStatus: "APPROVED", type: "BUSINESS", blocked: false },
     select: { id: true, name: true, industry: true, secure_url: true, _count: { select: { products: true } } },
     orderBy: { products: { _count: "desc" } },
     take: 8,
