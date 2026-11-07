@@ -30,6 +30,7 @@ A role-based academic portal at `/e-learning/<role>/...` for six roles — Stude
 | Study Zone (week tabs, document viewer, Stewart mock) | [`systems/study-zone-system.md`](systems/study-zone-system.md) |
 | Course Control (registration/add-drop/status) | [`systems/course-control-system.md`](systems/course-control-system.md) |
 | Course documents (upload to Supabase Storage, secure access) | [`systems/course-materials-system.md`](systems/course-materials-system.md) |
+| **Classroom** (live class: LiveKit stream, questions, "Do you understand?" poll) | [`systems/classroom-system.md`](systems/classroom-system.md) |
 | Faculty portal (My Subjects, results, timetable) | [`systems/faculty-portal-system.md`](systems/faculty-portal-system.md) |
 | Level Adviser | [`systems/level-adviser-system.md`](systems/level-adviser-system.md) |
 | HOD (assignments, approvals, results) | [`systems/hod-system.md`](systems/hod-system.md) |

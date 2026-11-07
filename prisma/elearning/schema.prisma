@@ -725,6 +725,8 @@ model CourseOffering {
   registrations StudentCourseRegistration[]
   // Lecturer-uploaded learning content for THIS offering only (never the reusable Course), so it can't leak between sessions/semesters.
   materials     CourseMaterial[]
+  // Live classes held for THIS offering (see ClassroomSession).
+  classrooms    ClassroomSession[]
 }
 
 enum OfferingLecturerRole {
@@ -957,4 +959,107 @@ model CourseMaterial {
 
   @@index([courseOfferingId, startWeek])
   @@index([uploadedByFacultyUserId])
+}
+
+// ===========================================================================
+// Classroom (live class)
+//
+// A faculty member assigned to a CourseOffering starts a live class for it;
+// registered students watch the stream (LiveKit — see
+// services/e-learning/classroom/token.ts) and ask questions / answer "Do you
+// understand?" polls. Video is LiveKit's; everything below is OUR state,
+// persisted here and polled by the clients, so a refresh or reconnect never
+// loses the question queue or an open poll. The LiveKit room name is the
+// ClassroomSession id.
+// ===========================================================================
+
+enum ClassroomStatus {
+  LIVE
+  ENDED
+}
+
+// One live class. At most one LIVE per offering (enforced in
+// services/e-learning/classroom/sessions.ts — Prisma can't express a partial
+// unique index).
+model ClassroomSession {
+  id               String          @id @default(cuid())
+  courseOffering   CourseOffering  @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  courseOfferingId String
+  // Core User.id of the lecturer presenting (no cross-database FK).
+  hostUserId       String
+  status           ClassroomStatus @default(LIVE)
+  startedAt        DateTime        @default(now())
+  endedAt          DateTime?
+
+  questions ClassroomQuestion[]
+  polls     ClassroomPoll[]
+
+  @@index([courseOfferingId, status])
+  @@index([hostUserId])
+}
+
+enum ClassroomQuestionStatus {
+  OPEN
+  ANSWERED
+  DISMISSED
+}
+
+// A student's question (raised-hand then typed). Text only for the MVP.
+model ClassroomQuestion {
+  id            String                  @id @default(cuid())
+  session       ClassroomSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId     String
+  studentUserId String
+  body          String
+  status        ClassroomQuestionStatus @default(OPEN)
+  createdAt     DateTime                @default(now())
+  resolvedAt    DateTime?
+
+  votes ClassroomQuestionVote[]
+
+  @@index([sessionId, status])
+}
+
+// "Me too" on someone else's question, so the lecturer sees what most of the class is stuck on.
+model ClassroomQuestionVote {
+  question      ClassroomQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId    String
+  studentUserId String
+  createdAt     DateTime          @default(now())
+
+  @@id([questionId, studentUserId])
+}
+
+enum ClassroomPollStatus {
+  OPEN
+  CLOSED
+}
+
+// The lecturer's "Do you understand?" check. Anonymous to other students; the lecturer sees counts.
+model ClassroomPoll {
+  id        String              @id @default(cuid())
+  session   ClassroomSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  status    ClassroomPollStatus @default(OPEN)
+  createdAt DateTime            @default(now())
+  closedAt  DateTime?
+
+  responses ClassroomPollResponse[]
+
+  @@index([sessionId, status])
+}
+
+enum ClassroomPollAnswer {
+  YES
+  NO
+}
+
+model ClassroomPollResponse {
+  poll          ClassroomPoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId        String
+  studentUserId String
+  answer        ClassroomPollAnswer
+  createdAt     DateTime            @default(now())
+
+  @@id([pollId, studentUserId])
 }
