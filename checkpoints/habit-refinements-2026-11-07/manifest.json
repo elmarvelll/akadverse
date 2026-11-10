@@ -1,0 +1,145 @@
+{
+  "root": "C:\\Productivity Layer\\schedule-manager",
+  "entries": [
+    {
+      "file": "src\\app\\globals.css",
+      "before": "52551f97fdafe70cc2dc66d4c6d3d65a97f4924e6dda7606c4efb4819960c8e9",
+      "after": "279a39f4ae905189dbba3622b099eea21bc11dadf457259f4d172d214ac97b7d"
+    },
+    {
+      "file": "src\\features\\habits\\domain.ts",
+      "before": "95e4321074239db055a1ed324ea14d4db814015936ddba39348fe695d56280d8",
+      "after": "b59756a49d08f70ec8a26ffd73c37257ae2a980305fe84706b1aa2f2355e8e56"
+    },
+    {
+      "file": "src\\features\\habits\\HabitForm.tsx",
+      "before": "77ae7b47bc4cf030c033e417e7a63dc7bd2fc1e8d207e9dcd8b57832cc260c11",
+      "after": "79d4e9e962a1debf2d5c812fb57c1d85340ec6da9b0c08e56eb1405ccc44067d"
+    },
+    {
+      "file": "src\\features\\habits\\HabitGrid.tsx",
+      "before": "baeccf506eac40e0ef8db223cb0c02505704067254a04ab45ffb0b63cb4e5ae8",
+      "after": "1fb974802dddda6316ebe6bb4248b603f55d65460c6136b7c49f87a73381eb8b"
+    },
+    {
+      "file": "src\\features\\habits\\HabitLabel.tsx",
+      "before": "f23190826ebb53dff7d88a03ffc2491232e36e50cc80a890bf0e578c5626e1c0",
+      "after": "20d37647164fa043853c8defd959f933495a358fb40e053e56dc9fcd237a1062"
+    },
+    {
+      "file": "src\\features\\habits\\HabitTracker.tsx",
+      "before": "32b4c884375459ec24410c6737a5472a459a9ae0c1f98606cf7aa45f5c453592",
+      "after": "f1931bd1a92207e0390b8ef5e89fc33a89303a38e556c1792e758fd0754f65af"
+    },
+    {
+      "file": "src\\features\\habits\\service.ts",
+      "before": "dfc1114c296181856bab677e3f352099dd7bbe4d9eea48dd8750e9fff83cf492",
+      "after": "8b81daf6182169e17b615a60ee1443cdede3de5f8f14ba518074c0753e9c6e5e"
+    },
+    {
+      "file": "src\\features\\habits\\storage.ts",
+      "before": "05d79c810cdd3170b882ccea86d14ea02b79cde2edcf74d5f35964f44be8d27b",
+      "after": "29df8f58506db27381a46c2e2360e179a9b126fe91f9754eac072f6e14a4a115"
+    },
+    {
+      "file": "src\\features\\schedule\\domain.ts",
+      "before": "bd9fc45445172adf44ed26b31a0b4503c1df5b7a89299cd1a7e8656eee7a4ad3",
+      "after": "6d9123ad868e065cba76a296a260c0e45abe0d73e15c8b4a128c2e80ca56daa3"
+    },
+    {
+      "file": "src\\features\\schedule\\ScheduleManager.tsx",
+      "before": "a39e78d073c6eae4ab62d52c489129272180ee231c96e115db8588b8fa3df121",
+      "after": "d5c2d349ed0545dd0968fa63dcc894c280a0dab59d1b91785bf2596869ffd0f4"
+    },
+    {
+      "file": "src\\features\\schedule\\storage.ts",
+      "before": "d45f1ecf8e44d5ec6e0fbbc88d3a71f4abe015633b748f6635d7a7e06c4eefa1",
+      "after": "acd334df49c93d16ce81c85d74d4ee7c16ce73812ac577311de9223c3ba61264"
+    },
+    {
+      "file": "src\\features\\tasks\\domain.ts",
+      "before": "47d7e1d713a24539cab005131fbc1838cae6c1f4bf53600bb1b583648439324d",
+      "after": "38b9130e5c8dc535554a591e000bee2caf1cff169b5625958db8e2c15440f702"
+    },
+    {
+      "file": "src\\features\\tasks\\service.ts",
+      "before": "581fac861acea221512d2bf0896fbd7ac13fdce5b9cadc9d40e9ba4b8e60f112",
+      "after": "b9d507492b2492b375e7d7ebde530e93815711792cd46f24ca7c29ef13936d52"
+    },
+    {
+      "file": "src\\features\\tasks\\storage.ts",
+      "before": "10f456079e1e698a102577659a1d7e88b82a7f47ad6b6024fb7bc820b9691f80",
+      "after": "ed12c379604268e49e29f7d124f3191f6f60b2a63b01c6be349436e0d944b653"
+    },
+    {
+      "file": "src\\features\\tasks\\TaskManager.tsx",
+      "before": "0ab28de3fab166e0de12234e3f38c8bae8146ade0826f7c540aff2d6cc897973",
+      "after": "6aae93f780fa6c3681f72ae00071e0efefbeb50dacc41aece04044cc23cf62ec"
+    },
+    {
+      "file": "src\\features\\tasks\\todo.ts",
+      "before": "19e275a19b14ffc7565f87585aa246f61ed606de1df4285530eeca40b5eea690",
+      "after": "97240aece6e4fc1bb30d1a1955d44f905a593388084110beff2bdfa5bda4b013"
+    },
+    {
+      "file": "src\\features\\workspace\\navigation.ts",
+      "before": "0d1928ba87b549a9fc7f849905a2f1b3ed7241a08dbc19dc10cd916b4407cb51",
+      "after": "a39c4b75d6c738ea4827014c7fbed4e6fa39ebab9f61654837a4764261320c32"
+    },
+    {
+      "file": "src\\features\\workspace\\Workspace.tsx",
+      "before": "59dde4574c1b02a13e74bb172d9318976a25fc0770b4c601bebf8d07a48937de",
+      "after": "eb26d4ff3e44493324499f96c45422702f33ded3d2badbce7129c71d51007276"
+    },
+    {
+      "file": "src\\features\\workspace\\WorkspaceNavigation.tsx",
+      "before": "fd0e16037ffd5baad4199c265f702eed681dae8feb5c58d89813d4ae70c5bbf6",
+      "after": "d635769b18d5aa7a8706178052e55db1d1d5c31089318d61e472f4b31b2e757f"
+    },
+    {
+      "file": "tests\\habits.test.ts",
+      "before": "c9930f69fd8e4ad8a0e85467fb015a4a2bf758fe3d00d897fd44ba96bb9f2af5",
+      "after": "db527c76640a69ce40fcc283cd66b785387d6d03c98bd64983489ded43b42480"
+    },
+    {
+      "file": "tests\\tasks.test.ts",
+      "before": "5d4ed3ae11f43bfc2164789be8e859e4331f879ff392465e8924d9cad63f2027",
+      "after": "45d6ac06c83f12a5a1170f4c8f822d86407634ca862946d270b98d19238cdece"
+    },
+    {
+      "file": "tests\\todo-habits.test.ts",
+      "before": "3e1a2fd468aed6745a784916fc2df7990f590372c0dd88e90e8a6b7912e7be3a",
+      "after": "a0f6b7190b461fcf248d97b9eb15092089cb0cf02de3612f29ed737488027142"
+    },
+    {
+      "file": "HABITS.md",
+      "before": "3c3dcca520f04bfa711b319377ed385dd28e5c1a726b6ed07ed4ffc25e58d255",
+      "after": "a2379111e06d6acb8f805674ae81441c2c856b0e2178b3e979da40a247445150"
+    },
+    {
+      "file": "TASKS.md",
+      "before": "489d8cb943ebe33ec7c7f25756fd2867865db23fe978f9e91362460856db6843",
+      "after": "6237985c406ea07f09e8e4f136c0af17f96b82f820721d465231beb555c45c78"
+    },
+    {
+      "file": "README.md",
+      "before": "46a143ebfed5848ca6aa3c158eb97d4064f090247d4d9676549e914d8c89ba29",
+      "after": "74ee87db83b1c43a9e91cc43bc8fe10fe6f1d51655986ffdd582b861379594af"
+    },
+    {
+      "file": "VERIFICATION.md",
+      "before": "5abe021d1991bbb976fdc4e594c653ecd1d38bf6a8d6b9088c12f7211d41092c",
+      "after": "00c1a796140216a99ef6fe19cbba9f392e06e1494c796979219459f61354c4ce"
+    },
+    {
+      "file": "src\\features\\habits\\outcomes.ts",
+      "before": null,
+      "after": "a7ffa46f97be7b5b0e807ed32468c68d0ec1f7891d9298dab386f7b581b06649"
+    },
+    {
+      "file": "tests\\habit-refinements.test.ts",
+      "before": null,
+      "after": "0f11ab35ae16a627ef87fb86854ef4702a8b4c6012e45587f4169d7c0ea18fe4"
+    }
+  ]
+}

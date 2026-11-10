@@ -1,0 +1,5 @@
+2026/11/07-22:42:00.925 7e20 Creating DB C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-check-profile\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/11/07-22:42:00.950 7e20 Reusing MANIFEST C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-check-profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/11/07-22:45:06.118 c900 Level-0 table #5: started
+2026/11/07-22:45:06.124 c900 Level-0 table #5: 683426 bytes OK
+2026/11/07-22:45:06.126 c900 Delete type=0 #3
