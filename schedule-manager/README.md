@@ -1,14 +1,14 @@
 # Productivity Layer
 
-A visual planner for a student's scheduled time. The app uses a development student in Africa/Lagos, browser persistence, and explicitly labelled sample academic data.
+A productivity workspace with Today, Schedule Manager, To-do List and Habit Tracker. The app uses a development student in Africa/Lagos, browser persistence, and explicitly labelled sample academic data.
 
 ## To-do List milestone
 
 Open `/#tasks`, or choose To-do List from the sidebar. Ordinary tasks support creation, viewing, editing, deletion with confirmation, explicit Complete / Mark missed actions, a Sort by input, six sort modes and Active / Pending / Completed / Missed tabs. `/#tasks?task=<taskId>` opens the exact task. See [TASKS.md](TASKS.md) for the integration contract, assumptions, manual journey and recovery notes.
 
-Ownership rules: tasks are created and completed in To-do List; habits are created and managed in the Habit Tracker, where habit completion may also be recorded. Today is a read-only overview with links when it is implemented. Schedule manages personal-event planning; the dedicated Task Deadlines view has been removed. Task deadlines remain part of To-do and deadline analytics. Task/habit creation and task completion controls are absent from Schedule.
+Ownership rules: tasks are created and completed in To-do List; habits are created and managed in the Habit Tracker, where habit completion may also be recorded. Today is a read-only overview with exact-record navigation. Schedule manages personal-event planning; the dedicated Task Deadlines view has been removed. Task deadlines remain part of To-do and deadline analytics. Task/habit creation and task completion controls are absent from Schedule.
 
-Task data retains the `productivity-layer.tasks.v1` key and now has a version-two schema with safe version-one migration. Schedule storage is unchanged. Existing statuses/timestamps and audits are retained; ambiguous legacy statuses block loading without modifying the saved data. Habit tasks are authoritative occurrence records, accessed through `HabitTaskGateway`, not independent completion copies. No sample habit tasks are inserted into real user data. Habit Tracker is implemented; Today is not present in this workspace. See [HABITS.md](HABITS.md) for recurrence, shared records, feedback, history and verification.
+Task data retains the `productivity-layer.tasks.v1` key and now has a version-two schema with safe version-one migration. Schedule storage is unchanged. Existing statuses/timestamps and audits are retained; ambiguous legacy statuses block loading without modifying the saved data. Habit tasks are authoritative occurrence records, accessed through `HabitTaskGateway`, not independent completion copies. No sample habit tasks are inserted into real user data. Habit Tracker and the read-only Today overview are implemented. See [HABITS.md](HABITS.md) for recurrence, shared records, feedback, history and verification.
 
 ## Habit Tracker
 
@@ -85,3 +85,7 @@ Current task tabs: Active (future or undated unfinished), Pending (deadline arri
 ## Habit Tracker refinements
 
 Habit Tracker now supports start/end dates, optional task deadlines, today-effective edits, source editor navigation, intentional outcome corrections with retained audits, and weekly/monthly completion rates. Active/Pending contain today?s unfinished habit tasks; Completed/Missed retain history with scheduled-date filters. Schedule remains visual with no outcome controls. Existing records and storage keys are preserved. See HABITS.md for current rules, validation and source-only rollback limits.
+
+## Figma interface integration
+
+The exported visual system is integrated into the Next.js app, including the shared shell, task cards, habit summary/matrix styling, actual day/week timetable and read-only Today. The Vite reference remains separate. See [DESIGN-INTEGRATION.md](DESIGN-INTEGRATION.md) for source mapping, adjustments, verification, run commands and guarded source-only rollback.

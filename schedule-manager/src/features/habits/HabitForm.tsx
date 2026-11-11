@@ -2,15 +2,15 @@
 import { useRef, useState } from "react";
 import { Dialog } from "../schedule/Forms";
 import { localNow } from "../schedule/domain";
-import type { Habit, HabitInput } from "./domain";
+import { validateHabit, type Habit, type HabitInput } from "./domain";
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export function HabitForm({ habit, onClose, onSave, timezone }: { habit?: Habit; onClose: () => void; onSave: (input: HabitInput) => Promise<void>; timezone: string }) {
   const [input, setInput] = useState<HabitInput>(() => habit ? { ...habit.revisions.at(-1)!, startDate: habit.revisions.at(-1)!.startDate || habit.createdDate } : { name: "", description: "", type: "task", frequency: "daily", weekdays: [], priority: "medium", time: "", end: "", startDate: localNow(timezone).date });
   const [busy, setBusy] = useState(false), [error, setError] = useState(""); const saving = useRef(false);
   function change<K extends keyof HabitInput>(key: K, value: HabitInput[K]) { setInput(previous => ({ ...previous, [key]: value })); }
-  return <Dialog title={habit ? "Edit habit" : "Add habit"} onClose={() => { if (!saving.current) onClose(); }}><form onSubmit={async event => {
+  return <Dialog title={habit ? `Edit habit — ${habit.revisions.at(-1)!.name}` : "Add habit"} onClose={() => { if (!saving.current) onClose(); }}><form onSubmit={async event => {
     event.preventDefault(); if (saving.current) return; saving.current = true; setBusy(true); setError("");
-    try { await onSave(input); onClose(); } catch (error) { setError((error as Error).message); } finally { saving.current = false; setBusy(false); }
+    try { validateHabit(input, timezone); await onSave(input); onClose(); } catch (error) { setError((error as Error).message); } finally { saving.current = false; setBusy(false); }
   }}><fieldset disabled={busy} className="habit-form-fields">
     <label>Name<input required maxLength={100} value={input.name} onChange={e => change("name", e.target.value)} /></label>
     <label>Description (optional)<textarea maxLength={10000} value={input.description} onChange={e => change("description", e.target.value)} /></label>
@@ -23,8 +23,8 @@ export function HabitForm({ habit, onClose, onSave, timezone }: { habit?: Habit;
     <label>Priority<select value={input.priority} onChange={e => change("priority", e.target.value as HabitInput["priority"])}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
     <label>{input.type === "task" ? "Completion deadline (optional)" : "Start time"}<input required={input.type === "event"} type="time" value={input.time} onChange={e => change("time", e.target.value)} /></label>
     {input.type === "event" && <label>End time<input required type="time" value={input.end || ""} onChange={e => change("end", e.target.value)} /></label>}
-    <p className="hint">{habit ? "Changes apply from today to unrecorded occurrences. Past dates and recorded outcomes stay unchanged." : "The start date uses your configured local time zone. Past start dates allow retrospective review."}</p>
+    <p className="hint">{habit ? "Changes apply from today onward. Previously recorded results are preserved." : "The start date uses your configured local time zone. Past start dates allow retrospective review."}</p>
     {error && <p className="error" role="alert">{error}</p>}
-    <div className="detail-actions"><button type="button" onClick={onClose}>Cancel</button><button type="submit" className="primary">{busy ? "Saving..." : "Save habit"}</button></div>
+    <div className="detail-actions"><button type="button" onClick={onClose}>Cancel</button><button type="submit" className="primary">{busy ? "Saving..." : habit ? "Save changes" : "Save habit"}</button></div>
   </fieldset></form></Dialog>;
 }

@@ -116,6 +116,37 @@ test("today-onward edits and archive preserve past context and recorded current 
   await service.save(input({ name: "Renamed archived habit" }), habit.id);
   assert.equal((await f.service().list())[0].revisions.at(-1)!.archived, true);
 });
+test("editing task and event settings preserves past and today's recorded results while updating existing projections without duplicates", async () => {
+  for (const type of ["task", "event"] as const) for (const recordedToday of [false, true]) {
+    const f = fixture(), service = f.service();
+    const original = input({ type, time: "08:00", end: type === "event" ? "09:00" : undefined });
+    const habit = await service.save(original), range = { start: "2030-01-14", end: "2030-01-17" };
+    await service.synchronize(range);
+    await service.synchronize({ start: "2030-02-15", end: "2030-02-15" });
+    if (recordedToday) await service.record(habit.id, "2030-01-15", "completed");
+    const before = await service.synchronize(range);
+    const source = (row: typeof before[number]) => type === "task" ? row.task! : row.event!;
+    const past = structuredClone(source(before[0])), today = structuredClone(source(before[1]));
+    await service.save({ ...original, name: "Updated habit", frequency: "weekdays", weekdays: [2, 3, 5], time: "20:00", end: type === "event" ? "21:00" : undefined }, habit.id);
+    const after = await service.synchronize(range);
+    assert.deepEqual(source(after.find(row => row.date === "2030-01-14")!), past);
+    const current = source(after.find(row => row.date === "2030-01-15")!);
+    assert.equal(current.id, today.id);
+    if (recordedToday) assert.deepEqual(current, today);
+    else assert.equal(current.title, "Updated habit");
+    const future = after.find(row => row.date === "2030-01-16")!;
+    assert.equal(source(future).id, source(before[2]).id);
+    assert.equal(source(future).title, "Updated habit");
+    assert.equal(type === "task" ? future.task!.dueTime : future.event!.slot.start, "20:00");
+    assert.equal(after.some(row => row.date === "2030-01-17"), false);
+    const distant = type === "task" ? (await f.tasks().listTasks()).find(task => task.dueDate === "2030-02-15")! : (await f.schedules().load()).events.find(event => event.originalSlot.date === "2030-02-15")!;
+    assert.equal(distant.title, "Updated habit");
+    const stored = type === "task" ? f.values.get(TASK_STORAGE_KEY) : f.values.get(STORAGE_KEY);
+    await service.synchronize(range);
+    assert.equal(type === "task" ? f.values.get(TASK_STORAGE_KEY) : f.values.get(STORAGE_KEY), stored);
+  }
+});
+
 test("corrected missed event can be replanned without clearing its outcome or original date", async () => {
   const f = fixture(), service = f.service(), habit = await service.save(input({ type: "event", time: "18:00", end: "19:00" }));
   await service.record(habit.id, "2030-01-14", "completed");

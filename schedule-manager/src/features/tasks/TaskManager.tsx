@@ -1,8 +1,8 @@
 "use client";
 import { habitDuplicateConflicts } from "../habits/duplicates";
-import { HabitBadge, HabitRecurrence } from "../habits/HabitLabel";
-import { WorkspaceSections } from "../workspace/WorkspaceSections";
+import { HabitBadge } from "../habits/HabitLabel";
 import { WorkspaceButton, useWorkspaceNavigation } from "../workspace/WorkspaceNavigation";
+import { Icon, ProdButton } from "../workspace/Design";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { developmentIdentity } from "../schedule/adapters";
 import { Dialog, Stamp, formatDate } from "../schedule/Forms";
@@ -100,17 +100,8 @@ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
   counts.completed = historicalCounts.completed; counts.missed = historicalCounts.missed;
   const historyEmpty = (status === "completed" || status === "missed") && historyPeriod !== "all";
   const deleting = tasks.find(task => task.id === deleteId);
-  return <div className="app-shell">
-    <aside className="sidebar">
-      <WorkspaceButton className="brand" section="schedule"><span className="brand-mark">P</span><span>Productivity<span className="brand-sub">LAYER</span></span></WorkspaceButton>
-      <p className="nav-label">YOUR WORKSPACE</p>
-      <WorkspaceSections active="tasks" />
-      <div className="sidebar-bottom"><span className="avatar">DS</span><div><strong>{student.name}</strong><small>Prototype identity</small></div></div>
-    </aside>
-    <div className="main-shell">
-      <header className="topbar"><span>Workspace / To-do List</span><span className="prototype">LOCAL PROTOTYPE</span></header>
-      <main className="content tasks-content">
-        <div className="page-heading"><div><p className="eyebrow">ONE THING AT A TIME</p><h1>{analytics ? "To-do analytics" : "To-do List"}</h1><p className="muted">Your ordinary tasks and task-type habit occurrences. All dates use {student.timezone}.</p></div>{!analytics && <button className="primary" onClick={() => { setSaveError(""); setEditor({}); }}>＋ New task</button>}</div>
+  return <div className="module-view tasks-module"><main className="content tasks-content">
+        <div className="page-heading"><div><p className="eyebrow">ONE THING AT A TIME</p><h1>{analytics ? "To-do analytics" : "To-do List"}</h1><p className="muted">Keep your commitments clear. One task at a time.</p></div>{!analytics && <ProdButton className="primary" onClick={() => { setSaveError(""); setEditor({}); }}><Icon name="plus"/> New task</ProdButton>}</div>
         <div className="analytics-view-switch" role="group" aria-label="To-do view"><button type="button" aria-pressed={!analytics} onClick={() => setAnalytics(false)}>Tasks</button><button type="button" aria-pressed={analytics} onClick={() => setAnalytics(true)}>Analytics</button></div>
         {duplicateConflicts.length > 0 && <p className="error" role="alert">Conflicting duplicate habit outcomes require review. Stored outcomes have not been merged or deleted. {duplicateConflicts.join(", ")}</p>}
         {loadError && <p className="error" role="alert">{loadError} <button onClick={() => void refresh()}>Retry loading</button></p>}
@@ -127,22 +118,21 @@ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
             <p className="hint">{visible.length} shown / {counts[status]} total {status}</p>
             {busy && <p role="status">Saving task update...</p>}
             {visible.map(task => <TaskCard key={task.id} task={task} timezone={student.timezone} instant={clock} busy={busy} onOpen={id => navigate({ section: "tasks", taskId: id })} onComplete={() => void mutate(() => service.completeTask(task.id), "Task completed. Find it in Completed.")} onMiss={() => void mutate(() => service.markTaskMissed(task.id), "Missed outcome recorded. Find it in Missed.")}>
-              <div className="event-info"><div className="badges"><span className={"badge priority-" + task.priority}>{task.priority} priority</span>{task.source.kind === "habit" ? <HabitBadge /> : <span className="badge">Ordinary task</span>}<span className={"badge " + (task.status === "missed" ? "red" : task.status === "completed" ? "green" : "")}>{taskViewStatus(task, student.timezone, clock)}</span>{isTaskOverdue(task, student.timezone, clock) && <span className="badge amber">Overdue</span>}</div>
-                <h2 className="task-title">{task.title}</h2>
-                {task.source.kind === "habit" && <p>Habit: {task.source.habitName} · Scheduled {task.source.scheduledDate}</p>}
-                <p>Intended completion: <Deadline task={task} /></p>
-                {task.completedAt && <p>Actually completed: <Stamp value={task.completedAt} timezone={student.timezone} /></p>}
-                {task.missedAt && <p>Missed outcome recorded: <Stamp value={task.missedAt} timezone={student.timezone} /></p>}
+              <div className="task-card-info"><h2 className="task-title" title={task.title}>{task.title}</h2><p className="task-card-source">{task.source.kind === "habit" ? `${task.source.habitName} · Scheduled ${formatDate(task.source.scheduledDate)}` : "Personal task"}</p></div>
+              <div className="task-card-meta">
+                {task.status === "missed" && <span className="badge red">Missed</span>}
+                {isTaskOverdue(task, student.timezone, clock) && <span className="badge amber">Awaiting outcome</span>}
+                <span className="task-priority-dot" role="img" aria-label={`${task.priority} priority`} title={`Priority: ${task.priority}`}/>
+                <span className="task-card-deadline" title={task.dueDate ? `Intended completion: ${task.dueDate}${task.dueTime ? ` ${task.dueTime}` : " (date only)"}` : "No deadline"}>{task.dueDate ? <>{formatDate(task.dueDate)}{task.dueTime ? ` · ${task.dueTime}` : ""}</> : "No deadline"}</span>
+                <span className="task-source-pill">{task.source.kind === "habit" ? "Habit" : "Task"}</span>
               </div>
 
             </TaskCard>)}
             {!visible.length && <div className="empty"><h2>{historyEmpty ? "No results for this history period" : status === "active" ? "No active tasks" : status === "pending" ? "No pending tasks" : status === "completed" ? "No completed tasks yet" : "No missed tasks"}</h2><p>{historyEmpty ? "Choose All time to review earlier habit outcomes. Ordinary task visibility is unchanged." : status === "active" ? "Future and undated unfinished tasks appear here. Complete a task early or set its deadline." : status === "pending" ? "Tasks await an outcome here once their deadline arrives. Complete them, mark them missed, or edit a deadline." : status === "completed" ? "Completed tasks and their actual completion times appear here." : "Tasks appear here only after an explicit missed outcome is recorded."}</p></div>}
           </div>
         </section>}
-        <p className="notice">Habits are created in the Habit Tracker. Each habit task shares its occurrence outcome with the tracker.</p>
         <footer className="page-footer"><span>Development identity · Browser persistence</span><span>No account sync</span></footer>
       </main>
-    </div>
     {editor && <TaskForm task={editor.task} timezone={student.timezone} onClose={() => setEditor(undefined)} onSave={async input => {
       const saved = editor.task ? await service.updateTask(editor.task.id, input) : await service.createTask(input);
       setTasks(previous => previous?.some(task => task.id === saved.id) ? previous.map(task => task.id === saved.id ? saved : task) : [...(previous || []), saved]);
@@ -150,12 +140,12 @@ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
       setClock(new Date());
     }} />}
     {selected && !editor && !deleting && <Dialog title={selected.title} onClose={() => closeTask()}><div className="detail task-detail">
-      {selected.source.kind === "habit" && <><HabitBadge /><HabitRecurrence recordedAt={selected.history.find(entry => entry.kind === "completed" || entry.kind === "missed")?.at} snapshot={selected.habitSettings} habit={habits.find(habit => selected.source.kind === "habit" && habit.id === selected.source.habitId)} date={selected.source.scheduledDate} /></>}
+      {selected.source.kind === "habit" && <HabitBadge />}
       <p>{selected.source.kind === "habit" ? `Habit: ${selected.source.habitName}` : "Ordinary task"} · {taskViewStatus(selected, student.timezone, clock)}{selected.deletedAt ? " · Deleted" : ""}</p>
       {selected.description && <p className="description">{selected.description}</p>}
       <dl><dt>Priority</dt><dd>{selected.priority}</dd><dt>Intended completion</dt><dd><Deadline task={selected} /></dd><dt>Created</dt><dd><Stamp value={selected.createdAt} timezone={student.timezone} /></dd><dt>Last updated</dt><dd><Stamp value={selected.updatedAt} timezone={student.timezone} /></dd>{selected.completedAt && <><dt>Actually completed</dt><dd><Stamp value={selected.completedAt} timezone={student.timezone} /></dd></>}{selected.missedAt && <><dt>Missed outcome recorded</dt><dd><Stamp value={selected.missedAt} timezone={student.timezone} /></dd></>}{selected.source.kind === "habit" && <><dt>Scheduled date</dt><dd>{selected.source.scheduledDate}</dd></>}</dl>
       {isTaskOverdue(selected, student.timezone, clock) && <p className="notice">Overdue. This task remains unfinished until you record its outcome.</p>}
-      {selected.source.kind === "habit" && <p className="notice">This is one linked occurrence. Edit repeating settings or archive the source habit in Habit Tracker; no detached copy will be edited or deleted here. <WorkspaceButton section="habits" habitId={selected.source.habitId} occurrenceDate={selected.source.scheduledDate}>Open habit</WorkspaceButton> <WorkspaceButton section="habits" habitId={selected.source.habitId} editHabit>Edit habit</WorkspaceButton></p>}
+      {selected.source.kind === "habit" && <div className="detail-actions"><WorkspaceButton section="habits" habitId={selected.source.habitId} occurrenceDate={selected.source.scheduledDate}>Open habit</WorkspaceButton><WorkspaceButton section="habits" habitId={selected.source.habitId} editHabit>Edit habit</WorkspaceButton></div>}
       <h3>Audit history</h3><ol className="timeline">{selected.history.map(entry => <li key={entry.id}><strong>{entry.kind}</strong><Stamp value={entry.at} timezone={student.timezone} /><p>{entry.snapshot.title} · {entry.snapshot.priority} priority · Intended: {entry.snapshot.dueDate || "No deadline"}{entry.snapshot.dueTime ? ` ${entry.snapshot.dueTime}` : ""}</p></li>)}</ol>
       {saveError && <p className="error" role="alert">{saveError}</p>}
       {notice && <p className="notice" role="status">{notice}</p>}

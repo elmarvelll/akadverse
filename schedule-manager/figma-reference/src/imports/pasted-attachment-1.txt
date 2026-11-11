@@ -1,0 +1,183 @@
+The dashboard should give administrators a complete overview of university operations, including students, courses, attendance, and platform activity.
+
+The design should feel professional, data-driven, and structured like a real university management system.
+
+1. University Overview Section
+
+At the top of the dashboard, display summary statistics cards showing the current status of the university.
+
+Include cards such as:
+
+Total Students
+
+Total Lecturers
+
+Total Active Courses
+
+Classes Running Today
+
+Overall Attendance Rate
+
+Pending Academic Requests
+
+Example data:
+
+Total Students: 10,245
+Total Lecturers: 612
+Courses Running: 1,320
+Today's Attendance Rate: 88%
+Pending Requests: 17
+
+These cards should give admins a quick snapshot of the entire system.
+
+2. Attendance Analytics
+
+Include a section showing attendance trends across departments.
+
+Display information such as:
+
+Department attendance percentages
+
+Courses with low attendance
+
+Students at risk of attendance shortage
+
+Example table:
+
+Computer Science — 89%
+Electrical Engineering — 84%
+Accounting — 92%
+Architecture — 81%
+
+If attendance drops too low, show a warning message such as:
+
+“EEE 212 – Circuit Theory attendance dropped below 70% this week.”
+
+3. Student Management Section
+
+Create a student management panel where admins can view and search student records.
+
+Each student profile preview should include:
+
+Student Name
+
+Matriculation Number
+
+Programme / Department
+
+Level (e.g., 200 level)
+
+GPA
+
+Attendance Percentage
+
+Example:
+
+Name: Daniel Adeyemi
+Matric No: 22CG028451
+Programme: Computer Engineering
+Level: 200
+GPA: 4.21
+Attendance: 87%
+
+Admins should be able to view student records and academic information from this section.
+
+4. Lecturer Management
+
+Create a section showing lecturers and their assigned courses.
+
+Display:
+
+Lecturer Name
+
+Department
+
+Courses Assigned
+
+Teaching Schedule
+
+Example:
+
+Dr. Adewale
+Department: Computer Science
+Courses: CSC 211 – Data Structures, CSC 214 – Computer Architecture
+
+5. Course & Academic Management
+
+Include a panel that shows active courses.
+
+Each course should display:
+
+Course Code
+
+Course Title
+
+Credit Units
+
+Assigned Lecturer
+
+Department
+
+Example:
+
+Course Code: CSC 211
+Course Title: Data Structures
+Credit Unit: 3
+Lecturer: Dr. Adewale
+
+6. Attendance Monitoring
+
+Include a dashboard panel showing attendance statistics across the university.
+
+Display:
+
+Students below 75% attendance
+
+Courses with attendance problems
+
+Attendance reports by department
+
+Example:
+
+Students below 75% attendance: 112
+Courses with attendance issues: 9
+
+7. Platform Activity (AkadVerse)
+
+Since the platform includes productivity and AI tools, include a section showing platform engagement statistics.
+
+Example metrics:
+
+Gemini Chat Sessions Today: 2,140
+Documents Created: 892
+Learning Videos Watched: 1,430
+
+This helps admins understand how students are using the system.
+
+8. System Alerts
+
+Include a notification panel for important alerts.
+
+Examples:
+
+“120 students are below the required attendance level.”
+
+“Course registration closes in 48 hours.”
+
+“System update scheduled tonight.”
+
+Design Goal
+
+The admin portal should feel like a real university control center, allowing administrators to:
+
+Monitor students
+
+Track attendance
+
+Manage courses and lecturers
+
+View university analytics
+
+Monitor platform usage
+
+The layout should prioritize data visibility, quick insights, and administrative control.

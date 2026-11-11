@@ -5,7 +5,7 @@
 - To-do List creates, edits, deletes and completes ordinary tasks. It also displays supplied task-type habit occurrences and records their completed or missed outcomes.
 - Habit Tracker owns habit creation, definitions and recurrence. See [HABITS.md](HABITS.md) for the implemented tracker.
 - Schedule manages personal events and time planning. Task creation, task completion, habit creation and habit-completion controls are absent. The dedicated Task Deadlines view and its entry points have been removed. Task deadlines remain in To-do forms, details, sorting, shared queries and analytics.
-- Today is a read-only overview with navigation links, without mutation controls. No Today implementation existed, so no new dashboard was built. Its future task summaries can reuse `taskDaySummary` and stable task identifiers for dashboard selection. No dedicated Task Deadlines component remains.
+- Today is a read-only overview with navigation links, without mutation controls. Today is now implemented using shared selectors and stable task identifiers for dashboard selection. No dedicated Task Deadlines component remains.
 
 The app remains a local prototype with Development student in Africa/Lagos. Client owner filtering is not server authorization.
 

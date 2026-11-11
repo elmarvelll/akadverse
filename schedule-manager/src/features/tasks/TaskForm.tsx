@@ -20,7 +20,7 @@ export function TaskForm({ task, timezone, onSave, onClose }: { task?: Task; tim
           <label>Intended completion date<input type="date" value={input.dueDate || ""} onChange={event => setInput({ ...input, dueDate: event.target.value || undefined, dueTime: event.target.value ? input.dueTime : undefined })} /></label>
           <label>Intended completion time (optional)<input type="time" disabled={!input.dueDate} value={input.dueTime || ""} onChange={event => setInput({ ...input, dueTime: event.target.value || undefined })} /></label>
         </div>
-        {!input.dueDate && <p className="hint">No deadline. The task stays pending until you complete it, mark it missed, or delete it.</p>}
+        {!input.dueDate && <p className="hint">No deadline. The task stays Active until you complete it or set a deadline.</p>}
         {input.dueDate && !input.dueTime && <p className="hint">Date only: overdue after this local calendar day ends.</p>}
       </fieldset>
       {error && <p role="alert" className="error">{error}</p>}

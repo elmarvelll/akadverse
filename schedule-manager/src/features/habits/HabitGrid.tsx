@@ -1,27 +1,33 @@
 "use client";
 import type { KeyboardEvent } from "react";
-import { formatDate } from "../schedule/Forms";
 import { outcome, type Habit, type Occurrence } from "./domain";
-export function HabitGrid({ habits, dates, occurrences, today, onOpen, onHabit }: { habits: Habit[]; dates: string[]; occurrences: Occurrence[]; today: string; onOpen: (item: Occurrence) => void; onHabit: (id: string) => void }) {
-  const byKey = new Map(occurrences.map(item => [`${item.habitId}:${item.date}`, item]));
-  function keyboard(event: KeyboardEvent<HTMLButtonElement>, row: number, column: number) {
-    let nextRow = row, nextColumn = column;
-    if (event.key === "ArrowDown") nextRow++;
-    else if (event.key === "ArrowUp") nextRow--;
-    else if (event.key === "ArrowLeft") nextColumn--;
-    else if (event.key === "ArrowRight") nextColumn++;
-    else if (event.key === "Home") nextColumn = 0;
-    else if (event.key === "End") nextColumn = habits.length - 1;
-    else return;
+const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export function HabitGrid({ habit, dates, occurrences, today, onOpen }: { habit: Habit; dates: string[]; occurrences: Occurrence[]; today: string; onOpen: (item: Occurrence) => void }) {
+  const byDate = new Map(occurrences.filter(item => item.habitId === habit.id).map(item => [item.date, item]));
+  const offset = dates.length ? new Date(dates[0] + "T12:00:00Z").getUTCDay() : 0;
+  const trailing = (7 - (offset + dates.length) % 7) % 7;
+  function keyboard(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const column = (offset + index) % 7;
+    const steps: Record<string, number> = { ArrowDown: 7, ArrowUp: -7, ArrowLeft: -1, ArrowRight: 1, Home: -column, End: 6 - column };
+    if (!(event.key in steps)) return;
     event.preventDefault();
-    event.currentTarget.closest("table")?.querySelector<HTMLButtonElement>(`[data-cell="${Math.max(0, Math.min(dates.length - 1, nextRow))}:${Math.max(0, Math.min(habits.length - 1, nextColumn))}"]`)?.focus();
+    const next = Math.max(0, Math.min(dates.length - 1, index + steps[event.key]));
+    event.currentTarget.closest(".habit-calendar-grid")?.querySelector<HTMLButtonElement>(`[data-day="${next}"]`)?.focus();
   }
-  return <div className="habit-grid-scroll" role="region" aria-label="Monthly habit grid; scroll horizontally for more habits" tabIndex={0}><table className="habit-grid"><caption>Dates down the left, habits across the top. Arrow keys move between cells; Enter opens a scheduled occurrence.</caption><thead><tr><th scope="col">Date</th>{habits.map(habit => <th scope="col" key={habit.id}><button onClick={() => onHabit(habit.id)}>{habit.revisions.at(-1)!.name}</button></th>)}<th scope="col">Completed / scheduled</th></tr></thead><tbody>{dates.map((date, row) => {
-    const scheduled = occurrences.filter(item => item.date === date), completed = scheduled.filter(item => outcome(item) === "completed").length;
-    return <tr key={date} className={date === today ? "habit-today" : date > today ? "habit-future" : ""}><th scope="row">{formatDate(date)}{date === today && <small>Today</small>}{date > today && <small>Planned</small>}</th>{habits.map((habit, column) => {
-      const item = byKey.get(`${habit.id}:${date}`), state = item ? outcome(item) : "unscheduled";
+  return <div className="habit-calendar-grid" role="group" aria-label={`${habit.revisions.at(-1)!.name} monthly calendar`}>
+    <p className="sr-only">Arrow keys move between dates. Home and End move within a week. Enter opens a scheduled occurrence.</p>
+    {weekdays.map(day => <div key={day} className="habit-weekday" aria-hidden="true">{day}</div>)}
+    {Array.from({ length: offset }, (_, index) => <span key={`before-${index}`} className="habit-calendar-blank" aria-hidden="true" />)}
+    {dates.map((date, index) => {
+      const item = byDate.get(date), state = item ? outcome(item) : "unscheduled";
       const label = state === "unrecorded" ? date > today ? "Planned, no outcome" : "Scheduled, no outcome" : state === "unscheduled" ? "Not scheduled" : state === "review" ? "Completion needs review" : state;
-      return <td key={habit.id}><button type="button" data-cell={`${row}:${column}`} className={`habit-cell habit-${state}`} aria-label={`${habit.revisions.at(-1)!.name}, ${date}: ${label}`} aria-disabled={!item} onKeyDown={event => keyboard(event, row, column)} onClick={() => { if (item) onOpen(item); }}>{state === "completed" ? "Done" : state === "missed" ? "Missed" : state === "unscheduled" ? "—" : state === "review" ? "Review" : date > today ? "Planned" : "Open"}</button></td>;
-    })}<td>{scheduled.length ? <>{completed}/{scheduled.length}{date > today && <small>planned</small>}</> : <span className="muted">No habits scheduled</span>}</td></tr>;
-  })}</tbody></table></div>;
+      return <button key={date} type="button" data-day={index} className={`habit-calendar-day habit-calendar-${state}${date > today ? " is-future" : ""}${date === today ? " is-today" : ""}`} aria-label={`${habit.revisions.at(-1)!.name}, ${date}: ${label}`} aria-current={date === today ? "date" : undefined} aria-disabled={!item} title={`${date}: ${label}`} onKeyDown={event => keyboard(event, index)} onClick={() => { if (item) onOpen(item); }}>
+        <span>{Number(date.slice(-2))}</span>
+        {state === "completed" && <span className="habit-day-symbol" aria-hidden="true">✓</span>}
+        {state === "missed" && <span className="habit-day-symbol" aria-hidden="true">×</span>}
+        {state === "review" && <span className="habit-day-symbol" aria-hidden="true">!</span>}
+      </button>;
+    })}
+    {Array.from({ length: trailing }, (_, index) => <span key={`after-${index}`} className="habit-calendar-blank" aria-hidden="true" />)}
+  </div>;
 }

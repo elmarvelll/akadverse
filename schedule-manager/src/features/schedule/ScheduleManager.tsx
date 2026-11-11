@@ -1,12 +1,13 @@
 "use client";
-import { WorkspaceSections } from "../workspace/WorkspaceSections";
-import { WorkspaceButton } from "../workspace/WorkspaceNavigation";
+import { WorkspaceButton, useWorkspaceNavigation } from "../workspace/WorkspaceNavigation";
+import { Icon, ProdButton } from "../workspace/Design";
+import { Timetable } from "./ScheduleTimetable";
+import { scheduleDates, selectTimetableEvents, slotTouchesDates, timetableSourceDates, type TimetableEntry } from "./timetable";
 import { useCallback, useEffect, useState } from "react";
 import {
   addDays,
   localNow,
   ScheduleService,
-  selectScheduleEvents,
   scheduleConflicts,
   type Dataset,
   type OfficialClass,
@@ -18,13 +19,15 @@ import { BrowserScheduleRepository, STORAGE_KEY } from "./storage";
 import { developmentIdentity, sampleAcademics } from "./adapters";
 import { Dialog, EventForm, ScheduleForm, Stamp, formatDate } from "./Forms";
 import { HabitBadge, HabitRecurrence } from "../habits/HabitLabel";
-import type { Habit } from "../habits/domain";
+import { eventOutcome, type Habit } from "../habits/domain";
 import { HABITS_CHANGED, HABIT_STORAGE_KEY } from "../habits/storage";
 import { browserHabits } from "../habits/browser";
 import { EventBackup } from "./EventBackup";
 import { AnalyticsPanel } from "../analytics/AnalyticsPanel";
-export function ScheduleManager() {
+export function ScheduleManager({ initialEventId, initialDate }: { initialEventId?: string; initialDate?: string } = {}) {
+  const selectWorkspace = useWorkspaceNavigation();
   const [habitRules, setHabitRules] = useState<Habit[]>([]);
+  const [timeView, setTimeView] = useState<"day" | "week">("week");
   const [analytics, setAnalytics] = useState(false);
   const [service] = useState<Pick<ScheduleService, "getCurrentStudent" | "load" | "getOfficialClasses" | "saveSubSchedule" | "saveEvent" | "archiveEvent" | "recordMissedAttempt">>(
     () =>
@@ -38,7 +41,7 @@ export function ScheduleManager() {
     [student, setStudent] = useState<Student>(),
     [loadError, setLoadError] = useState(""),
     [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(""),
+  const [date, setDate] = useState(initialDate || ""),
     [classes, setClasses] = useState<OfficialClass[]>([]),
     [classError, setClassError] = useState(""),
     [classLoading, setClassLoading] = useState(false),
@@ -50,12 +53,13 @@ export function ScheduleManager() {
     [scheduleEditor, setScheduleEditor] = useState<{
       schedule?: SubSchedule;
     } | null>(null);
-  const [detailId, setDetailId] = useState<string>(),
+  const [detailId, setDetailId] = useState<string | undefined>(initialEventId),
     [official, setOfficial] = useState<OfficialClass>(),
     [archiveId, setArchiveId] = useState<string>();
   const [saving, setSaving] = useState(false),
     [saveError, setSaveError] = useState(""),
     [notice, setNotice] = useState("");
+  const rangeDates = scheduleDates(date, timeView), rangeStart = rangeDates[0], rangeEnd = rangeDates.at(-1) || date;
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError("");
@@ -94,18 +98,21 @@ export function ScheduleManager() {
     };
   }, [service]);
   useEffect(() => {
-    if (!date) return;
+    if (!rangeStart || !rangeEnd) return;
     let active = true;
     async function get() {
       setClassLoading(true);
       setClassError("");
       try {
-        await browserHabits.synchronize({ start: date, end: date }, { tasks: "today" });
+        await browserHabits.synchronize({ start: rangeStart, end: rangeEnd }, { tasks: "today" });
         const rules = await browserHabits.list();
         const updated = await service.load();
-        const result = await service.getOfficialClasses(date);
         if (active) { setData(updated); setHabitRules(rules); }
-        if (active) setClasses(result);
+        const results = await Promise.allSettled(timetableSourceDates(scheduleDates(rangeStart, timeView)).map(day => service.getOfficialClasses(day)));
+        if (active) {
+          setClasses(results.flatMap(result => result.status === "fulfilled" ? result.value : []));
+          setClassError(results.some(result => result.status === "rejected") ? "Some academic dates could not be loaded. Personal and habit events are still displayed." : "");
+        }
       } catch (e) {
         if (active) {
           setClasses([]);
@@ -119,7 +126,7 @@ export function ScheduleManager() {
     return () => {
       active = false;
     };
-  }, [date, service, retry, student?.timezone]);
+  }, [rangeStart, rangeEnd, timeView, service, retry, student?.timezone]);
   useEffect(() => {
     const refresh = () => {
       void Promise.all([service.load(), service.getCurrentStudent()]).then(([data, current]) => { setData(data); setStudent(current); }).catch(e => setLoadError((e as Error).message));
@@ -185,21 +192,18 @@ export function ScheduleManager() {
     own = data.events.filter((e) => e.ownerId === student.id);
   const filteredEvents = history
     ? own.filter((e) => !current || e.subScheduleId === current.id)
-    : selectScheduleEvents(data, student.id, {
-          date,
-          scheduleId: current?.id,
-          focus,
-        });
+    : selectTimetableEvents(data, student.id, rangeDates, { scheduleId: current?.id, focus });
   const events = view === "habits" ? filteredEvents.filter(e => e.source.kind === "habit") : view === "academic" ? filteredEvents.filter(e => schedules.some(s => s.academic && s.id === e.subScheduleId)) : filteredEvents;
   const visibleClasses =
     !history && !focus && (view === "main" || view === "academic" || current?.academic)
       ? classes.filter(
           (c) =>
-            c.slot.date === date &&
+            slotTouchesDates(c.slot, rangeDates) &&
             c.state === "scheduled" &&
             c.registrationState === "registered",
         )
       : [];
+  const selectedOfficial = official || classes.find(item => item.id === initialEventId);
   const selected = own.find((e) => e.id === detailId),
     now = localNow(student.timezone);
   const overdue = (e: PersonalEvent) =>
@@ -210,9 +214,10 @@ export function ScheduleManager() {
     view === "main"
       ? "Main schedule"
       : view === "academic"
-        ? "Academic classes"
+        ? "Academics"
         : view === "habits" ? "Habit occurrences" : current?.name || "Main schedule";
-  const conflicts = scheduleConflicts(own.filter(e => e.slot.date === date), classes.filter(c => c.slot.date === date), student.id);
+  const conflicts = scheduleConflicts(own.filter(e => rangeDates.includes(e.slot.date)), classes.filter(c => rangeDates.includes(c.slot.date)), student.id);
+  const timelineEntries: TimetableEntry[] = [...events.filter(event => !event.archivedAt).map(event => ({ id: event.id, title: event.title, slot: event.slot, kind: event.source.kind === "habit" ? "habit" as const : "personal" as const, category: schedules.find(schedule => schedule.id === event.subScheduleId)?.name || (event.source.kind === "habit" ? "Habit" : "Personal"), priority: event.priority, outcome: eventOutcome(event) })), ...visibleClasses.map(item => ({ id: item.id, title: item.courseCode + " \u00b7 " + item.courseName, slot: item.slot, kind: "academic" as const, category: "Academics / Sample", venue: item.venue }))];
   function createEvent() {
     if (!schedules.length) {
       setNotice("Create a sub-category first, then create an event and select it.");
@@ -224,32 +229,7 @@ export function ScheduleManager() {
     setHistory(false);
   };
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <WorkspaceButton className="brand" section="schedule">
-          <span className="brand-mark">P</span>
-          <span>
-            Productivity<span className="brand-sub">LAYER</span>
-          </span>
-        </WorkspaceButton>
-        <p className="nav-label">YOUR WORKSPACE</p>
-        <WorkspaceSections active="schedule" />
-        <div className="sidebar-bottom">
-          <span className="avatar">DS</span>
-          <div>
-            <strong>Development student</strong>
-            <small>Prototype identity</small>
-          </div>
-        </div>
-      </aside>
-      <div className="main-shell">
-        <header className="topbar">
-          <span>
-            Workspace <span className="slash">/</span> Schedule Manager
-          </span>
-          <span className="prototype">LOCAL PROTOTYPE</span>
-        </header>
-        <main className="content">
+    <div className="module-view schedule-module"><main className="content">
           <div className="page-heading">
             <div>
               <p className="eyebrow">MAKE ROOM FOR WHAT MATTERS</p>
@@ -269,45 +249,16 @@ export function ScheduleManager() {
                   Edit sub-category
                 </button>
               )}
-              <button className="primary" onClick={createEvent}>
-                ＋ Create event
-              </button>
+              <ProdButton className="primary" onClick={createEvent}><Icon name="plus"/> Create event</ProdButton>
             </div>}
           </div>
           <div className="analytics-view-switch" role="group" aria-label="Schedule view"><button type="button" aria-pressed={!analytics} onClick={() => setAnalytics(false)}>Schedule</button><button type="button" aria-pressed={analytics} onClick={() => setAnalytics(true)}>Analytics</button></div>
           {analytics ? <AnalyticsPanel kind="schedule" student={student} data={data} academic={service} /> : <>
-          <div className="summary-grid">
-            {[
-              [
-                "▦",
-                own.filter(e => !e.archivedAt && e.slot.date === date).length + classes.filter(c => c.slot.date === date && c.state === "scheduled" && c.registrationState === "registered").length,
-                "Activities scheduled on this day",
-              ],
-              [
-                "🎓",
-                classes.filter(c => c.slot.date === date && c.state === "scheduled" && c.registrationState === "registered").length,
-                "Official classes on this day",
-              ],
-              [
-                "▦",
-                schedules.length,
-                "Your sub-categories",
-              ],
-            ].map(([icon, count, label]) => (
-              <div className="summary-card" key={label}>
-                <span className="summary-icon">{icon}</span>
-                <div>
-                  <strong>{count}</strong>
-                  <span>{label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
           <section className="schedule-panel" aria-label="Schedule">
             <div className="category-filters" role="group" aria-label="Sub-category filters">
               <button aria-pressed={view === "main"} onClick={() => navigate("main")}>All</button>
               <button aria-pressed={view === "academic"} onClick={() => navigate("academic")}>Academics</button>
-              {schedules.map(s => <button key={s.id} aria-pressed={view === s.id} onClick={() => navigate(s.id)}>{s.name}</button>)}
+              {schedules.map(s => <button key={s.id} aria-pressed={view === s.id} onClick={() => navigate(s.id)}>{s.name.toLowerCase() === "academics" ? `${s.name} (category)` : s.name}</button>)}
               <button onClick={() => setScheduleEditor({})}>＋ New sub-category</button>
             </div>
             <div className="panel-toolbar">
@@ -339,18 +290,18 @@ export function ScheduleManager() {
               <>
                 <div className="date-toolbar">
                   <div>
-                    <h2>{formatDate(date, true)}</h2>
+                    <h2>{timeView === "week" ? `${formatDate(rangeStart)} to ${formatDate(rangeEnd)}` : formatDate(date, true)}</h2>
                     <p className="hint">
                       {student.timezone} ·{" "}
                       {focus
                         ? "Only explicit must-complete commitments"
-                        : "One day, a little more intention"}
+                        : timeView === "week" ? "Your week at a glance" : "One day, a little more intention"}
                     </p>
                   </div>
                   <div className="date-controls">
                     <button
-                      aria-label="Previous day"
-                      onClick={() => setDate(addDays(date, -1))}
+                      aria-label={timeView === "week" ? "Previous week" : "Previous day"}
+                      onClick={() => setDate(addDays(date, timeView === "week" ? -7 : -1))}
                     >
                       ‹
                     </button>
@@ -367,34 +318,14 @@ export function ScheduleManager() {
                       }}
                     />
                     <button
-                      aria-label="Next day"
-                      onClick={() => setDate(addDays(date, 1))}
+                      aria-label={timeView === "week" ? "Next week" : "Next day"}
+                      onClick={() => setDate(addDays(date, timeView === "week" ? 7 : 1))}
                     >
                       ›
                     </button>
                   </div>
                 </div>
-                <div className="week-strip" aria-label="Nearby dates">
-                  {Array.from({ length: 7 }, (_, i) =>
-                    addDays(date, i - 3),
-                  ).map((d) => (
-                    <button
-                      key={d}
-                      aria-pressed={d === date}
-                      className={"day " + (d === date ? "chosen" : "")}
-                      onClick={() => setDate(d)}
-                    >
-                      <span>
-                        {new Intl.DateTimeFormat("en", {
-                          timeZone: "UTC",
-                          weekday: "short",
-                        }).format(new Date(d + "T12:00:00Z"))}
-                      </span>
-                      <strong>{Number(d.slice(-2))}</strong>
-                      {d === now.date && <small>Today</small>}
-                    </button>
-                  ))}
-                </div>
+                <div className="timetable-view-toggle" role="group" aria-label="Timetable range"><button type="button" aria-pressed={timeView === "day"} onClick={() => setTimeView("day")}>Day</button><button type="button" aria-pressed={timeView === "week"} onClick={() => setTimeView("week")}>Week</button></div>
               </>
             )}
             {history && (
@@ -429,7 +360,9 @@ export function ScheduleManager() {
                 </button>
               </p>
             )}
-            <div className="event-list" aria-busy={saving}>
+            {!history && !classLoading && !classError && !timelineEntries.length && <p className="timetable-empty-note" role="status">{focus ? "No must-complete activities in this date range." : "No activities scheduled in this view. Choose another date or create an event."}</p>}
+            {!history && <Timetable entries={timelineEntries} dates={rangeDates} today={now.date} currentTime={now.time} selectedDate={date} conflicts={conflicts} onDate={setDate} onOpen={entry => { if (entry.kind === "academic") setOfficial(classes.find(item => item.id === entry.id)); else setDetailId(entry.id); }}/> }
+            {history && <div className="event-list" aria-busy={saving}>
               {visibleClasses.map((c) => (
                 <article className="event-card official" key={c.id}>
                   <div className="event-time">
@@ -549,7 +482,7 @@ export function ScheduleManager() {
                   )}
                 </div>
               )}
-            </div>
+            </div>}
           </section>
           </>}
           <footer className="page-footer">
@@ -557,7 +490,6 @@ export function ScheduleManager() {
             <span>Stored in this browser · No account sync</span>
           </footer>
         </main>
-      </div>
       {editor && (
         <EventForm
           event={editor.event}
@@ -605,6 +537,7 @@ export function ScheduleManager() {
                 {formatDate(selected.slot.date, true)} · {selected.slot.start}–
                 {selected.slot.end}
               </dd>
+              <dt>Outcome</dt><dd>{eventOutcome(selected)}</dd>
               <dt>Priority</dt>
               <dd>{selected.priority}</dd>
               <dt>Must complete</dt>
@@ -704,10 +637,10 @@ export function ScheduleManager() {
           </div>
         </Dialog>
       )}
-      {official && (
+      {selectedOfficial && (
         <Dialog
-          title={official.courseCode + " — " + official.courseName}
-          onClose={() => setOfficial(undefined)}
+          title={selectedOfficial.courseCode + " — " + selectedOfficial.courseName}
+          onClose={() => { setOfficial(undefined); if (initialEventId) selectWorkspace({ section: "schedule" }); }}
         >
           <div className="detail">
             <p className="notice">
@@ -715,21 +648,21 @@ export function ScheduleManager() {
             </p>
             <dl>
               <dt>Date</dt>
-              <dd>{formatDate(official.slot.date, true)}</dd>
+              <dd>{formatDate(selectedOfficial.slot.date, true)}</dd>
               <dt>Time</dt>
               <dd>
-                {official.slot.start}–{official.slot.end}
+                {selectedOfficial.slot.start}–{selectedOfficial.slot.end}
               </dd>
               <dt>Lecturer</dt>
-              <dd>{official.lecturer}</dd>
+              <dd>{selectedOfficial.lecturer}</dd>
               <dt>Venue</dt>
-              <dd>{official.venue}</dd>
+              <dd>{selectedOfficial.venue}</dd>
               <dt>Semester</dt>
-              <dd>{official.semester}</dd>
+              <dd>{selectedOfficial.semester}</dd>
               <dt>Class group</dt>
-              <dd>{official.classGroup}</dd>
+              <dd>{selectedOfficial.classGroup}</dd>
               <dt>Source identifier</dt>
-              <dd>{official.sourceId}</dd>
+              <dd>{selectedOfficial.sourceId}</dd>
             </dl>
             <p className="muted">
               Your registered courses determine which timetable sessions appear
@@ -738,7 +671,7 @@ export function ScheduleManager() {
             <button onClick={() => {
               setOfficial(undefined);
               createEvent();
-              setNotice(`Create a personal catch-up for ${official.courseCode}. The official lecture stays in place.`);
+              setNotice(`Create a personal catch-up for ${selectedOfficial.courseCode}. The official lecture stays in place.`);
             }}>Plan a personal catch-up</button>
           </div>
         </Dialog>

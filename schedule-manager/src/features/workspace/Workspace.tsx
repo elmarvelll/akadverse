@@ -7,6 +7,8 @@ import { localNow } from "../schedule/domain";
 import { ScheduleManager } from "../schedule/ScheduleManager";
 import { TaskManager } from "../tasks/TaskManager";
 import { workspaceLocation, type WorkspaceSelection } from "./navigation";
+import { TodayView } from "../today/TodayView";
+import { WorkspaceShell } from "./WorkspaceShell";
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 function subscribe(listener: () => void) {
@@ -32,5 +34,5 @@ export function Workspace() {
     void prepare().catch(error => { if (active) setError((error as Error).message); });
     return () => { active = false; };
   }, [location.section, retry]);
-  return <WorkspaceNavigation.Provider value={setSelection}>{ready !== location.section ? <main className="loading"><h1>{error ? "Saved activities could not be loaded" : "Loading your workspace..."}</h1>{error && <><p className="error" role="alert">{error}</p><p>Existing records have not been reset.</p><button onClick={() => setRetry(value => value + 1)}>Retry loading</button><button onClick={() => { setReady(location.section); setError(""); }}>Open section without generating habits</button></>}</main> : location.section === "habits" ? <HabitTracker initialHabitId={location.habitId} initialDate={location.occurrenceDate} initialEdit={location.editHabit} /> : location.section === "tasks" ? <TaskManager initialTaskId={location.taskId} /> : <ScheduleManager />}</WorkspaceNavigation.Provider>;
+  return <WorkspaceNavigation.Provider value={setSelection}><WorkspaceShell active={location.section}>{ready !== location.section ? <main className="loading"><h1>{error ? "Saved activities could not be loaded" : "Loading your workspace..."}</h1>{error && <><p className="error" role="alert">{error}</p><p>Existing records have not been reset.</p><button onClick={() => setRetry(value => value + 1)}>Retry loading</button><button onClick={() => { setReady(location.section); setError(""); }}>Open section without generating habits</button></>}</main> : location.section === "today" ? <TodayView/> : location.section === "habits" ? <HabitTracker initialHabitId={location.habitId} initialDate={location.occurrenceDate} initialEdit={location.editHabit} /> : location.section === "tasks" ? <TaskManager initialTaskId={location.taskId} /> : <ScheduleManager initialEventId={location.eventId} initialDate={location.scheduleDate} />}</WorkspaceShell></WorkspaceNavigation.Provider>;
 }

@@ -4,7 +4,7 @@ This document describes the current refinement milestone and supersedes earlier 
 
 ## Responsibilities and navigation
 
-Habit Tracker creates/edits recurring Task or Event habits, archives/restores them, records and corrects outcomes, and shows history/feedback. Task occurrences appear in To-do; event occurrences appear in the existing date-based Schedule view. They share their source records, not copied outcomes. Native sidebar buttons and Edit habit/Open habit actions use dashboard selection state without changing the URL. Today is not implemented in this standalone project; no new overview or route was added. Task Deadlines stays removed.
+Habit Tracker creates/edits recurring Task or Event habits, archives/restores them, records and corrects outcomes, and shows history/feedback. Task occurrences appear in To-do; event occurrences appear in the existing day/week Schedule views. They share their source records, not copied outcomes. Native sidebar buttons and Edit habit/Open habit actions use dashboard selection state without changing the URL. Today is a read-only shared overview; no new route was added. Task Deadlines stays removed.
 
 ## Creation, recurrence and editing
 
@@ -34,7 +34,7 @@ Clearing today returns the task to Active/Pending according to its deadline; cle
 
 ## Grid, feedback and Schedule
 
-Dates are rows; habits are columns. Green/Done means completed, red/Missed means explicit missed, neutral/Open means unrecorded, and black means not scheduled. Text/accessible labels accompany every state. Today is highlighted. Planned future cells have distinct text and dashed styling and offer no recording actions. Black cells have no activation action. Arrow keys/Home/End move focus between cells; native controls support Enter/Space. Sticky dates/headers and horizontal scrolling support smaller screens. Row totals count completed/scheduled occurrences only. Empty states distinguish no habits, no scheduled period and no eligible feedback.
+The selected habit uses the design's seven-column Sunday–Saturday monthly calendar. Compact cards select the displayed habit; their separate pencil/Edit habit buttons open the existing prefilled form directly. Recurrence descriptions show actual days and local HH:mm deadlines or event ranges. Edits use Save changes/Cancel; source management and archive/restore remain under Manage habit in the summary. Real months include their weekday offsets and all 28–31 dates. Green tiles mean completed, pink tiles mean explicitly missed, gray means unrecorded/upcoming, and pale tiles mean not scheduled. Accessible date/state labels and outcome symbols accompany the colors; today has a blue outline. Scheduled tiles open the existing occurrence dialog, while unscheduled tiles do nothing. Future dates retain the existing restriction on recording outcomes. Arrow keys move between dates (Up/Down by seven days); Home/End move within a week. Feedback matches the calendar height on desktop, with content scrolling below its heading, and has a viewport-relative height limit when stacked on smaller screens. No parallel outcome state or direct status cycling is introduced.
 
 Weekly/monthly feedback uses shared original-date records once per occurrence. Its denominator includes past scheduled occurrences and today's elapsed or explicitly recorded occurrences, excluding future/unscheduled dates. Untimed unrecorded tasks become elapsed only after their day ends. Counts distinguish completed, explicit missed and unrecorded; completion rate is completed/eligible times 100. Zero eligible displays No eligible occurrences yet. Corrections update counts/rates from current outcomes; historical audits are not extra occurrences.
 
@@ -61,3 +61,5 @@ The source checkpoint is C:/Productivity Layer/checkpoints/habit-refinements-202
 Do not restore old localStorage to undo code: it would erase new user outcomes. Once corrections have been recorded, old strict readers may reject their current-state/audit combination. Prefer UI-only rollback while keeping the compatible model/storage/service code, or prepare a forward compatibility patch. A full old-source rollback can require that patch to read corrected records. Keep all current user data and correction history; there is no recommended destructive data rollback.
 
 Live midnight verification also passed while the isolated browser stayed open: the grid advanced to November 8, only the new day's task was actionable, and yesterday's unresolved record remained unchanged. See browser-midnight-results.json in the checkpoint.
+
+The Figma integration uses the exported selected-habit attendance calendar, compact real-data summary cards and a week timetable while preserving all shared outcome rules. See DESIGN-INTEGRATION.md.

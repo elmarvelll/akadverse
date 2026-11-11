@@ -37,10 +37,13 @@ export function monthRange(date: string) {
   return { start, end: addDays(parsed.toISOString().slice(0, 10), -1) };
 }
 export function outcome(occurrence: Occurrence): "completed" | "missed" | "unrecorded" | "review" {
-  const event = occurrence.event;
+  if (occurrence.task) return occurrence.task.status === "pending" ? "unrecorded" : occurrence.task.status;
+  return occurrence.event ? eventOutcome(occurrence.event) : "unrecorded";
+}
+export function eventOutcome(event: PersonalEvent): "completed" | "missed" | "unrecorded" {
   if (event?.outcomeChanges?.length) return event.outcomeChanges.at(-1)!.to.status === "pending" ? "unrecorded" : event.outcomeChanges.at(-1)!.to.status as "completed" | "missed";
-  if (occurrence.task?.status === "completed" || event?.completedAt) return "completed";
-  if (occurrence.task?.status === "missed" || event?.history.some(entry => entry.kind === "missed")) return "missed";
+  if (event.completedAt) return "completed";
+  if (event.history.some(entry => entry.kind === "missed")) return "missed";
   return "unrecorded";
 }
 export function isDue(occurrence: Occurrence, now: { date: string; time: string }) {

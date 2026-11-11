@@ -9,10 +9,10 @@ export function useWorkspaceNavigation() {
   return selectSection;
 }
 
-export function WorkspaceButton({ section, taskId, habitId, occurrenceDate, editHabit, selected, onClick, ...props }: Omit<ComponentPropsWithoutRef<"button">, "type"> & WorkspaceSelection & { selected?: boolean }) {
+export function WorkspaceButton({ section, taskId, habitId, occurrenceDate, editHabit, eventId, scheduleDate, selected, onClick, ...props }: Omit<ComponentPropsWithoutRef<"button">, "type"> & WorkspaceSelection & { selected?: boolean }) {
   const selectSection = useWorkspaceNavigation();
   return <button {...props} type="button" aria-pressed={selected} onClick={event => {
     onClick?.(event);
-    if (!event.defaultPrevented) selectSection({ section, taskId, ...(habitId ? { habitId } : {}), ...(occurrenceDate ? { occurrenceDate } : {}), ...(editHabit ? { editHabit } : {}) });
+    if (!event.defaultPrevented) selectSection({ section, taskId, ...(habitId ? { habitId } : {}), ...(occurrenceDate ? { occurrenceDate } : {}), ...(editHabit ? { editHabit } : {}), ...(eventId ? { eventId } : {}), ...(scheduleDate ? { scheduleDate } : {}) });
   }} />;
 }
