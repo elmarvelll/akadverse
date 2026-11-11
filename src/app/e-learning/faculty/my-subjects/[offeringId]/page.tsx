@@ -1,7 +1,7 @@
 // src/app/e-learning/faculty/my-subjects/[offeringId]/page.tsx
 //
-// One subject for its lecturer: Overview · Weekly Course Content (what students see, grouped by week)
-// · Upload Material. Authorization: the viewer must be assigned to THIS offering.
+// One subject for its lecturer: Overview · Upload Material · Weekly Course Content (what students
+// see, grouped by week). Authorization: the viewer must be assigned to THIS offering.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -79,6 +79,13 @@ export default async function SubjectPage({ params, searchParams }: { params: Pr
         </div>
       </section>
 
+      <section id="upload-material" className="scroll-mt-24 space-y-3">
+        <h2 className="text-lg font-semibold text-gray-900">Upload Material</h2>
+        <p className="text-sm text-gray-800">Each week can hold several documents. Uploading adds a new document — it never replaces one that is already there. To remove a document, use its Delete button below.</p>
+        {/* Keyed by week so following another week's "Add document" link re-seeds the form's week. */}
+        <UploadMaterial key={initialWeek} offeringId={d.id} totalWeeks={d.totalWeeks} initialWeek={initialWeek} documentsPerWeek={documentsPerWeek} />
+      </section>
+
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">Weekly Course Content</h2>
         <div className="space-y-2">
@@ -114,13 +121,6 @@ export default async function SubjectPage({ params, searchParams }: { params: Pr
             );
           })}
         </div>
-      </section>
-
-      <section id="upload-material" className="scroll-mt-24 space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">Upload Material</h2>
-        <p className="text-sm text-gray-800">Each week can hold several documents. Uploading adds a new document — it never replaces one that is already there. To remove a document, use its Delete button above.</p>
-        {/* Keyed by week so following another week's "Add document" link re-seeds the form's week. */}
-        <UploadMaterial key={initialWeek} offeringId={d.id} totalWeeks={d.totalWeeks} initialWeek={initialWeek} documentsPerWeek={documentsPerWeek} />
       </section>
     </div>
   );

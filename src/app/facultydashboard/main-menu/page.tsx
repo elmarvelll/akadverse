@@ -8,5 +8,5 @@
 import ComingSoon from "@/app/components/dashboard/shared/ComingSoon";
 
 export default function FacultyMainMenuPage() {
-  return <ComingSoon portalName="Main Menu" />;
+  return <ComingSoon portalName="Main Menu" backHref="/facultydashboard" />;
 }

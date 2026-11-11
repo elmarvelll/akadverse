@@ -48,6 +48,9 @@ If a value came from the production dashboard or the project's Vercel settings, 
 | `ADMIN_EMAIL` | Receives admin notification emails | No | Your own address, if you want them | Development |
 | `SUPABASE_URL` | Supabase Storage (E-Learning course-material files) | No | Supabase project → Settings → API | Development |
 | `SUPABASE_SERVICE_ROLE_KEY` | Same (server-only secret) | No | Same | Development |
+| `LIVEKIT_URL` | Classroom live classes: LiveKit server (`wss://…livekit.cloud`) | No | LiveKit Cloud → Settings → Keys | Development |
+| `LIVEKIT_API_KEY` | Same | No | Same | Development |
+| `LIVEKIT_API_SECRET` | Same (server-only secret; signs join tokens) | No | Same | Development |
 | `SUPABASE_COURSE_MATERIALS_BUCKET` | Storage bucket name | No | Code default is used when empty | Development |
 | `CRON_SECRET` | Protects `/api/cron/*` routes | No | Any random string | Local |
 | `DB_TIMING_DEBUG` | `1` logs Core query timings | No | n/a | Local |
