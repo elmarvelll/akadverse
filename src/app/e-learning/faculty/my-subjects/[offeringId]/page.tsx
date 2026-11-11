@@ -1,7 +1,7 @@
 // src/app/e-learning/faculty/my-subjects/[offeringId]/page.tsx
 //
-// One subject for its lecturer: Overview · Weekly Course Content (what students see, grouped by week)
-// · Upload Material. Authorization: the viewer must be assigned to THIS offering.
+// One subject for its lecturer: Overview · Upload Material · Weekly Course Content (what students
+// see, grouped by week). Authorization: the viewer must be assigned to THIS offering.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -52,6 +52,11 @@ export default async function SubjectPage({ params }: { params: Promise<{ offeri
       </section>
 
       <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-gray-900">Upload Material</h2>
+        <UploadMaterial offeringId={d.id} totalWeeks={d.totalWeeks} />
+      </section>
+
+      <section className="space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">Weekly Course Content</h2>
         <div className="space-y-2">
           {weeks.map((w) => {
@@ -77,11 +82,6 @@ export default async function SubjectPage({ params }: { params: Promise<{ offeri
             );
           })}
         </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">Upload Material</h2>
-        <UploadMaterial offeringId={d.id} totalWeeks={d.totalWeeks} />
       </section>
     </div>
   );

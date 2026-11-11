@@ -5,9 +5,9 @@
 // camera as a small inset, or just the camera. The lecturer additionally gets the mic/camera/share controls.
 
 import { useEffect, useRef, useState } from "react";
-import { LiveKitRoom, RoomAudioRenderer, VideoTrack, ControlBar, useTracks, useLocalParticipant, useConnectionState, isTrackReference, type TrackReference } from "@livekit/components-react";
-import { ConnectionState, DisconnectReason, Track } from "livekit-client";
-import { Loader2, Maximize, Minimize, MonitorUp, VideoOff } from "lucide-react";
+import { LiveKitRoom, RoomAudioRenderer, VideoTrack, ControlBar, useTracks, useLocalParticipant, useRemoteParticipants, useIsSpeaking, useConnectionState, isTrackReference, type TrackReference } from "@livekit/components-react";
+import { ConnectionState, DisconnectReason, Track, type Participant } from "livekit-client";
+import { Loader2, Maximize, Minimize, MicOff, MonitorUp, VideoOff } from "lucide-react";
 import "@livekit/components-styles";
 import { configureLiveKitLogging } from "./livekit-logging";
 
@@ -166,28 +166,34 @@ function Frame({ children, full = false, onToggleFullscreen }: { children: React
 
 function Stage({ isTeacher }: { isTeacher: boolean }) {
   const { localParticipant } = useLocalParticipant();
+  const remotes = useRemoteParticipants();
   const tracks = useTracks(
     [
       { source: Track.Source.ScreenShare, withPlaceholder: false },
       { source: Track.Source.Camera, withPlaceholder: false },
+      { source: Track.Source.Microphone, withPlaceholder: false },
     ],
     { onlySubscribed: false },
   )
     .filter(isTrackReference)
-    // A camera switched off stays published but muted, and renders as a black box: treat it as absent.
+    // A camera (or mic) switched off stays published but muted, and a muted camera renders as a black box: treat it as absent.
     .filter((t) => !t.publication.isMuted);
 
+  // The lecturer is the only one whose token can publish (students are watch-only), so that's how we find them.
+  const host: Participant | undefined = isTeacher ? localParticipant : remotes.find((p) => p.permissions?.canPublish);
   const screen = tracks.find((t) => t.source === Track.Source.ScreenShare);
   const camera = tracks.find((t) => t.source === Track.Source.Camera);
   const isMine = (t: TrackReference) => t.participant.identity === localParticipant.identity;
   const cameraLabel = camera ? (isMine(camera) ? "You" : camera.participant.name || "Lecturer") : "";
 
   if (!screen && !camera) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-gray-300">
-        {isTeacher ? "Turn on your camera or share your screen to start presenting." : "Waiting for the lecturer to start presenting…"}
-      </div>
-    );
+    // Like Meet: once the lecturer is in the class they're on stage, camera or not, so students can see who's
+    // talking even when it's audio only. Only before they've joined is there nothing to show.
+    if (!host) {
+      return <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-gray-300">Waiting for the lecturer to join…</div>;
+    }
+    const micOn = tracks.some((t) => t.source === Track.Source.Microphone && t.participant.identity === host.identity);
+    return <AvatarTile participant={host} label={isTeacher ? "You" : host.name || "Lecturer"} micOn={micOn} />;
   }
 
   // No screen share: the camera is the whole stage (Meet's normal tile).
@@ -229,6 +235,31 @@ function Stage({ isTeacher }: { isTeacher: boolean }) {
 }
 
 // LiveKit reconnects by itself when the network blips; say so instead of leaving a frozen picture unexplained.
+// The lecturer with no video: initials in a circle that rings while they speak (Meet's camera-off tile).
+function AvatarTile({ participant, label, micOn }: { participant: Participant; label: string; micOn: boolean }) {
+  const speaking = useIsSpeaking(participant);
+  const name = participant.name || "Lecturer";
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "L";
+  return (
+    <>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          aria-hidden
+          className={`flex aspect-square w-[22%] max-w-40 min-w-16 items-center justify-center rounded-full bg-blue-700 text-[clamp(1.25rem,4vw,3rem)] font-semibold text-white transition-shadow duration-150 ${
+            speaking ? "ring-4 ring-green-400 ring-offset-4 ring-offset-gray-900" : ""
+          }`}
+        >
+          {initials}
+        </div>
+      </div>
+      <NameLabel className="bottom-3 left-3 flex items-center gap-1.5">
+        {!micOn && <MicOff size={12} aria-label="Microphone off" />}
+        {label}
+      </NameLabel>
+    </>
+  );
+}
+
 function ReconnectingNotice() {
   const state = useConnectionState();
   if (state !== ConnectionState.Reconnecting && state !== ConnectionState.SignalReconnecting) return null;

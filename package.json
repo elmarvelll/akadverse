@@ -19,7 +19,7 @@
     "db:elearning:migrate": "prisma migrate dev --schema=prisma/elearning/schema.prisma",
     "db:elearning:studio": "prisma studio --schema=prisma/elearning/schema.prisma",
     "db:elearning:seed": "tsx scripts/elearning-seed.ts",
-    "storage:setup": "tsx scripts/setup-course-material-storage.ts",
+    "storage:setup": "tsx --env-file-if-exists=.env scripts/setup-course-material-storage.ts",
     "ccmas:extract": "python3 scripts/ccmas/extract_ccmas.py",
     "db:ccmas:import": "tsx scripts/ccmas/import-ccmas.ts",
     "sync:vercel-env": "./scripts/sync-vercel-env.sh production"
