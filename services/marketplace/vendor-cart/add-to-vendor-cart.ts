@@ -31,8 +31,8 @@ export async function addToVendorCart(userId: string, input: AddToVendorCartInpu
   if (productId && sideId) throw badRequest("Provide either productId or sideId, not both.");
 
   if (sideId) {
-    const side = await prisma.side.findUnique({ where: { id: sideId }, select: { id: true, stock: true, available: true, business: { select: { type: true, approvalStatus: true, paused: true } } } });
-    if (!side || side.business.type !== "SCHOOL_VENDOR" || side.business.approvalStatus !== "APPROVED") throw notFound("Side not found.");
+    const side = await prisma.side.findUnique({ where: { id: sideId }, select: { id: true, stock: true, available: true, business: { select: { type: true, approvalStatus: true, paused: true, blocked: true } } } });
+    if (!side || side.business.type !== "SCHOOL_VENDOR" || side.business.approvalStatus !== "APPROVED" || side.business.blocked) throw notFound("Side not found.");
     if (side.business.paused || !side.available) throw conflict("This side isn't currently available.");
     const stock = side.stock;
     if (stock !== null && stock === 0) throw conflict("This side is out of stock.");
@@ -49,9 +49,9 @@ export async function addToVendorCart(userId: string, input: AddToVendorCartInpu
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { id: true, stock: true, variants: { select: { id: true } }, business: { select: { type: true, approvalStatus: true, paused: true } } },
+    select: { id: true, stock: true, variants: { select: { id: true } }, business: { select: { type: true, approvalStatus: true, paused: true, blocked: true } } },
   });
-  if (!product || product.business.type !== "SCHOOL_VENDOR" || product.business.approvalStatus !== "APPROVED") throw notFound("Product not found.");
+  if (!product || product.business.type !== "SCHOOL_VENDOR" || product.business.approvalStatus !== "APPROVED" || product.business.blocked) throw notFound("Product not found.");
   if (product.business.paused) throw conflict("This vendor isn't currently accepting orders.");
   if (product.variants.length > 0 && !variantId) {
     throw badRequest("This product has variants — select one before adding it to your cart.");

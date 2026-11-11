@@ -9,6 +9,7 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { notFound, conflict } from "@/lib/service-error";
+import { getPaystackPublicKey } from "@/lib/external/paystack";
 
 export async function initializeFinePayment(businessId: string, fineId: string, email: string | undefined) {
   const fine = await prisma.lateDeliveryFine.findFirst({ where: { id: fineId, businessId } });
@@ -18,5 +19,7 @@ export async function initializeFinePayment(businessId: string, fineId: string, 
   const reference = `AKD-FINE-${Date.now()}-${randomUUID().slice(0, 8)}`;
   await prisma.lateDeliveryFine.update({ where: { id: fineId }, data: { paystackReference: reference } });
 
-  return { reference, amountKobo: Math.round(fine.amount * 100), email };
+  // publicKey: the publishable key for the same Paystack mode the server
+  // verifies in — see src/lib/external/paystack.ts.
+  return { reference, amountKobo: Math.round(fine.amount * 100), email, publicKey: getPaystackPublicKey() };
 }

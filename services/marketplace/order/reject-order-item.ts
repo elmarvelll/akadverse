@@ -9,11 +9,12 @@ import { notFound, badRequest, conflict } from "@/lib/service-error";
 import { recordOrderEvent } from "@/services/marketplace/order/record-order-event";
 import { recomputeOrderDeliveryOutcome } from "@/services/marketplace/order/recompute-order-delivery-outcome";
 import { refundOrderItem } from "@/services/marketplace/escrow/refund-order-item";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function rejectOrderItem(businessId: string, orderId: string, itemId: string, actorUserId: string, reason: string) {
   if (!reason.trim()) throw badRequest("A rejection reason is required.");
 
-  const order = await prisma.order.findFirst({ where: { id: orderId, businessId }, select: { id: true, status: true } });
+  const order = await prisma.order.findFirst({ where: { id: orderId, businessId, ...PAID_ORDER }, select: { id: true, status: true } });
   if (!order) throw notFound("Order not found.");
   if (order.status !== "ACCEPTED") throw conflict("Only items on an accepted order can be individually rejected.");
 

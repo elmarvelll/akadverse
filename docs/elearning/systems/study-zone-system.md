@@ -1,5 +1,7 @@
 # System: Study Zone
 
+> **Update 2026-10-13:** Stewart is no longer a mock: it has a real backend with document upload (`services/e-learning/student/stewart/`, `/api/e-learning/stewart/*`), and a week's documents are chosen from a dropdown. The "Not implemented" section and the `stewart.ts` mock description below are superseded — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+
 ## Purpose
 
 A focused reading workspace for students: pick a registered course, move through its weeks as document tabs, read that week's material, and have **Stewart** (the AI study assistant) beside it. Added 2026-10-02 as a **frontend** feature. Courses, weeks and documents are real data; Stewart is a **mock** and is not connected to any AI service.

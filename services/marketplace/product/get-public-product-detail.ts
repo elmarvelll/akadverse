@@ -27,6 +27,7 @@ export async function getPublicProductDetail(productId: string) {
         select: {
           name: true,
           approvalStatus: true,
+          blocked: true,
           type: true,
           sides: { where: { available: true }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, price: true, available: true, stock: true } },
         },
@@ -39,7 +40,8 @@ export async function getPublicProductDetail(productId: string) {
   // products should be indistinguishable from not existing at all to a
   // buyer browsing by URL, same as any other buyer-visibility gate in
   // this app.
-  if (!product || product.business.approvalStatus !== "APPROVED") throw notFound("Product not found.");
+  // An admin-blocked business is treated the same way.
+  if (!product || product.business.approvalStatus !== "APPROVED" || product.business.blocked) throw notFound("Product not found.");
 
   const { secure_url, business, images, variants, ...rest } = product;
 

@@ -31,7 +31,7 @@ export async function searchProducts(params: { q?: string; categoryIds?: string[
     // services/marketplace/vendor/get-popular-vendor-items.ts) so the two
     // experiences stay visually and logically separate per
     // docs/marketplace/decisions/vendor-extends-business.md.
-    business: { approvalStatus: "APPROVED", type: "BUSINESS" },
+    business: { approvalStatus: "APPROVED", type: "BUSINESS", blocked: false },
     // mode: "insensitive" — Postgres' `contains` is case-sensitive by
     // default (unlike MySQL's default collation, which this search relied
     // on being case-insensitive for free); explicit here so search

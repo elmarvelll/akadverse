@@ -22,10 +22,11 @@ import { recordOrderEvent } from "@/services/marketplace/order/record-order-even
 import { generateOtp, buildOtpExpiry } from "@/lib/otp";
 import { sendEmail, sellerDropoffOtpEmail } from "@/services/marketplace/notifications/email.service";
 import { notifyAdmins } from "@/services/marketplace/notifications/notification.service";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function initiateOrderDropoff(businessId: string, orderId: string, actorUserId: string) {
   const order = await prisma.order.findFirst({
-    where: { id: orderId, businessId },
+    where: { id: orderId, businessId, ...PAID_ORDER },
     select: {
       id: true,
       status: true,

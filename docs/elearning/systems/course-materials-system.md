@@ -1,5 +1,9 @@
 # System: Course Documents (Materials)
 
+> **Update 2026-10-13:** The lecturer upload form now keeps the selected week between uploads and offers "Add (another) document" per week; a week has always been able to hold several documents — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+
+> **Update 2026-11-04:** Supported `NOTES` create a durable AI-ingestion task atomically with the material. A scheduled worker submits it; HTTP 202 means queued. Callbacks confirm completion. Unsupported files remain accessible, and deletion preserves durable AI cleanup. DAPU can review outstanding tasks. Processing requires `AI_INGEST_ENABLED=true`; uncertain submissions await remote reconciliation. See [`ai-ingestion-contract.md`](ai-ingestion-contract.md).
+
 ## Purpose
 
 Lecturers upload course documents (Notes, Assignments, Quizzes) to the weeks of a course they teach; students who are registered for that course open them. Files live in **Supabase Storage**; PostgreSQL (the E-Learning database) holds the metadata and relationships.

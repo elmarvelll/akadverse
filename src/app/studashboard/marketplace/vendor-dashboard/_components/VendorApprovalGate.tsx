@@ -11,8 +11,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
-import { AlertCircle, Clock, Loader2, XCircle } from "lucide-react";
+import { AlertCircle, Ban, Clock, Loader2, XCircle } from "lucide-react";
 import api from "@/lib/axios";
 import VendorSidebar from "./VendorSidebar";
 import { VendorContext } from "./VendorContext";
@@ -35,6 +36,8 @@ export interface VendorProfile {
   accountHolderName: string | null;
   approvalStatus: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "SUSPENDED";
   rejectionReason: string | null;
+  blocked?: boolean;
+  blockedReason?: string | null;
   createdAt: string;
 }
 
@@ -43,6 +46,7 @@ type GateState = "loading" | "approved" | "pending" | "rejected" | "not-found" |
 export default function VendorApprovalGate({ id, children }: { id: string; children: React.ReactNode }) {
   const [state, setState] = useState<GateState>("loading");
   const [vendor, setVendor] = useState<VendorProfile | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +62,21 @@ export default function VendorApprovalGate({ id, children }: { id: string; child
         else setState("pending");
       } catch (err) {
         if (cancelled) return;
-        setState(isAxiosError(err) && err.response?.status === 404 ? "not-found" : "error");
+        const status = isAxiosError(err) ? err.response?.status : undefined;
+        if (status === 404 || status === 400) {
+          // Mirror of BusinessApprovalGate: if this id is a plain Business
+          // the signed-in user owns, send them to its own dashboard instead
+          // of a dead end. Owner-scoped endpoint, so nothing is exposed.
+          try {
+            await api.get(`/marketplace/businesses/${id}`);
+            if (!cancelled) router.replace(`/studashboard/marketplace/business/${id}`);
+            return;
+          } catch {
+            if (!cancelled) setState("not-found");
+            return;
+          }
+        }
+        setState("error");
       }
     };
 
@@ -66,7 +84,7 @@ export default function VendorApprovalGate({ id, children }: { id: string; child
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, router]);
 
   if (state === "loading") {
     return (
@@ -116,10 +134,27 @@ export default function VendorApprovalGate({ id, children }: { id: string; child
 
   return (
     <VendorContext.Provider value={vendor}>
+      {vendor?.blocked && <BlockedBanner name={vendor.name} reason={vendor.blockedReason} />}
       <div className="flex flex-col sm:flex-row gap-8 flex-1 min-w-0">
         <VendorSidebar id={id} />
         <div className="flex-1 min-w-0">{children}</div>
       </div>
     </VendorContext.Provider>
+  );
+}
+
+function BlockedBanner({ name, reason }: { name: string; reason: string | null | undefined }) {
+  return (
+    <div role="alert" className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      <Ban size={18} className="mt-0.5 shrink-0" aria-hidden />
+      <div className="min-w-0">
+        <p className="font-semibold">{name} has been blocked by an administrator.</p>
+        {reason && <p className="mt-0.5 break-words">Reason: {reason}</p>}
+        <p className="mt-1 text-red-700">
+          It is hidden from buyers and can&apos;t receive new orders. Orders already paid for still need to be fulfilled. Check your email
+          for details on contacting support.
+        </p>
+      </div>
+    </div>
   );
 }

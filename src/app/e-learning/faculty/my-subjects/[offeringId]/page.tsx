@@ -11,11 +11,33 @@ import { getOfferingDetail } from "@/services/e-learning/shared/offering-detail"
 import { MATERIAL_LABELS, weekRangeLabel, type MaterialType } from "@/lib/course-materials/config";
 import { ServiceError } from "@/lib/service-error";
 import DocumentLink from "@/app/e-learning/_components/DocumentLink";
+import { isAiIngestConfigured } from "@/services/e-learning/ai-ingest/client";
+import { AI_INGEST_STALE_MS } from "@/services/e-learning/ai-ingest/ingest-material";
 import UploadMaterial from "./UploadMaterial";
 import DeleteMaterialButton from "./DeleteMaterialButton";
+import AiIngestBadge, { type AiBadgeState } from "./AiIngestBadge";
 
-export default async function SubjectPage({ params }: { params: Promise<{ offeringId: string }> }) {
+function aiBadge(m: { aiIngestStatus: string | null; aiIngestUpdatedAt: Date | null; aiIngestError: string | null; aiChunkCount: number | null }, now: number): { state: AiBadgeState; detail: string | null } {
+  switch (m.aiIngestStatus) {
+    case "INGESTED":
+      return { state: "ingested", detail: m.aiChunkCount != null ? `Indexed in ${m.aiChunkCount} chunks` : null };
+    case "UNSUPPORTED_FORMAT":
+      return { state: "unsupported", detail: "AI supports PDF, DOCX and PPTX lecture notes." };
+    case "RETRY_PENDING":
+      return { state: "retry", detail: null };
+    case "FAILED":
+      return { state: "failed", detail: "Administrator review required." };
+    case "PENDING":
+      return now - (m.aiIngestUpdatedAt?.getTime() ?? 0) > AI_INGEST_STALE_MS ? { state: "stuck", detail: "No reply from the AI service yet" } : { state: "pending", detail: null };
+    default:
+      return { state: "none", detail: null };
+  }
+}
+
+export default async function SubjectPage({ params, searchParams }: { params: Promise<{ offeringId: string }>; searchParams: Promise<{ week?: string }> }) {
   const { offeringId } = await params;
+  // ?week=N comes from a week's "Add document" link and only preselects the upload form's week.
+  const requestedWeek = Number((await searchParams).week);
   const session = await requireElearningRole(["faculty"]);
   let role;
   try {
@@ -26,6 +48,12 @@ export default async function SubjectPage({ params }: { params: Promise<{ offeri
   }
   const d = await getOfferingDetail(offeringId);
   const weeks = Array.from({ length: d.totalWeeks }, (_, i) => i + 1);
+  const initialWeek = Number.isInteger(requestedWeek) && requestedWeek >= 1 && requestedWeek <= d.totalWeeks ? requestedWeek : 1;
+  const documentsPerWeek = Object.fromEntries(weeks.map((w) => [w, d.materials.filter((m) => m.startWeek <= w && w <= m.endWeek).length]));
+  // The AI badge appears only once the AI microservice is connected (services/e-learning/ai-ingest/client.ts).
+  const aiEnabled = isAiIngestConfigured();
+  // eslint-disable-next-line react-hooks/purity -- a server component renders once per request; "now" is that request's time
+  const now = Date.now();
 
   return (
     <div className="space-y-8">
@@ -51,9 +79,11 @@ export default async function SubjectPage({ params }: { params: Promise<{ offeri
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section id="upload-material" className="scroll-mt-24 space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">Upload Material</h2>
-        <UploadMaterial offeringId={d.id} totalWeeks={d.totalWeeks} />
+        <p className="text-sm text-gray-800">Each week can hold several documents. Uploading adds a new document — it never replaces one that is already there. To remove a document, use its Delete button below.</p>
+        {/* Keyed by week so following another week's "Add document" link re-seeds the form's week. */}
+        <UploadMaterial key={initialWeek} offeringId={d.id} totalWeeks={d.totalWeeks} initialWeek={initialWeek} documentsPerWeek={documentsPerWeek} />
       </section>
 
       <section className="space-y-3">
@@ -63,7 +93,15 @@ export default async function SubjectPage({ params }: { params: Promise<{ offeri
             const items = d.materials.filter((m) => m.startWeek <= w && w <= m.endWeek);
             return (
               <div key={w} className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-sm font-semibold text-gray-900">Week {w}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Week {w}
+                    {items.length > 0 && <span className="ml-2 font-normal text-gray-700">{items.length} document{items.length === 1 ? "" : "s"}</span>}
+                  </p>
+                  <Link href={`?week=${w}#upload-material`} className="text-sm font-medium text-blue-700 underline">
+                    {items.length === 0 ? "Add a document" : "Add another document"}
+                  </Link>
+                </div>
                 {items.length === 0 ? (
                   <p className="text-sm text-gray-700 mt-1">Nothing uploaded for this week.</p>
                 ) : (
@@ -72,6 +110,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ offeri
                       <li key={m.id} className="flex flex-wrap items-start gap-2 text-sm">
                         <div className="min-w-0 flex-1">
                           <DocumentLink id={m.id} title={`${MATERIAL_LABELS[m.type as MaterialType].singular}: ${m.title}`} mimeType={m.mimeType} fileSize={m.fileSize} detail={weekRangeLabel(m.startWeek, m.endWeek)} />
+                          {aiEnabled && m.type === "NOTES" && <div className="mt-1"><AiIngestBadge offeringId={d.id} materialId={m.id} {...aiBadge(m, now)} /></div>}
                         </div>
                         <DeleteMaterialButton offeringId={d.id} materialId={m.id} />
                       </li>

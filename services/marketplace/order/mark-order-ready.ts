@@ -10,10 +10,11 @@ import { recordOrderEvent } from "@/services/marketplace/order/record-order-even
 import { formatEstimatedDelivery } from "@/services/marketplace/delivery/estimated-delivery.service";
 import { sendEmail, buyerOrderReadyEmail } from "@/services/marketplace/notifications/email.service";
 import { createNotification } from "@/services/marketplace/notifications/notification.service";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function markOrderReady(businessId: string, orderId: string, actorUserId: string) {
   const order = await prisma.order.findFirst({
-    where: { id: orderId, businessId },
+    where: { id: orderId, businessId, ...PAID_ORDER },
     select: {
       id: true,
       status: true,

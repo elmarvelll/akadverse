@@ -1,5 +1,7 @@
 # System: Vendor Delivery (operations)
 
+> **Update 2026-10-13:** Vendors now have recurring delivery weekdays and date-level overrides (`VendorDeliveryDateOverride`, `vendor-delivery-schedule.ts`); capacity counts only paid orders and live reservations; the vendor order list is newest-first — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+
 ## Purpose
 
 The operational layer that moves School Vendor orders from vendor prep, through pickup **at the vendor's own location**, to a student deliverer, to the buyer. There is no central vendor drop-off point — see [`../decisions/vendor-independent-architecture.md`](../decisions/vendor-independent-architecture.md) for the correction from the earlier central-drop-off design. It reuses the existing chain-of-custody OTP primitive (`Delivery`, `DeliveryItem`, `Delivery_x_businesses.pickupOtp`, `confirm-pickup.ts`) unchanged — only *who holds the OTP* changes (the vendor, not a coordinator) and the seller→coordinator drop-off confirmation step simply does not exist for vendor items. See [`delivery-coordinator-system.md`](./delivery-coordinator-system.md) and [`central-dropoff-system.md`](./central-dropoff-system.md) for the Business-side machinery this reuses.

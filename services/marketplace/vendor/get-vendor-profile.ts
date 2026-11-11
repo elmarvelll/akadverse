@@ -33,6 +33,8 @@ export async function getVendorProfile(businessId: string, userId: string) {
     accountHolderName: business.accountHolderName,
     approvalStatus: business.approvalStatus,
     rejectionReason: business.rejectionReason,
+    blocked: business.blocked,
+    blockedReason: business.blocked ? business.blockedReason : null,
     createdAt: business.createdAt.toISOString(),
   };
 }

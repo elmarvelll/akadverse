@@ -9,10 +9,11 @@ import { notFound, conflict } from "@/lib/service-error";
 import { recordOrderEvent } from "@/services/marketplace/order/record-order-event";
 import { sendEmail, sellerOrderProcessingEmail } from "@/services/marketplace/notifications/email.service";
 import { createNotification } from "@/services/marketplace/notifications/notification.service";
+import { PAID_ORDER } from "@/services/marketplace/order/shared/paid-order";
 
 export async function acceptOrder(businessId: string, orderId: string, actorUserId: string) {
   const order = await prisma.order.findFirst({
-    where: { id: orderId, businessId },
+    where: { id: orderId, businessId, ...PAID_ORDER },
     select: { id: true, status: true, userId: true, business: { select: { name: true } }, user: { select: { email: true } } },
   });
   if (!order) throw notFound("Order not found.");

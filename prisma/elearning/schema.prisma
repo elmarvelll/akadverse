@@ -938,6 +938,17 @@ enum CourseMaterialType {
   QUIZ
 }
 
+// Where a material stands with the AI microservice that chunks/embeds it for Stewart
+// (docs/elearning/systems/ai-ingestion-contract.md). Null on CourseMaterial = never sent
+// (service not configured yet, or uploaded before ingestion existed).
+enum AiIngestStatus {
+  PENDING
+  INGESTED
+  FAILED
+  RETRY_PENDING
+  UNSUPPORTED_FORMAT
+}
+
 model CourseMaterial {
   id                       String             @id @default(cuid())
   courseOffering           CourseOffering     @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
@@ -954,6 +965,12 @@ model CourseMaterial {
   fileSize                 Int
   storageBucket            String
   storagePath              String             @unique
+  // AI ingestion (see AiIngestStatus). aiIngestUpdatedAt = when the status last changed (sent / callback received).
+  aiTask                   AiIngestTask?
+  aiIngestStatus           AiIngestStatus?
+  aiIngestError            String?
+  aiChunkCount             Int?
+  aiIngestUpdatedAt        DateTime?
   createdAt                DateTime           @default(now())
   updatedAt                DateTime           @updatedAt
 
@@ -1062,4 +1079,28 @@ model ClassroomPollResponse {
   createdAt     DateTime            @default(now())
 
   @@id([pollId, studentUserId])
+}
+
+// AkadVerse integration outbox only; never contains AI chunks or service-owned jobs.
+// documentId survives material deletion so remote cleanup remains durable.
+model AiIngestTask {
+  id             String          @id @default(cuid())
+  documentId     String          @unique
+  materialId     String?         @unique
+  material       CourseMaterial? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  operation      String          @default("INGEST")
+  state          String          @default("READY")
+  attempts       Int             @default(0)
+  submittedAt    DateTime?
+  callbackAt     DateTime?
+  cleanupUncertain Boolean       @default(false)
+  nextAttemptAt  DateTime        @default(now())
+  lastAttemptAt  DateTime?
+  leaseUntil     DateTime?
+  claimToken     String?
+  lastError      String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([state, nextAttemptAt])
 }

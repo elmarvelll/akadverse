@@ -1,133 +1,253 @@
 // services/marketplace/checkout/confirm-payment-by-reference.ts
 //
-// Idempotent: re-running this for a reference that's already been marked
-// paid (e.g. both the verify call and the webhook fire for the same
-// payment) just does nothing on the second call. Called by
-// src/app/api/marketplace/checkout/verify/route.controller.ts and
-// src/app/api/webhooks/paystack/webhook.controller.ts (via
-// services/marketplace/payment/paystack-webhook.service.ts).
+// Finalizes a checkout that Paystack has CONFIRMED as paid (the caller —
+// reconcile-checkout-payment.ts — has already called verifyTransaction
+// server-side; this file never trusts a browser callback or a webhook body).
+//
+// Before anything is finalized the verified transaction must match what this
+// checkout charged: same reference, same amount in kobo, same currency. A
+// mismatch is never finalized — it's flagged NEEDS_REVIEW for an admin.
+//
+// Idempotent and race-safe for both checkout kinds (Business and School
+// Vendor share this one path):
+//   - PENDING checkout: a conditional PENDING -> PAID update inside the
+//     finalize transaction elects exactly one winner among concurrent
+//     callers (webhook, verify, cancel, reconciler). Only the winner marks the
+//     orders paid, confirms the vendor booking, records events, enqueues the
+//     owner emails (same transaction), clears the cart lines this checkout
+//     covered, and creates in-app notifications. Everyone else gets the
+//     already-finalized result.
+//   - Already-PAID checkout: returns the orders; nothing is re-sent.
+//   - Released checkout (ABANDONED/EXPIRED/FAILED) that turns out to have been
+//     paid after all (browser said "cancelled" but Paystack says success, or
+//     a bank transfer settled late): the stock/capacity it gave back is
+//     re-reserved inside a transaction; if that's no longer possible the
+//     checkout is flagged NEEDS_REVIEW (the buyer paid — an admin must fulfil
+//     or refund), never silently dropped.
+// Stock is not touched for a PENDING checkout — it was reserved at
+// initialize and simply stops being a reservation. So a successful payment
+// results in exactly one deduction.
 
+import { Prisma, type CheckoutPayment } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { VerifiedTransaction } from "@/lib/external/paystack";
+import type { Db } from "@/services/marketplace/order/shared/db";
 import { recordOrderEvent } from "@/services/marketplace/order/record-order-event";
-import { sendEmail, newOrderEmail } from "@/services/marketplace/notifications/email.service";
-import { createNotification } from "@/services/marketplace/notifications/notification.service";
+import { notifyAdmins } from "@/services/marketplace/notifications/notification.service";
+import { ORDER_PAYMENT_STATUS } from "@/services/marketplace/order/shared/paid-order";
+import { resolveVendorCapacity } from "@/services/marketplace/vendor/capacity/resolve-vendor-capacity";
+import { countVendorBookingsForSlot } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
+import { reserveLine } from "./shared/stock-reservation";
+import { logPayment } from "./shared/payment-log";
+import { enqueueOrderPaidEmails, createOrderPaidNotifications } from "./notify-order-paid";
 
-export async function confirmPaymentByReference(reference: string): Promise<{ confirmedOrderIds: string[] }> {
-  const pendingOrders = await prisma.order.findMany({
-    where: { paystackReference: reference, paymentStatus: "pending" },
-    select: {
-      id: true,
-      userId: true,
-      businessId: true,
-      vendorDeliveryBookingId: true,
-      business: { select: { name: true, user: { select: { id: true, email: true } } } },
-      items: { select: { quantity: true, price: true, product: { select: { name: true } }, side: { select: { name: true } } } },
-    },
-  });
+export type ConfirmResult =
+  | { state: "paid"; orderIds: string[]; newlyConfirmed: boolean; emailIds: string[] }
+  | { state: "needs_review"; reason: string };
 
-  if (pendingOrders.length === 0) {
-    return { confirmedOrderIds: [] };
+const RELEASED = ["FAILED", "ABANDONED", "EXPIRED"] as const;
+
+class ReReserveError extends Error {}
+
+export function describeMismatch(payment: Pick<CheckoutPayment, "reference" | "amountKobo" | "currency">, verified: VerifiedTransaction): string | null {
+  if (verified.reference !== payment.reference) return `reference mismatch (Paystack returned ${verified.reference})`;
+  if (verified.amountKobo !== payment.amountKobo) return `amount mismatch (expected ${payment.amountKobo} kobo, Paystack reported ${verified.amountKobo})`;
+  if (verified.currency.toUpperCase() !== payment.currency.toUpperCase()) return `currency mismatch (expected ${payment.currency}, Paystack reported ${verified.currency || "none"})`;
+  return null;
+}
+
+export async function confirmPaymentByReference(payment: CheckoutPayment, verified: VerifiedTransaction): Promise<ConfirmResult> {
+  if (payment.status === "PAID") {
+    return { state: "paid", orderIds: await orderIdsFor(payment.reference), newlyConfirmed: false, emailIds: [] };
   }
+  if (payment.status === "NEEDS_REVIEW") return { state: "needs_review", reason: payment.reviewReason ?? "Under review." };
 
-  // Additive for the Vendor checkout path — a reference shared by
-  // Business-only orders has no matching row here, so this is a pure
-  // no-op for Business checkouts (see
-  // docs/marketplace/decisions/vendor-extends-business.md). Confirmed in
-  // the SAME transaction as the orders below so a booking can never end
-  // up CONFIRMED with its orders still "pending", or vice versa.
-  const vendorDeliveryBookingId = pendingOrders.find((o) => o.vendorDeliveryBookingId)?.vendorDeliveryBookingId ?? null;
+  const mismatch = describeMismatch(payment, verified);
+  if (mismatch) return flagForReview(payment, mismatch, verified.status);
 
-  const now = new Date();
-
-  await prisma.$transaction(async (tx) => {
-    await tx.order.updateMany({
-      where: { id: { in: pendingOrders.map((o) => o.id) } },
-      data: { paymentStatus: "paid" },
-    });
-
-    if (vendorDeliveryBookingId) {
-      await tx.vendorDeliveryBooking.updateMany({
-        where: { id: vendorDeliveryBookingId, status: "PENDING_PAYMENT" },
-        data: { status: "CONFIRMED" },
-      });
-
-      // Vendor orders are never manually accepted/rejected (spec §6) —
-      // payment confirmation IS the acceptance moment. Business orders are
-      // untouched here: they keep starting at PENDING_SELLER and go
-      // through the seller's own accept/reject flow unchanged. See
-      // docs/marketplace/decisions/vendor-independent-architecture.md.
-      const vendorOrderIds = pendingOrders.filter((o) => o.vendorDeliveryBookingId).map((o) => o.id);
-      if (vendorOrderIds.length > 0) {
-        await tx.order.updateMany({
-          where: { id: { in: vendorOrderIds } },
-          data: { status: "ACCEPTED", acceptedAt: now, fulfillmentStatus: "PROCESSING" },
-        });
-        for (const orderId of vendorOrderIds) {
-          await recordOrderEvent(tx, { orderId, type: "SELLER_ACCEPTED", actorType: "system", message: "Vendor orders are auto-accepted on payment — no manual accept step." });
-        }
-      }
-    }
-
-    for (const order of pendingOrders) {
-      await recordOrderEvent(tx, { orderId: order.id, type: "ORDER_CREATED", actorType: "buyer", actorId: order.userId });
-      await recordOrderEvent(tx, { orderId: order.id, type: "SELLER_NOTIFIED", actorType: "system" });
-    }
-  });
-
-  // The cart was fully snapshotted into these orders at initialize time —
-  // clearing it now removes exactly what was just paid for. Scoped to
-  // Business-only cart lines (productId set, product's business is type
-  // BUSINESS) — NOT a blanket delete-everything-for-this-user, since
-  // CartItem is now shared with the Vendor cart (see
-  // docs/marketplace/decisions/vendor-extends-business.md): a user paying
-  // for a Business checkout must not have an unrelated, still-in-progress
-  // Vendor cart silently wiped out. The Vendor checkout path clears its
-  // own cart lines separately, below.
-  const userId = pendingOrders[0].userId;
-  if (vendorDeliveryBookingId) {
-    // Vendor checkout path — clear only vendor-scoped cart lines (Sides,
-    // or Products belonging to a School Vendor), same rationale as the
-    // Business branch below.
-    await prisma.cartItem.deleteMany({
-      where: { userId, OR: [{ sideId: { not: null } }, { product: { business: { type: "SCHOOL_VENDOR" } } }] },
-    });
+  if (payment.status === "PENDING") {
+    const result = await finalizePending(payment, verified);
+    if (result) return result;
   } else {
-    await prisma.cartItem.deleteMany({ where: { userId, productId: { not: null }, product: { business: { type: "BUSINESS" } } } });
+    const result = await finalizeAfterRelease(payment, verified);
+    if (result) return result;
   }
 
-  // Notify each business owner of their new order. Fire-and-forget by
-  // design (see services/marketplace/notifications/email.service.ts) —
-  // a slow/failed email must never hold up payment confirmation.
-  for (const order of pendingOrders) {
-    const owner = order.business.user;
-    const itemSummary = order.items
-      .map((item) => `${item.quantity} x ${item.product?.name ?? item.side?.name ?? "item"} (₦${(item.price * item.quantity).toLocaleString()})`)
-      .join("<br/>");
-    const totalAmount = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    if (owner?.email) {
-      void sendEmail({
-        to: owner.email,
-        ...newOrderEmail({ businessName: order.business.name, orderId: order.id, itemSummary, totalAmount }),
+  // Lost a race — someone else changed this checkout between our read and
+  // our conditional update. Re-read and report whatever it is now; if it was
+  // released in the meantime (cancel racing a late success) try once more
+  // through the re-reserve path.
+  const fresh = await prisma.checkoutPayment.findUniqueOrThrow({ where: { id: payment.id } });
+  if (fresh.status === "PAID") return { state: "paid", orderIds: await orderIdsFor(fresh.reference), newlyConfirmed: false, emailIds: [] };
+  if (fresh.status === "NEEDS_REVIEW") return { state: "needs_review", reason: fresh.reviewReason ?? "Under review." };
+  const retry = (RELEASED as readonly string[]).includes(fresh.status) ? await finalizeAfterRelease(fresh, verified) : null;
+  if (retry) return retry;
+  throw new Error(`Checkout ${fresh.reference} changed state concurrently (${fresh.status}); retry.`);
+}
+
+async function finalizePending(payment: CheckoutPayment, verified: VerifiedTransaction): Promise<ConfirmResult | null> {
+  const now = new Date();
+  const finalized = await prisma.$transaction(
+    async (tx) => {
+      const claim = await tx.checkoutPayment.updateMany({
+        where: { id: payment.id, status: "PENDING" },
+        data: { status: "PAID", paidAt: now, providerStatus: verified.status, providerCheckedAt: now, lastError: null },
       });
+      if (claim.count !== 1) return null;
+      return markOrdersPaid(tx, payment, now);
+    },
+    { maxWait: 10000, timeout: 20000 }
+  );
+  if (!finalized) return null;
+  await afterPaid(payment, finalized.orderIds);
+  logPayment("info", "payment_finalized", { reference: payment.reference, kind: payment.kind, orders: finalized.orderIds.length, path: "pending" });
+  return { state: "paid", orderIds: finalized.orderIds, newlyConfirmed: true, emailIds: finalized.emailIds };
+}
+
+async function finalizeAfterRelease(payment: CheckoutPayment, verified: VerifiedTransaction): Promise<ConfirmResult | null> {
+  const now = new Date();
+  try {
+    const finalized = await prisma.$transaction(
+      async (tx) => {
+        const claim = await tx.checkoutPayment.updateMany({
+          where: { id: payment.id, status: { in: [...RELEASED] } },
+          data: { status: "PAID", paidAt: now, stockReleasedAt: null, providerStatus: verified.status, providerCheckedAt: now, lastError: null },
+        });
+        if (claim.count !== 1) return null;
+
+        const items = await tx.orderItem.findMany({
+          where: { order: { paystackReference: payment.reference } },
+          select: { productId: true, variantId: true, sideId: true, quantity: true, product: { select: { name: true } }, side: { select: { name: true } } },
+        });
+        for (const item of items) {
+          if (!(await reserveLine(tx, item))) {
+            throw new ReReserveError(`${item.product?.name ?? item.side?.name ?? "an item"} no longer has enough stock`);
+          }
+        }
+
+        if (payment.kind === "VENDOR") {
+          const orders = await tx.order.findMany({
+            where: { paystackReference: payment.reference },
+            select: { businessId: true, vendorDeliveryBooking: { select: { slotId: true, bookedFor: true } } },
+          });
+          for (const order of orders) {
+            if (!order.vendorDeliveryBooking) continue;
+            const { slotId, bookedFor } = order.vendorDeliveryBooking;
+            const capacity = await resolveVendorCapacity(order.businessId, slotId, bookedFor, tx);
+            const used = await countVendorBookingsForSlot(order.businessId, slotId, bookedFor, tx, { excludeReference: payment.reference });
+            if (used >= capacity) throw new ReReserveError("the vendor's delivery slot is now fully booked");
+          }
+        }
+
+        return markOrdersPaid(tx, payment, now);
+      },
+      {
+        isolationLevel: payment.kind === "VENDOR" ? Prisma.TransactionIsolationLevel.Serializable : undefined,
+        maxWait: 10000,
+        timeout: 20000,
+      }
+    );
+    if (!finalized) return null;
+    await afterPaid(payment, finalized.orderIds);
+    logPayment("warn", "payment_finalized", { reference: payment.reference, kind: payment.kind, orders: finalized.orderIds.length, path: "late_success" });
+    return { state: "paid", orderIds: finalized.orderIds, newlyConfirmed: true, emailIds: finalized.emailIds };
+  } catch (err) {
+    if (err instanceof ReReserveError) {
+      return flagForReview(payment, `Paid after the reservation was released, and ${err.message}.`, verified.status);
     }
-    if (owner?.id) {
-      // A vendor order's owner dashboard lives at a different route tree
-      // than Business's — see
-      // docs/marketplace/decisions/vendor-independent-architecture.md.
-      const dashboardBase = order.vendorDeliveryBookingId
-        ? `/studashboard/marketplace/vendor-dashboard/${order.businessId}`
-        : `/studashboard/marketplace/business/${order.businessId}`;
-      await createNotification({
-        recipientId: owner.id,
-        type: "NEW_ORDER",
-        title: "New order",
-        message: `You have a new order on ${order.business.name}.`,
-        targetUrl: `${dashboardBase}/orders`,
-        orderId: order.id,
-        businessId: order.businessId,
-      });
+    throw err;
+  }
+}
+
+// Shared by both finalize paths, inside their transaction.
+async function markOrdersPaid(tx: Db, payment: CheckoutPayment, now: Date) {
+  const orders = await tx.order.findMany({ where: { paystackReference: payment.reference }, select: { id: true, userId: true } });
+  const orderIds = orders.map((o) => o.id);
+
+  if (payment.kind === "VENDOR") {
+    // Vendor orders are never manually accepted/rejected — payment
+    // confirmation IS the acceptance (docs/marketplace/decisions/vendor-independent-architecture.md).
+    await tx.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: {
+        paymentStatus: ORDER_PAYMENT_STATUS.PAID,
+        status: "ACCEPTED",
+        acceptedAt: now,
+        fulfillmentStatus: "PROCESSING",
+        cancelledAt: null,
+        cancellationReason: null,
+      },
+    });
+    await tx.vendorDeliveryBooking.updateMany({
+      where: { paystackReference: payment.reference, status: { in: ["PENDING_PAYMENT", "CANCELLED"] } },
+      data: { status: "CONFIRMED" },
+    });
+    for (const orderId of orderIds) {
+      await recordOrderEvent(tx, { orderId, type: "SELLER_ACCEPTED", actorType: "system", message: "Vendor orders are auto-accepted on payment — no manual accept step." });
     }
+  } else {
+    await tx.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: { paymentStatus: ORDER_PAYMENT_STATUS.PAID, status: "PENDING_SELLER", cancelledAt: null, cancellationReason: null },
+    });
   }
 
-  return { confirmedOrderIds: pendingOrders.map((o) => o.id) };
+  for (const order of orders) {
+    await recordOrderEvent(tx, { orderId: order.id, type: "ORDER_CREATED", actorType: "buyer", actorId: order.userId, metadata: { paystackReference: payment.reference } });
+    await recordOrderEvent(tx, { orderId: order.id, type: "SELLER_NOTIFIED", actorType: "system" });
+  }
+
+  const emailIds = await enqueueOrderPaidEmails(tx, orderIds);
+  return { orderIds, emailIds };
+}
+
+// Post-commit, winner only. Failures here are logged, never surfaced: the
+// payment is already final and the owner email is safely in the outbox.
+async function afterPaid(payment: CheckoutPayment, orderIds: string[]) {
+  const cartItemIds = Array.isArray(payment.cartItemIds) ? (payment.cartItemIds as unknown[]).filter((v): v is string => typeof v === "string") : [];
+  try {
+    if (cartItemIds.length > 0) {
+      // Only the lines this checkout covered — anything added to the cart
+      // while the payment popup was open survives.
+      await prisma.cartItem.deleteMany({ where: { userId: payment.userId, id: { in: cartItemIds } } });
+    }
+  } catch (err) {
+    console.error(`[checkout] clearing paid cart lines for ${payment.reference} failed`, err);
+  }
+  await createOrderPaidNotifications(orderIds);
+}
+
+async function flagForReview(payment: CheckoutPayment, reason: string, providerStatus: string): Promise<ConfirmResult> {
+  const now = new Date();
+  const flagged = await prisma.$transaction(async (tx) => {
+    const res = await tx.checkoutPayment.updateMany({
+      where: { id: payment.id, status: { in: ["PENDING", ...RELEASED] } },
+      data: { status: "NEEDS_REVIEW", reviewReason: reason, providerStatus, providerCheckedAt: now },
+    });
+    if (res.count !== 1) return false;
+    await tx.order.updateMany({
+      where: { paystackReference: payment.reference, paymentStatus: { not: ORDER_PAYMENT_STATUS.PAID } },
+      data: { paymentStatus: ORDER_PAYMENT_STATUS.NEEDS_REVIEW },
+    });
+    return true;
+  });
+
+  if (flagged) {
+    logPayment("error", "payment_needs_review", { reference: payment.reference, kind: payment.kind, reason });
+    try {
+      await notifyAdmins({
+        type: "PAYMENT_NEEDS_REVIEW",
+        title: "Payment needs review",
+        message: `Checkout ${payment.reference} was paid but couldn't be completed automatically: ${reason}`,
+      });
+    } catch (err) {
+      console.error(`[checkout] admin notification for ${payment.reference} failed`, err);
+    }
+  }
+  return { state: "needs_review", reason };
+}
+
+async function orderIdsFor(reference: string): Promise<string[]> {
+  const orders = await prisma.order.findMany({ where: { paystackReference: reference }, select: { id: true } });
+  return orders.map((o) => o.id);
 }

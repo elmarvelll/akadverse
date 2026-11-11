@@ -38,6 +38,8 @@ import { calculateVendorFees } from "./shared/vendor-fees";
 import { resolveVendorCapacity } from "@/services/marketplace/vendor/capacity/resolve-vendor-capacity";
 import { countVendorBookingsForSlot } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
 import { EmptyCartError } from "@/services/marketplace/checkout/shared/empty-cart-error";
+import { reserveLine } from "@/services/marketplace/checkout/shared/stock-reservation";
+import { CHECKOUT_CURRENCY, reservationExpiry, toKobo } from "@/services/marketplace/checkout/shared/checkout-payment-config";
 
 export { EmptyCartError };
 
@@ -136,29 +138,36 @@ export async function createVendorOrdersForCheckout(userId: string, params: { sl
         const variantById = new Map(variants.map((v) => [v.id, v]));
         const productById = new Map(products.map((p) => [p.id, p]));
 
+        // Stock is RESERVED here (conditional decrement — see
+        // checkout/shared/stock-reservation.ts) and released exactly once if
+        // this checkout is cancelled, fails, or expires
+        // (checkout/release-checkout-reservation.ts). Same rule as the
+        // Business checkout, through the same helper.
         const revalidatedPrices = new Map<string, number>();
         for (const item of cartItems) {
+          if (!Number.isInteger(item.quantity) || item.quantity < 1) throw conflict(`${item.name} has an invalid quantity.`);
+          let price: number;
           if (item.kind === "side") {
             const side = sideById.get(item.sideId!);
             if (!side || !side.available) throw conflict(`${item.name} is no longer available.`);
-            if (side.stock !== null) {
-              if (side.stock < item.quantity) throw conflict(`${item.name} no longer has enough stock.`);
-              await tx.side.update({ where: { id: item.sideId! }, data: { stock: { decrement: item.quantity } } });
-            }
-            revalidatedPrices.set(item.id, side.price);
+            price = side.price;
           } else if (item.variantId) {
             const variant = variantById.get(item.variantId);
-            if (!variant || variant.stock < item.quantity) {
-              throw conflict(`${item.name}${item.variantName ? ` (${item.variantName})` : ""} no longer has enough stock.`);
-            }
-            await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { decrement: item.quantity } } });
-            revalidatedPrices.set(item.id, variant.price);
+            if (!variant) throw conflict(`${item.name}${item.variantName ? ` (${item.variantName})` : ""} is no longer available.`);
+            price = variant.price;
           } else {
             const product = productById.get(item.productId!);
-            if (!product || product.stock < item.quantity) throw conflict(`${item.name} no longer has enough stock.`);
-            await tx.product.update({ where: { id: item.productId! }, data: { stock: { decrement: item.quantity } } });
-            revalidatedPrices.set(item.id, product.price);
+            if (!product) throw conflict(`${item.name} is no longer available.`);
+            price = product.price;
           }
+          const reserved = await reserveLine(tx, {
+            productId: item.kind === "side" ? null : (item.productId ?? null),
+            variantId: item.kind === "side" ? null : (item.variantId ?? null),
+            sideId: item.kind === "side" ? item.sideId! : null,
+            quantity: item.quantity,
+          });
+          if (!reserved) throw conflict(`${item.name}${item.variantName ? ` (${item.variantName})` : ""} no longer has enough stock.`);
+          revalidatedPrices.set(item.id, price);
         }
         // Fee calculation, grouping, and every downstream total use the
         // revalidated prices, not the (possibly stale) cart snapshot.
@@ -175,7 +184,7 @@ export async function createVendorOrdersForCheckout(userId: string, params: { sl
         // query instead of one findUnique per distinct business.
         const businesses = await tx.business.findMany({
           where: { id: { in: Array.from(byBusiness.keys()) } },
-          select: { id: true, approvalStatus: true, type: true, paused: true, name: true },
+          select: { id: true, approvalStatus: true, type: true, paused: true, blocked: true, name: true },
         });
         const businessById = new Map(businesses.map((b) => [b.id, b]));
 
@@ -184,7 +193,8 @@ export async function createVendorOrdersForCheckout(userId: string, params: { sl
           if (!business || business.type !== "SCHOOL_VENDOR" || business.approvalStatus !== "APPROVED") {
             throw conflict("One of the vendors in your cart is no longer available.");
           }
-          if (business.paused) throw conflict(`${business.name} isn't currently accepting orders.`);
+          // Paused (vendor's own toggle) or admin-blocked: no new bookings.
+          if (business.paused || business.blocked) throw conflict(`${business.name} isn't currently accepting orders.`);
 
           // Vendor's own per-timeframe, per-DATE order capacity (spec
           // §4-7) — a completely independent check from
@@ -238,7 +248,24 @@ export async function createVendorOrdersForCheckout(userId: string, params: { sl
           orders.push(order);
         }
 
-        return { reference, totalAmount: fees.total, orderIds: orders.map((o) => o.id), bookingId: booking.id };
+        const amountKobo = toKobo(fees.total);
+        if (amountKobo <= 0) throw conflict("This order has nothing to pay for.");
+        // The payment attempt — see CheckoutPayment in prisma/schema.prisma.
+        // The Orders above stay hidden "pending" rows, and the booking stays
+        // PENDING_PAYMENT, until Paystack confirms this exact amount.
+        await tx.checkoutPayment.create({
+          data: {
+            reference,
+            userId,
+            kind: "VENDOR",
+            amountKobo,
+            currency: CHECKOUT_CURRENCY,
+            cartItemIds: cartItems.map((item) => item.id),
+            expiresAt: reservationExpiry(),
+          },
+        });
+
+        return { reference, totalAmount: fees.total, amountKobo, orderIds: orders.map((o) => o.id), bookingId: booking.id };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,

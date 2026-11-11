@@ -25,6 +25,7 @@ import { VENDOR_CATEGORIES } from "@/types/vendor";
 import ImageUploadField from "../../business/_components/ImageUploadField";
 import BankDetailsFields from "../../business/_components/BankDetailsFields";
 import DeliveryDatePicker, { todayIsoDate } from "../../vendor-checkout/_components/DeliveryDatePicker";
+import DeliveryScheduleSection from "../_components/DeliveryScheduleSection";
 import { useVendorContext } from "../_components/VendorContext";
 import type { VendorProfile } from "../_components/VendorApprovalGate";
 
@@ -69,6 +70,10 @@ interface CapacityRow {
   overrideCapacity: number | null;
   capacity: number;
   booked: number;
+  paid?: number;
+  reserved?: number;
+  // False when you don't deliver on the selected date at all.
+  dateAvailable?: boolean;
 }
 
 // Editing a slot's capacity NEVER sends a request while the vendor is
@@ -78,7 +83,7 @@ interface CapacityRow {
 // date (defaults to today, same Today/Tomorrow/custom picker as checkout)
 // and edits/saves capacity for that date's override, falling back to the
 // "Default" recurring value when no override exists yet.
-function CapacitySection({ businessId }: { businessId: string }) {
+function CapacitySection({ businessId, reloadKey = 0 }: { businessId: string; reloadKey?: number }) {
   const [date, setDate] = useState(() => todayIsoDate());
   const [rows, setRows] = useState<CapacityRow[]>([]);
   const [draft, setDraft] = useState<Record<string, number>>({});
@@ -106,7 +111,22 @@ function CapacitySection({ businessId }: { businessId: string }) {
     };
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, date]);
+  }, [businessId, date, reloadKey]);
+
+  // Drops this date's override for one timeframe so it uses the default again.
+  const resetToDefault = async (slotId: string) => {
+    if (saveState === "saving") return;
+    setSaveState("saving");
+    setSaveError("");
+    try {
+      await api.delete(`/marketplace/vendor/${businessId}/capacity`, { params: { slotId, date } });
+      await load(date);
+    } catch {
+      setSaveError("Couldn't reset that timeframe. Please try again.");
+    } finally {
+      setSaveState("idle");
+    }
+  };
 
   const isDirty = rows.some((row) => draft[row.slotId] !== row.capacity);
 
@@ -142,6 +162,14 @@ function CapacitySection({ businessId }: { businessId: string }) {
   return (
     <div className="space-y-4">
       <DeliveryDatePicker value={date} onChange={setDate} disabled={saveState === "saving"} />
+      <p className="text-xs text-gray-500">
+        Saving here sets the capacity for <strong>this date only</strong>. Your default for other days is not changed.
+      </p>
+      {rows.length > 0 && rows[0].dateAvailable === false && (
+        <p role="status" className="text-xs p-2.5 rounded-lg bg-amber-50 text-amber-800">
+          You don&apos;t deliver on this date (see your delivery schedule above), so customers can&apos;t book it whatever the numbers below say.
+        </p>
+      )}
 
       <div className="space-y-2">
         {rows.map((row) => {
@@ -152,9 +180,16 @@ function CapacitySection({ businessId }: { businessId: string }) {
               <div className="min-w-[140px]">
                 <p className="font-medium text-gray-900 text-sm">{row.slotLabel}</p>
                 <p className="text-xs text-gray-500">
-                  {row.booked} booked · {remaining} remaining
+                  {row.paid ?? row.booked} paid
+                  {(row.reserved ?? 0) > 0 && ` · ${row.reserved} awaiting payment`} · {remaining} remaining
                   {row.overrideCapacity === null && <span className="text-gray-400"> · using default ({row.defaultCapacity})</span>}
                 </p>
+                {row.booked > value && <p className="text-xs text-amber-700">Over capacity — existing orders are kept; new bookings are stopped.</p>}
+                {row.overrideCapacity !== null && (
+                  <button type="button" disabled={saveState === "saving"} onClick={() => resetToDefault(row.slotId)} className="text-xs font-semibold text-purple-700 hover:text-purple-900 disabled:opacity-50">
+                    Use default ({row.defaultCapacity})
+                  </button>
+                )}
               </div>
               <label className="flex items-center gap-1.5 text-xs text-gray-500 ml-auto">
                 Max orders
@@ -197,6 +232,8 @@ function CapacitySection({ businessId }: { businessId: string }) {
 export default function VendorProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const vendor = useVendorContext();
+  // Bumped when the schedule changes, so the capacity section re-reads availability.
+  const [scheduleVersion, setScheduleVersion] = useState(0);
   const [form, setForm] = useState<VendorFormValues | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -416,12 +453,18 @@ export default function VendorProfilePage({ params }: { params: Promise<{ id: st
       )}
 
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <h2 className="font-semibold text-gray-900 mb-1">Delivery Schedule</h2>
+        <p className="text-xs text-gray-500 mb-4">Choose the days you deliver, and close or add individual dates.</p>
+        <DeliveryScheduleSection businessId={id} onChanged={() => setScheduleVersion((v) => v + 1)} />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <h2 className="font-semibold text-gray-900 mb-1">Set Product Deliveries Per Time Range</h2>
         <p className="text-xs text-gray-500 mb-4">
           The maximum number of customer orders you can fulfil during each delivery timeframe. This is independent
           of deliverer scheduling — it&apos;s only about how many orders you can prepare.
         </p>
-        <CapacitySection businessId={id} />
+        <CapacitySection businessId={id} reloadKey={scheduleVersion} />
       </div>
 
       {current.approvalStatus === "APPROVED" && (

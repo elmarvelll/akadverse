@@ -23,13 +23,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { isAxiosError } from "axios";
-import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Loader2, MapPin, ShoppingBag } from "lucide-react";
-import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
+import { AlertCircle, CheckCircle2, Clock, Loader2, MapPin, ShoppingBag } from "lucide-react";
 import api from "@/lib/axios";
-import { loadPaystackScript } from "../checkout/_components/loadPaystackScript";
+import { confirmPayment, openPaystackCheckout, reportCancelled } from "../checkout/_components/paystackCheckout";
 import DeliveryDatePicker, { todayIsoDate } from "./_components/DeliveryDatePicker";
 import type { VendorCartLineItem } from "@/types/vendor-cart";
 import type { InitializeCheckoutResponse } from "@/types/checkout";
+import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
 
 const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 });
 
@@ -56,6 +56,8 @@ interface VendorCheckoutSummary {
   fees: VendorFees;
   slots: VendorSlot[];
   date: string;
+  // Which dates in the booking window can be chosen (see calculate-vendor-checkout-summary.ts).
+  dates?: { date: string; selectable: boolean; reason: string }[];
 }
 
 type PageStatus = "loading" | "ready" | "empty" | "error" | "paying" | "verifying" | "success" | "payment-error";
@@ -70,7 +72,11 @@ export default function VendorCheckoutPage() {
   // date changes — the rest of the page (items, location, fees) stays put
   // so switching dates doesn't jump the whole layout (spec §1/§30).
   const [slotsRefreshing, setSlotsRefreshing] = useState(false);
+  // Bumped to re-fetch availability after a cancelled payment releases its reservation.
+  const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState("");
+  // Neutral (non-error) feedback, e.g. after the buyer closes the payment popup.
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +88,18 @@ export default function VendorCheckoutPage() {
         });
         if (cancelled) return;
         setSummary(res.data);
+        // If the date being shown can't be booked (vendor closed that day,
+        // fully booked, today's windows have passed), move to the first date
+        // that can — the effect re-runs for it. The server re-validates the
+        // final choice at initialize regardless.
+        const offered = res.data.dates ?? [];
+        const current = offered.find((d) => d.date === res.data.date);
+        const firstOpen = offered.find((d) => d.selectable);
+        if (current && !current.selectable && firstOpen && res.data.items.length > 0) {
+          setDeliveryDate(firstOpen.date);
+          setSelectedSlotId(null);
+          return;
+        }
         setSelectedSlotId((current) => (res.data.slots.some((s) => s.id === current) ? current : null));
         setStatus((current) => (current === "loading" ? (res.data.items.length === 0 ? "empty" : "ready") : current));
       } catch {
@@ -95,7 +113,7 @@ export default function VendorCheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [deliveryDate]);
+  }, [deliveryDate, refreshKey]);
 
   const handleDateChange = (nextDate: string) => {
     if (nextDate === deliveryDate) return;
@@ -114,33 +132,21 @@ export default function VendorCheckoutPage() {
     }
 
     setError("");
+    setNotice("");
     setStatus("paying");
 
     try {
-      await loadPaystackScript();
       const res = await api.post<InitializeCheckoutResponse>("/marketplace/vendor-checkout/initialize", {
         slotId: selectedSlotId,
         location,
         date: deliveryDate,
       });
-      const { reference, amountKobo, email } = res.data;
+      const init = res.data;
 
-      const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
-      if (!publicKey || !window.PaystackPop) {
-        throw new Error("Payment isn't available right now.");
-      }
-
-      window.PaystackPop.setup({
-        key: publicKey,
-        email,
-        amount: amountKobo,
-        ref: reference,
-        currency: "NGN",
-        onClose: () => setStatus("ready"),
-        callback: (response) => {
-          verifyPayment(response.reference);
-        },
-      }).openIframe();
+      await openPaystackCheckout(init, (outcome) => {
+        if (outcome === "success") verifyPayment(init.reference);
+        else handlePopupClosed(init.reference);
+      });
     } catch (err) {
       const message =
         (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) ||
@@ -150,33 +156,43 @@ export default function VendorCheckoutPage() {
     }
   };
 
-  // Reuses the exact same verify endpoint the Business checkout calls —
-  // confirmPaymentByReference.ts branches internally on whether the
-  // reference has a vendor booking. See this file's own top comment.
+  // The popup reported success. That's only the browser's word — the server
+  // verifies with Paystack (amount, currency, reference) before any order
+  // becomes real. See _components/paystackCheckout.ts.
   const verifyPayment = async (reference: string) => {
     setStatus("verifying");
-    try {
-      await api.post("/marketplace/checkout/verify", { reference });
+    const outcome = await confirmPayment(reference);
+    if (outcome.kind === "success") {
       setStatus("success");
-    } catch (err) {
-      const message =
-        (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "We couldn't confirm your payment.";
-      setError(message);
+    } else if (outcome.kind === "unconfirmed") {
+      setNotice("");
+      setError(`${outcome.message} If you were charged, your order will be confirmed automatically — check My Orders shortly before paying again.`);
+      setStatus("payment-error");
+    } else {
+      setNotice("");
+      setError(outcome.message);
       setStatus("payment-error");
     }
   };
 
+  // The popup was closed without paying. The server checks with Paystack
+  // and releases what this attempt reserved; the cart is never touched, so
+  // the buyer can simply try again.
+  const handlePopupClosed = async (reference: string) => {
+    setStatus("verifying");
+    const result = await reportCancelled(reference);
+    if (result === "paid") {
+      setStatus("success");
+      return;
+    }
+    setError("");
+    setNotice("Payment cancelled — you haven't been charged and your cart is unchanged.");
+    setStatus("ready");
+    setRefreshKey((k) => k + 1);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNavbar />
-      <div className="pt-16 max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <Link
-          href="/studashboard/marketplace"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition mb-6"
-        >
-          <ArrowLeft size={16} />
-          Back to Marketplace
-        </Link>
+    <MarketplacePageShell width="2xl">
 
         {status === "loading" && (
           <div className="flex justify-center py-24">
@@ -273,6 +289,7 @@ export default function VendorCheckoutPage() {
                 value={deliveryDate}
                 onChange={handleDateChange}
                 disabled={status === "paying" || status === "verifying"}
+                dates={summary.dates}
               />
             </section>
 
@@ -329,7 +346,8 @@ export default function VendorCheckoutPage() {
               </div>
             </section>
 
-            {error && <div className="text-sm p-3 rounded-lg text-red-700 bg-red-100 mb-4">{error}</div>}
+            {error && <div role="alert" className="text-sm p-3 rounded-lg text-red-700 bg-red-100 mb-4">{error}</div>}
+            {notice && !error && <div role="status" className="text-sm p-3 rounded-lg text-gray-700 bg-gray-100 mb-4">{notice}</div>}
 
             <button
               type="button"
@@ -342,7 +360,6 @@ export default function VendorCheckoutPage() {
             </button>
           </>
         )}
-      </div>
-    </div>
+    </MarketplacePageShell>
   );
 }

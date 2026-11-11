@@ -7,6 +7,7 @@
 //                       create the database record. If that write fails the uploaded object is removed.
 // One CourseMaterial row covers a whole week range (startWeek..endWeek).
 
+import { eligibility } from "@/services/e-learning/ai-ingest/policy";
 import { randomUUID } from "node:crypto";
 import { elearningDb } from "@/lib/db/elearning";
 import { badRequest, conflict, forbidden } from "@/lib/service-error";
@@ -69,9 +70,11 @@ export async function confirmUpload(facultyUserId: string, meta: UploadMeta & { 
     throw badRequest(`That file is too large. The maximum is ${MAX_MATERIAL_MB} MB per file.`);
   }
 
+  const materialId = randomUUID();
   try {
     return await elearningDb.courseMaterial.create({
       data: {
+        id: materialId,
         courseOfferingId: o.id,
         uploadedByFacultyUserId: facultyUserId,
         title,
@@ -84,6 +87,10 @@ export async function confirmUpload(facultyUserId: string, meta: UploadMeta & { 
         fileSize: actual,
         storageBucket: BUCKET(),
         storagePath: meta.path,
+        // Nested create is atomic with the material; no network call can fail the upload.
+        ...(eligibility({ type: meta.type, mimeType: CANONICAL_MIME[extensionOf(meta.fileName)], fileSize: actual }) === "eligible"
+          ? { aiIngestStatus: "PENDING", aiIngestUpdatedAt: new Date(), aiTask: { create: { documentId: materialId } } }
+          : meta.type === "NOTES" ? { aiIngestStatus: "UNSUPPORTED_FORMAT" } : {}),
       },
     });
   } catch (e) {
