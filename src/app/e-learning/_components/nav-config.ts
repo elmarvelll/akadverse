@@ -28,6 +28,7 @@ import {
   CalendarClock,
   CalendarCheck2,
   Library,
+  Video,
 } from "lucide-react";
 
 // Where each role's dashboard lives. The header's AkadVerse logo uses this (always the CURRENT role's dashboard), and so do the nav
@@ -89,6 +90,7 @@ export function getStudentNav(): NavSection[] {
       ],
     },
     { label: "Study Zone", icon: Library, href: "/e-learning/student/study-zone", activeOnSubpaths: true },
+    { label: "Classroom", icon: Video, href: "/e-learning/student/classroom", activeOnSubpaths: true },
     {
       label: "Records & Analytics",
       icon: GraduationCap,
@@ -105,6 +107,7 @@ export function getFacultyNav(isLevelAdviser: boolean): NavSection[] {
   const nav: NavSection[] = [
     { label: "Dashboard", icon: LayoutDashboard, href: DASHBOARD_HREF.faculty },
     { label: "My Subjects", icon: BookOpen, href: "/e-learning/faculty/my-subjects" },
+    { label: "Classroom", icon: Video, href: "/e-learning/faculty/classroom", activeOnSubpaths: true },
     { label: "Results Record", icon: FileText, href: "/e-learning/faculty/results" },
   ];
 

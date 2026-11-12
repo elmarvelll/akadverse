@@ -6,7 +6,7 @@
 import { elearningDb } from "@/lib/db/elearning";
 import { forbidden, notFound } from "@/lib/service-error";
 
-export const BUCKET = () => process.env.SUPABASE_COURSE_MATERIALS_BUCKET ?? "Akadverdse documents";
+export const BUCKET = () => process.env.SUPABASE_COURSE_MATERIALS_BUCKET || "Akadverdse documents";
 
 export const slug = (s: string) => s.replace(/[^\w-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || "x";
 
