@@ -1,0 +1,55 @@
+{
+  "answer": "Intra-group conflict occurs within a single group when members hold differing opinions or ideas regarding how to achieve their common goals. Essentially, while the group is united by a shared objective, the internal disagreement over the \"how\" or the \"what\" creates friction among the members. This type of conflict can lead to divisions within the group and ultimately hinder progress toward achieving those collective objectives (note 1.pdf).\n\nTo understand this, you can think of it like a sports team where every player wants to win the championship (the common goal), but some teammates argue that the team should focus on a defensive strategy while others insist on an aggressive offensive strategy. Because they cannot agree on the method to reach their goal, the team becomes divided, which may prevent them from playing effectively and winning the game.\n\n[AI-GENERATED EXAMPLE]\nImagine a student project group tasked with creating a presentation. All members want to get an 'A' grade. However, two members want to use a slide-heavy format to explain the data, while the other two members want to use a video-based format. Because they cannot agree on the best way to present their research, they spend their meeting time arguing about the format instead of actually completing the work, which slows down their progress and creates tension within the group.\n\nThe provided materials do not offer a step-by-step process for resolving intra-group conflict, though they do note generally that conflicts are best resolved when \"nibbed in the bud\" at an early stage before they escalate (note 1.pdf).",
+  "sources": [
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Class conflict: Conflict that occurs among different social classes due to inequality, exploitation, or oppression.\nIntergroup conflict arises when there is tension between two or more groups of peopl"
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Conflict Types Cont’d\n\n1. Interpersonal conflict: This type of conflict occurs between two or more individuals who have different opinions, ideas, or beliefs about a particular issue.\n\n2. Intrapersona"
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "5. Environmental conflict: This type of conflict arises due to disagreements over the use and management of natural resources and the environment.\n\nDifferent Theories of Conflict \n\nClassical Conflict "
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Clashing personality styles, language and cultures as well as gender conflict often lead to harassment or discrimination charges. \n\n\nConflict Types Cont’d\n\n\nThis conflict is evident in office politics"
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Modern Conflict Theory (C. Wright Mills)\nFocuses on unequal distribution of power and resources within social structures, highlighting how elites maintain control opposed to the interests of the broad"
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "PRESENTER\nNICK ESSIEN \n\n16x9\n\n4x3\nTypes and Theories of Conflict \nOutline of Presentation\n Introduction \nConceptual Clarification\nTYPES/FORMS OF CONFLICT\nTHEORIES OF CONFLICT \nConcluding Remarks\n\n\n\nIn"
+    },
+    {
+      "document_id": null,
+      "title": "AI-generated example",
+      "material_type": "AI_GENERATED",
+      "chunk_preview": "[AI-GENERATED EXAMPLE] Imagine a student project group tasked with creating a presentation. All members want to get an 'A' grade. However, two members want to use a slide-heavy format to explain the data, while the other tw",
+      "source_type": "ai_generated",
+      "attachment_id": null,
+      "filename": null
+    }
+  ],
+  "retrieval_info": {
+    "chunks_available": 6,
+    "chunks_above_threshold": 6,
+    "similarity_threshold": 0.4
+  }
+}

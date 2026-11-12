@@ -25,7 +25,7 @@ export interface RegisteredCourse {
   lecturerName: string | null;
 }
 
-export async function getRegisteredCourses(studentUserId: string, academicContext: CurrentAcademicContext): Promise<RegisteredCourse[]> {
+export async function getRegisteredCourses(studentUserId: string, academicContext: CurrentAcademicContext, { includeLecturerNames = true }: { includeLecturerNames?: boolean } = {}): Promise<RegisteredCourse[]> {
   const registration = await elearningDb.courseRegistration.findUnique({
     where: { studentUserId_academicSessionId_semesterId: { studentUserId, academicSessionId: academicContext.session!.id, semesterId: academicContext.semester!.id } },
     include: { items: { include: { course: { include: { department: true } } }, orderBy: { course: { code: "asc" } } } },
@@ -47,7 +47,7 @@ export async function getRegisteredCourses(studentUserId: string, academicContex
     },
   });
   const placementByCourseId = new Map(placements.map((p) => [p.courseId, p]));
-  const identities = await resolveIdentities(placements.flatMap((p) => p.offering?.lecturers.map((l) => l.facultyUserId) ?? []));
+  const identities = await resolveIdentities(includeLecturerNames ? placements.flatMap((p) => p.offering?.lecturers.map((l) => l.facultyUserId) ?? []) : []);
 
   return courses.map((course) => {
     const placement = placementByCourseId.get(course.id);
@@ -64,7 +64,7 @@ export async function getRegisteredCourses(studentUserId: string, academicContex
       sessionName: academicContext.session!.name,
       semesterName: academicContext.semester!.name,
       departmentName: course.department?.name ?? "Shared",
-      lecturerName: lecturers.length ? lecturers.map((l) => fullName(identities.get(l.facultyUserId))).join(", ") : null,
+      lecturerName: includeLecturerNames && lecturers.length ? lecturers.map((l) => fullName(identities.get(l.facultyUserId))).join(", ") : null,
     };
   });
 }

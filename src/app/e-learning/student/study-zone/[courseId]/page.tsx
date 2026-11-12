@@ -1,3 +1,4 @@
+import "katex/dist/katex.min.css";
 // src/app/e-learning/student/study-zone/[courseId]/page.tsx
 //
 // One course's study workspace (week tabs · document viewer · Stewart). Authorization: the course must be in THIS

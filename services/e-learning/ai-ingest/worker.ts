@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { elearningDb } from "@/lib/db/elearning";
 import { createSignedDownloadUrl } from "@/lib/storage/supabase-storage";
-import { AiServiceError, aiIngestCallbackUrl, isAiIngestConfigured, requestDelete, requestIngest } from "./client";
-import { AI_INGEST_STALE_MS, buildIngestPayload, loadMaterialForIngestion } from "./ingest-material";
+import { AiServiceError, aiIngestCallbackUrl, isAiIngestConfigured, requestDelete, requestIngest, requestDocumentStatus } from "./client";
+import { buildIngestPayload, loadMaterialForIngestion } from "./ingest-material";
 import { eligibility, positiveSetting, retryDelay } from "./policy";
 
 // A lease outlives our 15s HTTP timeout. Never resubmit an expired POST claim:
@@ -11,11 +11,10 @@ const LEASE_MS = 90_000;
 export async function runAiIngestSweep(limit = 10) {
   if (process.env.AI_INGEST_ENABLED !== "true") return { processed: 0, disabled: true };
   const now = new Date();
+  const deadline = Date.now() + 240_000;
+  const reconciled = await reconcileAiIngestion(limit, deadline);
   await elearningDb.aiIngestTask.updateMany({
-    where: { operation: "INGEST", OR: [
-      { state: "CLAIMED", leaseUntil: { lt: now } },
-      { state: "ACCEPTED", submittedAt: { lt: new Date(+now - AI_INGEST_STALE_MS) } },
-    ] },
+    where: { operation: "INGEST", state: "CLAIMED", leaseUntil: { lt: now } },
     data: { state: "ATTENTION", lastError: "Submission or callback outcome uncertain. Remote reconciliation required.", claimToken: null, leaseUntil: null },
   });
   await elearningDb.aiIngestTask.updateMany({
@@ -27,7 +26,6 @@ export async function runAiIngestSweep(limit = 10) {
     orderBy: { nextAttemptAt: "asc" }, take: Math.min(20, Math.max(1, limit)),
   });
   let processed = 0;
-  const deadline = Date.now() + 240_000;
   for (const task of candidates) {
     if (Date.now() > deadline) break;
     const token = randomUUID();
@@ -66,6 +64,7 @@ export async function runAiIngestSweep(limit = 10) {
       }
       await elearningDb.aiIngestTask.updateMany({ where: { id: task.id, claimToken: token, operation: task.operation, callbackAt: task.operation === "INGEST" ? null : undefined },
         data: { state: task.operation === "DELETE" ? (task.cleanupUncertain ? "ATTENTION" : "DONE") : "ACCEPTED", claimToken: null, leaseUntil: null,
+          ...(task.operation === "INGEST" ? { nextAttemptAt: new Date(Date.now() + 10_000) } : {}),
           lastError: task.operation === "DELETE" && task.cleanupUncertain ? "Remote records deleted, but an unfinished AI worker may recreate them. Confirm cancellation with AI engineer." : null },
       });
       console.info("[ai-ingest] accepted", { documentId: task.documentId, operation: task.operation });
@@ -95,7 +94,7 @@ export async function runAiIngestSweep(limit = 10) {
       console.warn("[ai-ingest] task failed", { documentId: task.documentId, retry, status });
     }
   }
-  return { processed };
+  return { processed, reconciled };
 }
 
 // DAPU action only. Existing remote identities cannot be reset under the v1 API.
@@ -105,4 +104,48 @@ export async function retryReviewedTask(id: string) {
     data: { state: "READY", attempts: 0, nextAttemptAt: new Date(), lastError: null },
   });
   if (!changed.count) throw new Error("This task needs remote reconciliation; safe re-ingestion is not supported by the AI API.");
+}
+
+// Reuse durable task scheduling fields; a poll never re-submits an ingestion job.
+export async function reconcileAiIngestion(limit = 10, deadline = Date.now() + 240_000) {
+  const now = new Date();
+  const tasks = await elearningDb.aiIngestTask.findMany({ where: {
+    operation: "INGEST", materialId: { not: null }, submittedAt: { not: null }, callbackAt: null,
+    state: { in: ["ACCEPTED", "ATTENTION"] }, nextAttemptAt: { lte: now },
+    OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
+  }, orderBy: { nextAttemptAt: "asc" }, take: Math.min(20, Math.max(1, limit)) });
+  let processed = 0;
+  for (const task of tasks) {
+    if (Date.now() > deadline) break;
+    const token = randomUUID();
+    const claim = await elearningDb.aiIngestTask.updateMany({ where: { id: task.id, updatedAt: task.updatedAt, operation: "INGEST", callbackAt: null },
+      data: { claimToken: token, leaseUntil: new Date(Date.now() + LEASE_MS), lastAttemptAt: new Date() } });
+    if (!claim.count) continue;
+    processed++;
+    try {
+      const remote = await requestDocumentStatus(task.documentId);
+      const terminal = remote.status === "done" || remote.status === "failed";
+      await elearningDb.$transaction(async (tx) => {
+        const changed = await tx.aiIngestTask.updateMany({ where: { id: task.id, claimToken: token, operation: "INGEST", callbackAt: null }, data: {
+          state: terminal ? "DONE" : "ACCEPTED", claimToken: null, leaseUntil: null,
+          lastError: remote.status === "failed" ? "AI processing failed. Administrator review required." : null,
+          nextAttemptAt: new Date(Date.now() + (Date.now() - +task.submittedAt! < 300_000 ? 10_000 : 300_000)),
+        } });
+        if (changed.count) await tx.courseMaterial.updateMany({ where: { id: task.materialId! }, data: {
+          aiIngestStatus: remote.status === "done" ? "INGESTED" : remote.status === "failed" ? "FAILED" : "PENDING",
+          aiChunkCount: remote.status === "done" ? remote.chunk_count : null,
+          aiIngestError: remote.status === "failed" ? "AI processing failed. Administrator review required." : null, aiIngestUpdatedAt: new Date(),
+        } });
+      });
+    } catch (err) {
+      const missing = err instanceof AiServiceError && err.status === 404;
+      const recent = Date.now() - +task.submittedAt! < 30_000;
+      await elearningDb.aiIngestTask.updateMany({ where: { id: task.id, claimToken: token, operation: "INGEST", callbackAt: null }, data: {
+        claimToken: null, leaseUntil: null, state: "ATTENTION",
+        lastError: missing ? "Remote status record missing; reconciliation anomaly." : "Status check unavailable; retry scheduled.",
+        nextAttemptAt: new Date(Date.now() + (missing && recent ? 5_000 : 300_000)),
+      } });
+    }
+  }
+  return processed;
 }

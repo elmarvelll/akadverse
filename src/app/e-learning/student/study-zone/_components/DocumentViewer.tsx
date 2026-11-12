@@ -14,7 +14,7 @@
 import { captureRegion, type CaptureRect } from "./capture-region";
 import { checkStewartAttachment } from "@/lib/stewart/config";
 import { useEffect, useRef, useState } from "react";
-import { Crop, Download, ExternalLink, FileArchive, FileText, Loader2, Maximize2, Minimize2, Presentation } from "lucide-react";
+import { Crop, Download, ExternalLink, FileArchive, FileText, Loader2, Maximize2, Minimize2, PanelsTopLeft, Presentation } from "lucide-react";
 import { formatSize } from "@/app/e-learning/_components/DocumentLink";
 import type { StudyDocument, StudyDocumentKind } from "@/services/e-learning/student/study-zone";
 import { GENERIC_ERROR, requestDocumentUrl } from "./office/document-access";
@@ -30,11 +30,12 @@ const KIND_META: Record<StudyDocumentKind, { label: string; Icon: typeof FileTex
   other: { label: "ZIP archive", Icon: FileArchive, color: "text-amber-700" },
 };
 
-export default function DocumentViewer({ doc, onCapture, captureRequest = 0 }: { doc: StudyDocument; onCapture: (file: File) => void; captureRequest?: number }) {
+export default function DocumentViewer({ doc, onCapture, captureRequest = 0, onStudyMode, studyMode = false }: { doc: StudyDocument; onCapture: (file: File) => void; captureRequest?: number; onStudyMode?: () => void; studyMode?: boolean }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [selecting, setSelecting] = useState(false);
   const [seenCaptureRequest, setSeenCaptureRequest] = useState(captureRequest);
   if (seenCaptureRequest !== captureRequest) { setSeenCaptureRequest(captureRequest); setSelecting(true); }
+  const [preview, setPreview] = useState<File | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [selection, setSelection] = useState<CaptureRect | null>(null);
   const origin = useRef<{ x: number; y: number } | null>(null);
@@ -79,7 +80,7 @@ export default function DocumentViewer({ doc, onCapture, captureRequest = 0 }: {
       const file = await captureRegion(surfaceRef.current!, rect, doc.kind === "pdf");
       const problem = checkStewartAttachment(file.name, file.size);
       if (problem) throw new Error(problem);
-      onCapture(file);
+      setPreview(file);
       setSelecting(false);
       captureButton.current?.focus();
     } catch (e) { setActionError(e instanceof Error ? e.message : "Couldn't capture this area. Please try again."); }
@@ -126,7 +127,8 @@ export default function DocumentViewer({ doc, onCapture, captureRequest = 0 }: {
           <button type="button" onClick={openOrDownload} disabled={busy} aria-label={doc.kind === "pdf" ? `Open ${doc.title} in a new tab` : `Download ${doc.title}`} title={doc.kind === "pdf" ? "Open in new tab" : "Download"} className={iconButton}>
             {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : doc.kind === "pdf" ? <ExternalLink size={16} aria-hidden /> : <Download size={16} aria-hidden />}
           </button>
-          {doc.kind !== "other" && <button ref={captureButton} type="button" disabled={preparing} aria-pressed={selecting} title="Select an area to attach to Stewart" onClick={() => { setActionError(null); setSelecting((v) => !v); setSelection(null); }} className={`${iconButton} w-auto gap-1 px-2`}><Crop size={16} aria-hidden /><span className="text-xs">Capture</span></button>}
+          {doc.kind !== "other" && <button ref={captureButton} type="button" disabled={preparing || !!preview} aria-pressed={selecting} title="Select an area to attach to Stewart" onClick={() => { setActionError(null); setSelecting((v) => !v); setSelection(null); }} className={`${iconButton} w-auto gap-1 px-2`}><Crop size={16} aria-hidden /><span className="text-xs">Capture</span></button>}
+          {onStudyMode && <button type="button" onClick={onStudyMode} aria-pressed={studyMode} className={`${iconButton} w-auto gap-1 px-2`}><PanelsTopLeft size={16} aria-hidden /><span className="text-xs">Study Mode</span></button>}
           {doc.kind !== "other" && (
             <button type="button" onClick={toggleFullscreen} aria-label={fullscreen ? "Exit full screen" : "View full screen"} title={fullscreen ? "Exit full screen" : "Full screen"} className={iconButton}>
               {fullscreen ? <Minimize2 size={16} aria-hidden /> : <Maximize2 size={16} aria-hidden />}
@@ -139,6 +141,10 @@ export default function DocumentViewer({ doc, onCapture, captureRequest = 0 }: {
         <div ref={surfaceRef} className="absolute inset-0">
         <Viewer doc={doc} onDownload={openOrDownload} busy={busy} />
         </div>
+        {preview && <ScreenshotPreview file={preview} onCancel={() => { setPreview(null); captureButton.current?.focus(); }} onConfirm={() => {
+          try { onCapture(preview); setPreview(null); captureButton.current?.focus(); }
+          catch (error) { setActionError(error instanceof Error ? error.message : "Could not attach screenshot."); }
+        }} />}
         {selecting && <div ref={overlayRef} tabIndex={-1} aria-label="Drag to select a screenshot area. Escape cancels." className="absolute inset-0 z-20 touch-none cursor-crosshair overflow-hidden bg-blue-950/10 outline-none"
           onPointerDown={(e) => {
             if (preparing || e.button !== 0 || !e.isPrimary || (e.target as Element).closest("button")) return;
@@ -193,4 +199,29 @@ function DownloadOnlyViewer({ doc, onDownload, busy }: ViewerProps) {
       </button>
     </StatusCard>
   );
+}
+
+
+function ScreenshotPreview({ file, onCancel, onConfirm }: { file: File; onCancel: () => void; onConfirm: () => void }) {
+  const ref = useRef<HTMLImageElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    if (ref.current) ref.current.src = url;
+    confirmRef.current?.focus();
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  return <div role="dialog" aria-modal="true" aria-label="Screenshot preview" className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-white/95 p-4" onKeyDown={(e) => {
+    if (e.key === "Escape") onCancel();
+    if (e.key === "Tab") {
+      const buttons = e.currentTarget.querySelectorAll<HTMLButtonElement>("button");
+      const target = e.shiftKey ? buttons[0] : buttons[buttons.length - 1];
+      if (document.activeElement === target) { e.preventDefault(); (e.shiftKey ? buttons[buttons.length - 1] : buttons[0]).focus(); }
+    }
+  }}>
+    {/* eslint-disable-next-line @next/next/no-img-element -- temporary local preview */}
+    <img ref={ref} alt="Selected lecture content" className="max-h-[70%] max-w-full object-contain" />
+    <p className="text-xs">{file.name} · {(file.size / 1024).toFixed(0)} KB</p>
+    <div className="flex gap-3"><button type="button" onClick={onCancel} className="rounded border px-3 py-2">Cancel screenshot</button><button ref={confirmRef} type="button" onClick={onConfirm} className="rounded bg-blue-600 px-3 py-2 text-white">Attach screenshot</button></div>
+  </div>;
 }

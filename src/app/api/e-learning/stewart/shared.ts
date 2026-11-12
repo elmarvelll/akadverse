@@ -4,6 +4,7 @@
 // `{ error }` shape the document-access route returns, so the browser handles both the same way).
 
 import { NextResponse } from "next/server";
+import { isDatabaseUnavailable } from "@/lib/database-availability";
 import { ServiceError } from "@/lib/service-error";
 import { requireElearningRole, requireStudentProfile } from "@/services/e-learning/shared/auth";
 
@@ -16,7 +17,11 @@ export async function requireStewartStudent(): Promise<string> {
 }
 
 export function stewartErrorResponse(scope: string, err: unknown): NextResponse {
-  if (err instanceof ServiceError) return NextResponse.json({ error: err.message }, { status: err.status, headers: { "Cache-Control": "no-store" } });
+  if (err instanceof ServiceError) return NextResponse.json({ error: err.message, ...("code" in err ? { code: err.code } : {}) }, { status: err.status, headers: { "Cache-Control": "no-store" } });
+  if (isDatabaseUnavailable(err)) {
+    console.warn(`[stewart ${scope}] database temporarily unavailable`);
+    return NextResponse.json({ error: "The academic database is temporarily unreachable. Please try again shortly." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
   console.error(`[stewart ${scope}]`, err);
   return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500, headers: { "Cache-Control": "no-store" } });
 }

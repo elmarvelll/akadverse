@@ -11,7 +11,7 @@ import { notFound } from "@/lib/service-error";
 import { weeksInSemester } from "@/lib/course-materials/config";
 import { fullName, resolveIdentities } from "@/services/e-learning/shared/identity";
 
-export async function getOfferingDetail(offeringId: string) {
+export async function getOfferingDetail(offeringId: string, { includeLecturerNames = true }: { includeLecturerNames?: boolean } = {}) {
   const o = await elearningDb.courseOffering.findUnique({
     where: { id: offeringId },
     include: {
@@ -28,7 +28,7 @@ export async function getOfferingDetail(offeringId: string) {
   });
   if (!o) throw notFound("That course doesn't exist.");
 
-  const ids = await resolveIdentities(o.lecturers.map((l) => l.facultyUserId));
+  const ids = await resolveIdentities(includeLecturerNames ? o.lecturers.map((l) => l.facultyUserId) : []);
   const lecturers = o.lecturers
     .map((l) => ({ userId: l.facultyUserId, name: fullName(ids.get(l.facultyUserId)), role: l.role }))
     .sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name) : a.role === "COORDINATOR" ? -1 : 1));

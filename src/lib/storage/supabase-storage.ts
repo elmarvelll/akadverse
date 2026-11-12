@@ -59,7 +59,21 @@ export async function removeObject(bucket: string, path: string) {
 // With a `downloadName` the browser saves the file under that name; with null it's served inline (e.g. a PDF shown in-page).
 export async function createSignedDownloadUrl(bucket: string, path: string, downloadName: string | null, expiresInSeconds = 60) {
   const { key, api } = config();
-  const raw = await fetch(`${api}/object/sign/${encodeURIComponent(bucket)}/${encodePath(path)}`, { method: "POST", headers: { ...authHeaders(key), "Content-Type": "application/json" }, body: JSON.stringify({ expiresIn: expiresInSeconds }) });
+  // Signing can safely retry once after a transport failure; never retry object deletion/upload this way.
+  let raw: Response | undefined;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      raw = await fetch(`${api}/object/sign/${encodeURIComponent(bucket)}/${encodePath(path)}`, {
+        method: "POST", headers: { ...authHeaders(key), "Content-Type": "application/json" },
+        body: JSON.stringify({ expiresIn: expiresInSeconds }), signal: AbortSignal.timeout(10_000),
+        cache: "no-store", redirect: "error",
+      });
+      break;
+    } catch {
+      if (attempt === 1) throw new ServiceError(503, "File storage is temporarily unreachable. Please try opening the document again shortly.");
+    }
+  }
+  if (!raw) throw new ServiceError(503, "File storage is temporarily unreachable. Please try again shortly.");
   // The record exists but the file is gone from Storage: say so plainly instead of a generic upstream error.
   if (raw.status === 404 || raw.status === 400) throw new ServiceError(404, "This file is no longer available. Please contact your lecturer.");
   const res = await call(raw, "create download URL");
