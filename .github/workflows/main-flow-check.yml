@@ -1,0 +1,70 @@
+name: Main Branch Flow Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  verify-pr-source:
+    name: Verify PR comes from staging
+
+    if: github.event_name == 'pull_request'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check source branch
+        run: |
+          echo "Pull request source: ${{ github.head_ref }}"
+          echo "Pull request destination: main"
+
+          if [ "${{ github.head_ref }}" != "staging" ]; then
+            echo "::error::Only staging may open a pull request into main."
+            exit 1
+          fi
+
+          echo "Valid release path: staging -> main"
+
+  audit-main-push:
+    name: Audit changes to main
+
+    if: github.event_name == 'push'
+
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      COMMIT_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Check whether main was updated through a staging PR
+        run: |
+          MATCHING_PRS=$(gh api \
+            "repos/$REPOSITORY/commits/$COMMIT_SHA/pulls" \
+            -H "Accept: application/vnd.github+json" \
+            --jq '[.[] |
+              select(
+                .merged_at != null and
+                .base.ref == "main" and
+                .head.ref == "staging"
+              )
+            ] | length')
+
+          echo "Matching staging -> main PRs: $MATCHING_PRS"
+
+          if [ "$MATCHING_PRS" -lt 1 ]; then
+            echo "::error::main appears to have changed without a staging -> main pull request."
+            exit 1
+          fi
+
+          echo "main update came through an approved branch path."

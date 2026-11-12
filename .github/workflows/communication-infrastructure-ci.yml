@@ -1,0 +1,17 @@
+name: communication-infrastructure CI
+
+on:
+  push:
+    paths:
+      - "services/communication-infrastructure/**"
+  pull_request:
+    paths:
+      - "services/communication-infrastructure/**"
+
+jobs:
+  security-scan:
+    uses: ./.github/workflows/shared/snyk-scan-template.yml
+    with:
+      working-directory: services/communication-infrastructure
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

@@ -1,0 +1,17 @@
+name: payments-service CI
+
+on:
+  push:
+    paths:
+      - "services/payments-service/**"
+  pull_request:
+    paths:
+      - "services/payments-service/**"
+
+jobs:
+  security-scan:
+    uses: ./.github/workflows/shared/snyk-scan-template.yml
+    with:
+      working-directory: services/payments-service
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

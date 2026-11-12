@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/deliverer-inventory",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/delivery-schedule",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

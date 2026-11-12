@@ -1,0 +1,17 @@
+name: productivity-layer CI
+
+on:
+  push:
+    paths:
+      - "services/productivity-layer/**"
+  pull_request:
+    paths:
+      - "services/productivity-layer/**"
+
+jobs:
+  security-scan:
+    uses: ./.github/workflows/shared/snyk-scan-template.yml
+    with:
+      working-directory: services/productivity-layer
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

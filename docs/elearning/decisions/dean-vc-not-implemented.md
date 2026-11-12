@@ -1,0 +1,8 @@
+# Decision: Dean and VC remain placeholder-only
+
+- **Date**: 2026-09-14 (still true as of every phase completed since).
+- **Context**: §29 explicitly instructs: "Do not invent functionality for VC / Dean... Wait for explicit requirements before implementing their dashboards, permissions, workflows, or approval systems." §44 lists them as Phase 7, with "Do not implement the final phase until requirements are explicitly provided."
+- **Chosen option**: `role` includes `dean`/`vc` (routing/architecture support exists — `src/proxy.ts`'s `ROLE_HOME_PATHS`, the domain list in `src/lib/account-domains.ts`), but `/e-learning/dean` and `/e-learning/vc` are single placeholder pages (`src/app/e-learning/{dean,vc}/page.tsx`, both rendering the shared `ComingSoon` component) with empty nav trees (`getDeanNav()`/`getVcNav()` return `[]`). No `DeanProfile`/`VcProfile` model exists — nothing to scope them by yet.
+- **Reason**: Direct instruction, repeated at both the per-role (§29) and phase-ordering (§44) level. This held even when a later instruction said "execute all phases" — that was read as the six phases the spec actually defines requirements for (Foundation through DAPU), not as an instruction overriding §29's explicit "wait for requirements," since a broad "do everything" request doesn't repeal a more specific standing instruction it doesn't mention.
+- **Consequences**: A Dean/VC account can sign in and lands on a page that says so, rather than a 404 or an error. Nothing about what either role can do is guessed at anywhere in the codebase.
+- **Revisit when**: Explicit Dean/VC requirements are provided — at that point this decision (and its file) should be updated or removed, not left as stale context.

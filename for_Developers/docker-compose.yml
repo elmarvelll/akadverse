@@ -1,0 +1,37 @@
+# for_Developers/docker-compose.yml
+#
+# LOCAL DEVELOPMENT ONLY. One Postgres 16 container holding BOTH of the app's databases:
+#   akadverse            -> Core / Marketplace   (DATABASE_URL, prisma/schema.prisma)
+#   akadverse_elearning  -> E-Learning           (ELEARNING_DATABASE_URL, prisma/elearning/schema.prisma)
+#
+# Start:  npm run db:local:up      Stop:  npm run db:local:down
+# The password below is a throwaway for a container that only listens on 127.0.0.1 — it is not, and must never
+# become, a staging/production credential. See for_Developers/DATABASE.md.
+#
+# Port 5433 (not 5432) so it never collides with a Postgres you may already have installed.
+
+name: akadverse-local
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: akadverse
+      POSTGRES_PASSWORD: akadverse_local_only
+      POSTGRES_DB: akadverse
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - akadverse-local-pg:/var/lib/postgresql/data
+      # Runs once, on the very first start (empty volume): creates the second (E-Learning) database.
+      - ./docker/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      # Checks the E-Learning database specifically, so "healthy" also means the init script has finished.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "akadverse", "-d", "akadverse_elearning"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  akadverse-local-pg:

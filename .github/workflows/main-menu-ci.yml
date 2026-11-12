@@ -1,0 +1,17 @@
+name: main-menu CI
+
+on:
+  push:
+    paths:
+      - "services/main-menu/**"
+  pull_request:
+    paths:
+      - "services/main-menu/**"
+
+jobs:
+  security-scan:
+    uses: ./.github/workflows/shared/snyk-scan-template.yml
+    with:
+      working-directory: services/main-menu
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

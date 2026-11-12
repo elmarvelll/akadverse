@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/*
+ * E-Learning form readability. The Academy forms use plain inputs with no text
+ * colour, which renders light on some browsers/themes. Scoped to
+ * .elearning-shell so Marketplace styling is unaffected.
+ */
+.elearning-shell input,
+.elearning-shell select,
+.elearning-shell textarea {
+  color: #111827;
+  background-color: #ffffff;
+  border-color: #9ca3af;
+}
+.elearning-shell input::placeholder,
+.elearning-shell textarea::placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
+.elearning-shell input:focus,
+.elearning-shell select:focus,
+.elearning-shell textarea:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+  border-color: #2563eb;
+}
+.elearning-shell input:disabled,
+.elearning-shell select:disabled,
+.elearning-shell textarea:disabled {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  cursor: not-allowed;
+}
+.elearning-shell label {
+  color: #374151;
+}
+
+/*
+ * E-Learning responsive guards (scoped; Marketplace unaffected).
+ *  - A <select>/<input> sizes itself to its longest option/value, which stretches a phone-width grid or flex row past
+ *    the screen. Capping to the container (and letting it shrink) keeps every form inside the viewport.
+ *  - Long unbroken text (file names, emails, course titles) wraps instead of pushing the page sideways.
+ *  - Below `sm`, form controls are 16px so iOS Safari doesn't zoom the page when one is focused.
+ */
+.elearning-shell input,
+.elearning-shell select,
+.elearning-shell textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+.elearning-shell main {
+  overflow-wrap: break-word;
+}
+/* Flex/grid children default to min-width:auto (= their content), so a label around a wide <select> can't shrink. */
+.elearning-shell label,
+.elearning-shell form > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.elearning-shell img,
+.elearning-shell video,
+.elearning-shell svg {
+  max-width: 100%;
+}
+@media (max-width: 639px) {
+  .elearning-shell input,
+  .elearning-shell select,
+  .elearning-shell textarea {
+    font-size: 16px;
+  }
+}
+
+/*
+ * E-Learning base text. The global stylesheet switches body text to near-white
+ * when the OS is in dark mode, but Academy cards are white — which made Level,
+ * Units and Type nearly invisible. Set a dark base inside the shell and lift the
+ * faintest greys to readable values. Scoped to .elearning-shell (Marketplace unaffected).
+ */
+.elearning-shell {
+  color: #111827;
+}
+.elearning-shell .text-gray-400 {
+  color: #4b5563;
+}
+.elearning-shell .text-gray-500 {
+  color: #374151;
+}
+.elearning-shell .text-gray-600 {
+  color: #1f2937;
+}

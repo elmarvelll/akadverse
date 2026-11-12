@@ -1,0 +1,14 @@
+# Decision: The Admin Dashboard requires `super_admin`, not `admin`
+
+> **Superseded** (2026-08-28, later): the *mechanism* here — role-based access — was replaced by an independent `User.isAdmin` flag. See [`admin-flag-replaces-role-check.md`](admin-flag-replaces-role-check.md) for the new decision and why this file is kept rather than deleted. The reasoning below (avoid a second, competing authorization scheme) still held and directly informed the replacement.
+
+- **Date**: 2026-08-28.
+- **Context**: The `Role` enum has both `admin` and `super_admin`. `role: "admin"` already routes to `/admindashboard`, a "coming soon" placeholder, per `src/proxy.ts`. `requireAdmin()` (`src/lib/admin.ts`), which gates the pre-existing Marketplace admin pages (deliverer approval, delivery-coordinator assignment), had recently been narrowed from accepting either role to `super_admin` only.
+- **Problem**: Building a full Admin Dashboard (user promotion, business verification/blocking, dispute resolution, fine/report oversight) needed to decide who could reach it — and the spec's literal request ("promote a user to `ADMIN`") doesn't by itself resolve whether that should mean `role: "admin"` or `role: "super_admin"` in a schema that already has both, with different existing meanings attached to each.
+- **Options considered**:
+  1. Reuse `requireAdmin()` exactly as it already stood (`super_admin` only); "promote to admin" sets `role: "super_admin"`.
+  2. Revert `requireAdmin()` to accept either `admin` or `super_admin`, restoring its earlier behavior, and have promotion set `role: "admin"`.
+- **Chosen option**: 1.
+- **Reason**: Confirmed directly with the requester rather than guessed. The deciding factors: `requireAdmin()`'s narrowing was a deliberate, recent choice by the person building this, not an accident to be silently reverted; and this new dashboard is strictly a superset of the privileges the already-narrowed pages guard (user promotion and business blocking are at least as sensitive as deliverer approval), so it would have been inconsistent to gate it more loosely than what it extends.
+- **Consequences**: `role: "admin"` continues to mean nothing beyond routing to the still-unbuilt `/admindashboard` placeholder — it carries no Marketplace admin privilege. There is exactly one way to gain real admin access: an existing `super_admin` promoting an account via the Users tab. If a distinct, lower-privilege `admin` tier is ever wanted (e.g. read-only oversight), it will need a real, separate authorization rule — not a role rename — since `requireAdmin()` today treats `role !== "super_admin"` as a single "no access" bucket.
+- **Alternatives rejected**: Option 2 was viable and not unreasonable, but would have silently undone a recent, deliberate security decision as a side effect of an unrelated feature request — rejected specifically to avoid that, not because a two-tier admin model is wrong in principle.

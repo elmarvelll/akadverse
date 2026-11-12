@@ -1,0 +1,9 @@
+# Decision: Business onboarding collects a subset of the schema's fields
+
+- **Date**: undocumented.
+- **Context**: `Business` has fields for payment method, banking details, and service days/times, but the onboarding form only asks for name/industry/description/contact info (+ optional logo) up front.
+- **Problem**: Requiring full banking/service-hours detail before someone can even create a business storefront raises the barrier to trying the Marketplace out, before there's necessarily any real transaction to process yet.
+- **Chosen option**: Make `paymentMethod`/`bankName`/`accountNumber`/`accountHolderName`/`serviceDays`/`serviceTimes` nullable in the schema, collect only the minimal profile on creation, and let a business owner fill in the rest later from the dashboard's edit form (which does collect banking details via the Paystack bank dropdown + account-resolution flow).
+- **Reason**: Documented directly in the schema's own comment on these fields: *"these used to be required, but the onboarding form only collects name/industry/description/contact for now — payment/banking/service-hours details are meant to be filled in later from the business dashboard's edit view."*
+- **Consequences**: A business can exist and list products with zero banking info. Any future feature that needs banking info (payouts, late-delivery fines) must handle the case where a business hasn't filled it in yet — there is no enforcement today requiring it before a business can transact. `serviceDays`/`serviceTimes` remain **free text** and are not currently collected by any form found in this pass, meaning they're effectively dead columns right now, not silently-broken UI — no form references them.
+- **Alternatives rejected**: Requiring full setup at onboarding (the original design, per the schema comment's "these used to be required") — reverted in favor of the phased approach above.

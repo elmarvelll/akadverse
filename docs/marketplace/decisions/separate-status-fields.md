@@ -1,0 +1,9 @@
+# Decision: Order status, fulfillment status, delivery status, and payment/escrow status are four separate fields
+
+- **Date**: 2026-08-28.
+- **Context**: An order's lifecycle touches at least four independent concerns: has the seller accepted it, how far along is the seller's own prep, where is each item in delivery, and what's happening to each item's money.
+- **Problem**: A single `Order.status` string could theoretically encode all of this (e.g. `"accepted_processing_out_for_delivery_paid_out"`), but that couples concerns that legitimately move independently — e.g. an order can be `ACCEPTED` and `HANDED_TO_DELIVERER` while individual items are still `PENDING` delivery outcome, or `PARTIALLY_DELIVERED` while others are `DELIVERED`.
+- **Chosen option**: Four separate fields/enums: `Order.status` (`OrderStatus`), `Order.fulfillmentStatus` (`FulfillmentStatus`), `OrderItem.deliveryStatus` (`DeliveryStatus`) + `Order.deliveryOutcome` (rollup), `OrderItem.escrowStatus`/`payoutStatus`.
+- **Reason**: Directly required by the implementation spec ("The system should not try to represent seller fulfillment, delivery logistics, and payment settlement using one status field"), and independently the right design given items within one order can diverge in delivery outcome while the order's seller-side status stays fixed.
+- **Consequences**: More fields to keep in sync (mitigated by `services/marketplace/order/order-events.service.ts#recomputeOrderDeliveryOutcome` recalculating the order-level rollup from item state rather than being independently settable), but each field individually stays simple and each transition is unambiguous.
+- **Alternatives rejected**: One combined status string/enum — rejected as explicitly ruled out by the spec and as a maintenance hazard (a combinatorial explosion of possible combined states, many of them invalid).
