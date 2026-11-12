@@ -48,8 +48,7 @@ export async function retryIngestAction(offeringId: string, materialId: string) 
 
 export async function deleteMaterialAction(offeringId: string, materialId: string) {
   const res = await guard(async (id) => {
-    await deleteMaterial(id, materialId);
-    return {};
+    return deleteMaterial(id, materialId);
   });
   if (res.ok) revalidatePath(`/e-learning/faculty/my-subjects/${offeringId}`);
   return res;

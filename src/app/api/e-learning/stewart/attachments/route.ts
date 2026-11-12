@@ -1,57 +1,42 @@
-// POST   /api/e-learning/stewart/attachments   (multipart/form-data, field "file")
-//   A student attaches one document to their Stewart conversation. The server validates it (type from the file's own
-//   bytes, size), extracts its content, stores it for the session, and returns { token, name, kind, truncated,
-//   expiresAt } — `token` is an opaque signed handle (never a storage URL) to send with each question.
-// DELETE /api/e-learning/stewart/attachments   { token }
-//   The student removed/replaced the attachment: the stored copy is deleted. Only the uploader's own token works.
-//
-// See services/e-learning/student/stewart/upload-attachment.ts.
-
+// Authenticated single-file multipart proxy. Files stay in Concept Explainer; only metadata is persisted here.
 import { NextResponse } from "next/server";
-import { badRequest, ServiceError } from "@/lib/service-error";
-import { STEWART_MAX_ATTACHMENT_BYTES, STEWART_MAX_ATTACHMENT_MB } from "@/lib/stewart/config";
-import { deleteStewartAttachment, uploadStewartAttachment } from "@/services/e-learning/student/stewart/upload-attachment";
-import { verifyAttachment } from "@/services/e-learning/student/stewart/attachment-token";
+import { badRequest } from "@/lib/service-error";
+import { STEWART_MAX_ATTACHMENT_BYTES } from "@/lib/stewart/config";
+import { AiServiceError } from "@/services/e-learning/ai-ingest/client";
+import { attachmentContext } from "@/services/e-learning/student/stewart/attachment-context";
+import { AttachmentError, removeAttachment, storeAttachment } from "@/services/e-learning/student/stewart/attachment-store";
+import { validateAttachment } from "@/services/e-learning/student/stewart/validate-attachment";
+import { enforceRateLimit } from "@/services/e-learning/student/stewart/rate-limit";
 import { boundedStewartRequest, requireStewartStudent, stewartErrorResponse } from "../shared";
 
 export const maxDuration = 60;
-
-const tooLarge = () => new ServiceError(413, `That file is too large. The maximum is ${STEWART_MAX_ATTACHMENT_MB} MB.`);
-
+function uploadError(error: unknown) {
+  if (error instanceof AiServiceError) {
+    const status = error.status === 413 ? 413 : error.status === 422 ? 422 : 503;
+    return stewartErrorResponse("attachment", new AttachmentError(status, status === 413 ? "The maximum file size is 4 MiB." : status === 422 ? "This file could not be read. Choose a supported, nonempty file." : "We couldn't upload this file. Please retry.", "ATTACHMENT_UPLOAD_FAILED"));
+  }
+  return stewartErrorResponse("attachment", error);
+}
 export async function POST(req: Request) {
   try {
     const userId = await requireStewartStudent();
-
-    // Refuse an oversized body from its declared length before reading any of it (multipart adds a little overhead).
-    const declared = Number(req.headers.get("content-length") ?? 0);
-    if (declared > STEWART_MAX_ATTACHMENT_BYTES + 64 * 1024) throw tooLarge();
-
-    let form: FormData;
-    try {
-      form = await (await boundedStewartRequest(req, STEWART_MAX_ATTACHMENT_BYTES + 64 * 1024)).formData();
-    } catch (error) {
-      if (error instanceof ServiceError) throw error;
-      throw badRequest("That upload couldn't be read. Please try again.");
-    }
+    enforceRateLimit(`upload-v2:${userId}`, { limit: 60, windowMs: 10 * 60 * 1000 });
+    const limited = await boundedStewartRequest(req, STEWART_MAX_ATTACHMENT_BYTES + 64 * 1024);
+    const form = await limited.formData().catch(() => { throw badRequest("That upload couldn't be read."); });
+    const { sessionId } = await attachmentContext(userId, { courseId: form.get("courseId"), weekNumber: form.get("weekNumber"), documentId: form.get("documentId"), ...(form.get("conversationId") ? { conversationId: form.get("conversationId") } : {}) });
     const file = form.get("file");
-    if (!(file instanceof File)) throw badRequest("Choose a document to attach.");
-    if (file.size > STEWART_MAX_ATTACHMENT_BYTES) throw tooLarge();
-
-    const attachment = await uploadStewartAttachment(userId, { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) });
-    return NextResponse.json(attachment, { headers: { "Cache-Control": "no-store" } });
-  } catch (err) {
-    return stewartErrorResponse("attachment upload", err);
-  }
+    if (!(file instanceof File) || form.getAll("file").length !== 1) throw badRequest("Upload one file per request.");
+    const attachment = await storeAttachment(userId, sessionId, await validateAttachment(file), typeof form.get("conversationId") === "string" ? form.get("conversationId") as string : undefined);
+    return NextResponse.json({ success: true, attachment, session_id: sessionId }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return uploadError(error); }
 }
-
 export async function DELETE(req: Request) {
   try {
     const userId = await requireStewartStudent();
-    const body = (await req.json().catch(() => ({}))) as { token?: unknown };
-    const claims = verifyAttachment(body.token, userId);
-    await deleteStewartAttachment(claims.fileId);
+    const body = await (await boundedStewartRequest(req, 8192)).json().catch(() => null);
+    if (!body) throw badRequest("Choose an attachment to remove.");
+    const { sessionId } = await attachmentContext(userId, body);
+    await removeAttachment(userId, sessionId, body.attachment_id);
     return NextResponse.json({ removed: true }, { headers: { "Cache-Control": "no-store" } });
-  } catch (err) {
-    return stewartErrorResponse("attachment delete", err);
-  }
+  } catch (error) { return uploadError(error); }
 }
