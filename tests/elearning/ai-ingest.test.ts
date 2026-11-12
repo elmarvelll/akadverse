@@ -8,7 +8,7 @@ import { courseScenario } from "../helpers/elearning-fixtures";
 import { requestUpload, confirmUpload, type UploadMeta } from "@/services/e-learning/faculty/materials/upload-material";
 import { deleteMaterial } from "@/services/e-learning/faculty/materials/delete-material";
 import { retryMaterialIngestion, sendMaterialForIngestion } from "@/services/e-learning/ai-ingest/ingest-material";
-import { runAiIngestSweep, retryReviewedTask } from "@/services/e-learning/ai-ingest/worker";
+import { runAiIngestSweep, retryReviewedTask, reconcileAiIngestion } from "@/services/e-learning/ai-ingest/worker";
 import { POST as callback } from "@/app/api/webhooks/ai-ingest/route";
 
 before(() => installFakeProviders());
@@ -125,5 +125,56 @@ describe("durable AI ingestion", () => {
   it("pauses processing until explicitly enabled", async () => {
     const m = await upload(await courseScenario()); process.env.AI_INGEST_ENABLED = "false";
     assert.equal((await runAiIngestSweep()).processed, 0); assert.equal((await task(m.id)).state, "READY");
+  });
+});
+
+
+describe("database-backed missed callback reconciliation", () => {
+  for (const [remote, local] of [["queued", "PENDING"], ["processing", "PENDING"], ["done", "INGESTED"], ["failed", "FAILED"]]) {
+    it(`recovers ${remote} using the persisted task without re-ingesting`, async () => {
+      const m = await upload(await courseScenario());
+      await runAiIngestSweep();
+      await elearningDb.aiIngestTask.update({ where: { documentId: m.id }, data: { nextAttemptAt: new Date(0) } });
+      aiService.responses.push({ status: 200, body: { document_id: m.id, status: remote, chunk_count: 12 } });
+      await reconcileAiIngestion();
+      assert.equal((await material(m.id)).aiIngestStatus, local);
+      assert.equal(aiService.requests.at(-1)!.method, "GET");
+      assert.equal(aiService.requests.at(-1)!.path, `/documents/${m.id}/status`);
+      assert.equal(aiService.requests.filter((r) => r.method === "POST").length, 1);
+      if (remote === "done") assert.equal((await material(m.id)).aiChunkCount, 12);
+      const n = aiService.requests.length;
+      await reconcileAiIngestion();
+      assert.equal(aiService.requests.length, n, "terminal and not-yet-due tasks are excluded");
+    });
+  }
+  it("allows only one competing database claim to poll the same task", async () => {
+    const m = await upload(await courseScenario()); await runAiIngestSweep();
+    await elearningDb.aiIngestTask.update({ where: { documentId: m.id }, data: { nextAttemptAt: new Date(0) } });
+    aiService.responses.push({ status: 200, body: { document_id: m.id, status: "done", chunk_count: 7 } });
+    await Promise.all([reconcileAiIngestion(), reconcileAiIngestion()]);
+    assert.equal(aiService.requests.filter((r) => r.method === "GET").length, 1);
+    assert.equal((await material(m.id)).aiIngestStatus, "INGESTED");
+  });
+  it("retains missing remote records as anomalies and schedules another poll", async () => {
+    const m = await upload(await courseScenario()); await runAiIngestSweep();
+    await elearningDb.aiIngestTask.update({ where: { documentId: m.id }, data: { nextAttemptAt: new Date(0), submittedAt: new Date(Date.now() - 600_000) } });
+    aiService.responses.push({ status: 404 });
+    await reconcileAiIngestion();
+    assert.equal((await task(m.id)).state, "ATTENTION");
+    assert.equal((await material(m.id)).aiIngestStatus, "PENDING");
+    assert.match((await task(m.id)).lastError!, /anomaly/);
+    assert.ok((await task(m.id)).nextAttemptAt > new Date());
+  });
+  it("does not enqueue AI deletion or remove the material when Storage deletion fails", async () => {
+    const s = await courseScenario(); const m = await upload(s); await runAiIngestSweep();
+    const fakeFetch = globalThis.fetch;
+    globalThis.fetch = async (url, init) => String(url).includes("/storage/v1/object/") && init?.method === "DELETE"
+      ? new Response(null, { status: 503 }) : fakeFetch(url, init);
+    try { await assert.rejects(deleteMaterial(s.lecturerId, m.id)); }
+    finally { globalThis.fetch = fakeFetch; }
+    assert.equal((await task(m.id)).operation, "INGEST");
+    assert.ok(await material(m.id));
+    assert.ok(storage.objects.has(`course-materials/${m.storagePath}`));
+    assert.equal(aiService.requests.filter((r) => r.method === "DELETE").length, 0);
   });
 });

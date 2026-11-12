@@ -1,0 +1,55 @@
+{
+  "answer": "Intra-group conflict is a type of conflict that occurs within a single group when members hold differing opinions or ideas regarding how to achieve common goals, which can lead to internal divisions and hinder progress toward collective objectives (note 1.pdf).\n\nTo understand this, think of it like a sports team where all the players share the ultimate goal of winning the championship, but they argue intensely about the specific strategy or play-calling required to get there. Because they cannot agree on the method, the team becomes fragmented, and their performance suffers.\n\n[AI-GENERATED EXAMPLE]\nImagine a student project group tasked with creating a presentation. While every member wants to earn an 'A' grade, two members believe they should focus on a creative video format, while the other two insist on a traditional slide deck. Because the group is stuck debating these different approaches rather than working on the content, they fail to make progress on the assignment, illustrating how intra-group conflict can stall collective success.",
+  "sources": [
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Class conflict: Conflict that occurs among different social classes due to inequality, exploitation, or oppression.\nIntergroup conflict arises when there is tension between two or more groups of peopl"
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Conflict Types Cont’d\n\n1. Interpersonal conflict: This type of conflict occurs between two or more individuals who have different opinions, ideas, or beliefs about a particular issue.\n\n2. Intrapersona"
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Clashing personality styles, language and cultures as well as gender conflict often lead to harassment or discrimination charges. \n\n\nConflict Types Cont’d\n\n\nThis conflict is evident in office politics"
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "5. Environmental conflict: This type of conflict arises due to disagreements over the use and management of natural resources and the environment.\n\nDifferent Theories of Conflict \n\nClassical Conflict "
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Modern Conflict Theory (C. Wright Mills)\nFocuses on unequal distribution of power and resources within social structures, highlighting how elites maintain control opposed to the interests of the broad"
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "PRESENTER\nNICK ESSIEN \n\n16x9\n\n4x3\nTypes and Theories of Conflict \nOutline of Presentation\n Introduction \nConceptual Clarification\nTYPES/FORMS OF CONFLICT\nTHEORIES OF CONFLICT \nConcluding Remarks\n\n\n\nIn"
+    },
+    {
+      "document_id": null,
+      "title": "AI-generated example",
+      "material_type": "AI_GENERATED",
+      "chunk_preview": "[AI-GENERATED EXAMPLE] Imagine a student project group tasked with creating a presentation. While every member wants to earn an 'A' grade, two members believe they should focus on a creative video format, while the other tw",
+      "source_type": "ai_generated",
+      "attachment_id": null,
+      "filename": null
+    }
+  ],
+  "retrieval_info": {
+    "chunks_available": 6,
+    "chunks_above_threshold": 6,
+    "similarity_threshold": 0.4
+  }
+}

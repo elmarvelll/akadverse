@@ -1104,3 +1104,72 @@ model AiIngestTask {
 
   @@index([state, nextAttemptAt])
 }
+
+// Temporary Stewart upload metadata only. Binaries expire upstream after six hours.
+model StewartAttachment {
+  id           String   @id @default(cuid())
+  userId       String
+  sessionId    String
+  uploadKey    String
+  attachmentId String?  @unique
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  status       String   @default("uploading")
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  inUseUntil   DateTime?
+
+  @@unique([sessionId, uploadKey])
+  @@index([sessionId, expiresAt])
+  @@index([expiresAt])
+}
+
+// Chat identity references Core userId at the application layer, like StudentProfile.
+enum ChatMessageRole {
+  USER
+  ASSISTANT
+}
+enum ChatMessageStatus {
+  PENDING
+  COMPLETE
+  FAILED
+}
+model ChatConversation {
+  id               String   @id @default(cuid())
+  userId           String
+  clientKey        String
+  sessionId        String   @unique @default(uuid())
+  title            String
+  titleGenerated   Boolean  @default(false)
+  courseId         String
+  offeringId       String
+  courseCode       String
+  weekNumber       Int
+  documentId       String?
+  documentTitle    String?
+  pendingRequestId String?
+  pendingToken     String?
+  pendingUntil     DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now())
+  messages         ChatMessage[]
+
+  @@unique([userId, clientKey])
+  @@index([userId, updatedAt, id])
+  @@index([userId, courseId, updatedAt, id])
+}
+model ChatMessage {
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  requestId      String
+  role           ChatMessageRole
+  status         ChatMessageStatus @default(COMPLETE)
+  content        String
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+
+  @@unique([conversationId, requestId, role])
+  @@index([conversationId, createdAt, id])
+}

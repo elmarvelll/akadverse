@@ -1,0 +1,45 @@
+.portal {
+  --portal-blue: #185cff;
+  color: #0f172a;
+  background: #f8fafc;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.portal ::selection { background: #185cff26; color: #185cff; }
+.portal > header { height: 56px; background: #fffffff2; backdrop-filter: blur(12px); border-color: #e2e8f099; }
+.portal > div { padding-top: 56px; max-width: none; }
+.portal aside { top: 56px; background: #f8fafc; border-right: 1px solid #e2e8f080; transition-duration: 400ms; transition-timing-function: cubic-bezier(.4,0,.2,1); }
+.portal main { padding: 32px; }
+.portal main > div { animation: portal-enter 350ms cubic-bezier(.22,1,.36,1) both; }
+.portal main h1 { font-size: 28px; letter-spacing: -.025em; color: #0f172a; }
+.portal main :global(.bg-white):global(.rounded-2xl) { box-shadow: 0 4px 20px #00000014; border-color: #e2e8f0bf; }
+.portal :global(.text-gray-900) { color: #0f172a; }
+.portal :global(.text-gray-800) { color: #334155; }
+.portal :global(.text-gray-500) { color: #64748b; }
+.portal :global(.bg-blue-600) { background: var(--portal-blue); box-shadow: 0 4px 18px #185cff40; }
+.portal :global(.text-blue-700), .portal :global(.text-blue-800) { color: var(--portal-blue); }
+.portal nav a, .portal nav button { transition: background-color 200ms cubic-bezier(.22,1,.36,1), color 300ms, box-shadow 300ms; }
+.portal nav a { border-radius: 14px; }
+.portal nav a:hover, .portal nav button:hover { background-color: #e2e8f099; }
+.portal nav :global(.bg-blue-600):hover { background-color: var(--portal-blue); }
+.portal nav svg { transition: transform 300ms cubic-bezier(.4,0,.2,1); }
+.portal button:active { transform: scale(.98); }
+.study li { animation: card-enter 400ms cubic-bezier(.22,1,.36,1) both; }
+.portal .studyCard { padding: 24px; min-height: 225px; border-width: 1.5px; transition: transform 300ms cubic-bezier(.22,1,.36,1), box-shadow 300ms, border-color 300ms; }
+.portal .studyCard:hover, .portal .studyCard:focus-visible { transform: translateY(-4px); box-shadow: 0 12px 28px #0f172a1f; border-color: #3b82f6bf; }
+.studyCard > div > span > span { font-size: 11.5px; font-weight: 700; border-radius: 7px; padding-inline: 10px; }
+.studyCard :global(.bg-gray-100) { background: #f8fafc; border-color: #cbd5e1e6; color: #1e293b; }
+.studyCard :global(.bg-purple-100) { background: #f3e8ff; border-color: #e9d5ff; color: #581c87; }
+.studyCard :global(.bg-blue-100) { background: #dbeafe; border-color: #bfdbfe; color: #1e3a8a; }
+@media (min-width: 1024px) {
+  .portal aside { height: calc(100dvh - 56px); }
+  .portal aside:global(.lg\:w-64) { width: 252px; }
+  .portal aside:global(.lg\:w-16) { width: 68px; }
+}
+@media (max-width: 639px) { .portal main { padding: 20px 16px; } }
+@keyframes portal-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes card-enter { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .portal *, .portal main > div, .study li { animation: none !important; transition: none !important; }
+  .portal .studyCard:hover { transform: none; }
+}

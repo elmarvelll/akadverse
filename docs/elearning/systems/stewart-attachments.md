@@ -1,58 +1,125 @@
-# Stewart screenshots and supporting files
+# Stewart attachments and screenshots
 
-The Study Zone's existing Stewart client and authenticated APIs now handle both screenshots and supporting documents. No schema changes or additional AI service are required.
+Implemented 10 November 2026 against the current Concept Explainer README supplied by the user (`Downloads/README.md`, Phases 3.5a–3.5c and 4a). The older sibling `Concept Explainer` checkout is a different, outdated implementation. No microservice source or API was changed.
 
 ## Student workflow
 
-Capture sits beside the existing open/download control. Drag within the document, release to capture, or cancel with Escape/Cancel. Tiny selections and cancelled pointers do not create files. Screenshots appear above the composer with a preview, actual filename, size, Remove and Retake. Add files allows multiple selections and additional batches. Files remain in browser memory until Send; neither picking a file nor taking a screenshot uploads it.
+Add files accepts multiple PDF, DOCX, PPTX, TXT, Markdown, PNG, JPEG and WEBP files. Legacy DOC/PPT files are rejected because the service does not support them. Each file must be nonempty and at most **4 MiB**. Eight active references, including screenshots and references retained for follow-up questions, can be used together. Duplicate local selections are ignored; invalid selections receive an error.
 
-Send processes each new file through the existing multipart attachment endpoint, then submits the question, course/week/document context, conversation history and signed attachment references together. An attachment-only message asks Stewart to explain the materials. Failed sends retain files and the question; successful uploads are reused during retries. Submitted references remain available per document conversation and can be individually removed. Switching documents preserves each conversation's references and pending files.
+Capture retains the existing pointer selection/cancellation and document-only cropping. PDF crops use rendered PDF.js canvases; Office crops use the existing document DOM capture. Overlays and controls remain outside the capture surface. Screenshots use `canvas.toBlob()` and actual PNG Files. Oversized captures reduce oversampling, never below one pixel per selected CSS pixel; if still too large, the student must select a smaller region. A confirmation preview supports Attach screenshot or Cancel. Confirmed screenshots enter the same pending file queue as ordinary images.
 
-## Rendering and capture
+Files stay local until Send or an explicit failed-file Retry. Compact previews show filename, type, size, local/uploading/uploaded/failed status, error and removal controls. Send uploads each new file separately. A failed file does not stop the other uploads; successful references are cached and only failed files need retrying. No explanation is sent until every required file has uploaded. A failed explanation retains the question, local files and confirmed upload references. Student messages retain their submitted filenames/image previews.
 
-PDFs use the same authenticated document-access route, rendered with PDF.js rather than the opaque browser PDF iframe. Pages render lazily near the viewport, fit to the available width, and support zoom and scrolling. Captures composite the intersecting regions of ready canvases using their actual CSS-to-pixel scale. Unrendered pages cannot be captured silently. The existing open-in-new-tab control remains available for browser PDF search/printing.
+## Browser → AkadVerse contract
 
-Word and PowerPoint keep the existing Office readers. DOM capture rasterizes only intersecting document content, with the original geometry and computed styling; clipping is relative to the actual visible content after scrolling. The overlay is a sibling of the capture surface. Screenshot controls never enter the capture. Resizing cancels selection, and pointer capture supports dragging on touch devices. PNG captures use at least 2× resolution where practical, bounded to avoid excessive memory use.
+Existing endpoints are extended; there is no screenshot-specific AI endpoint.
 
-PDF.js worker/font/CMap/WASM resources are served from an allowlisted public library-asset route. Deployment tracing includes those dependency assets. Private course files continue to use the existing authenticated access route and expiring URLs.
+### POST /api/e-learning/stewart/attachments
 
-## Limits, processing and ownership
+Multipart fields: `file` (exactly one), `courseId`, `weekNumber`, optional `documentId`. The course/week/document uses the same context as chat. Multiple selected files produce multiple requests, each with an independent success/error result.
 
-- Eight attachment references per chat request/conversation; 4 MiB per pending file, matching the existing serverless upload limit.
-- PDF, DOC/DOCX, PPT/PPTX, TXT/MD, PNG, JPG/JPEG and WebP.
-- Server checks extension and bytes. Images are decoded with a pixel limit and normalized to PNG, not trusted from MIME declarations. Legacy Office files must have a valid compound-file signature; PowerPoint record traversal is bounded. Existing bounded OOXML extraction remains in use.
-- PDFs and images use provider file references in document/vision blocks. Office documents are extracted to text. Text truncation is disclosed to Stewart and returned in attachment metadata.
-- Existing upload/chat rate limits, student authentication, course-registration access checks, HMAC-signed user-bound handles and provider error handling remain in force. Request streams are bounded even without Content-Length.
-- Files expire after six hours. References and conversation history use the existing page-visit state, not database persistence. Leaving the page triggers best-effort deletion; expiry remains the fallback. Object URLs for previews are revoked on removal/unmount.
-- Only relevant material should inform the answer; unclear image details should lead to clarification. Attachment contents are untrusted reference data, not instructions.
+```json
+{
+  "success": true,
+  "session_id": "server-scoped-conversation-id",
+  "attachment": {
+    "attachment_id": "8ce28683-406d-4f61-aa75-957c032be16c",
+    "filename": "equation.png",
+    "mime_type": "image/png",
+    "size_bytes": 128000,
+    "created_at": "2026-11-09T10:00:00Z",
+    "expires_at": "2026-11-09T16:00:00Z",
+    "status": "uploaded"
+  }
+}
+```
 
-## Validation
+The browser holds the returned ID; it does not generate it. Old Claude attachment tokens are rejected with a request to reselect the files.
 
-`node --import tsx --experimental-test-module-mocks --test tests/elearning/stewart-document-chat.test.ts tests/elearning/stewart-http.test.ts` checks 31 cases covering bounded HTTP bodies, the PDF asset allowlist, extraction, limits, signed ownership/expiry, mixed image/document requests, prompt caching, follow-up references and provider failures with a recording provider fake.
+### POST /api/e-learning/stewart/chat
 
-`BROWSER_MODULE_DIR=<directory containing playwright-core> node --import tsx scripts/verify-stewart-capture.ts` bundles the production components into a temporary fixture server and runs real Chrome. It checks Office cropping after scrolling, Escape, pending files without uploads, retry without re-upload, mixed submission, follow-up references, the repository's real Engineering-CCMAS PDF, retake/cancel, mobile overflow, touch dragging and pointer cancellation. It uses fixture HTTP endpoints, not live student accounts or a live AI provider. `--office-only` skips the PDF portion when diagnosing PDF setup.
+```json
+{
+  "courseId": "authorized-course-id",
+  "weekNumber": 3,
+  "documentId": null,
+  "messages": [{"role": "student", "text": "Explain this equation."}],
+  "attachment_ids": ["8ce28683-406d-4f61-aa75-957c032be16c"],
+  "grounded": false
+}
+```
 
-## Practical limits
+Response: `{reply, truncated:false, sources, session_id, retrieval_info?}`. `attachment_ids` may be omitted or empty. No binaries/base64 are included. Only the last validated student question is sent upstream; Concept Explainer maintains its own history. Previous browser history remains shape/size checked.
 
-Conversation references last for the page visit and provider expiry, matching existing persistence. Reloading does not restore a chat. Office screenshots reflect the existing Office reader's rendering fidelity; extracted Office text omits embedded diagrams, which students can capture separately. Encrypted, corrupt or image-only Office files may require export as PDF. DOM capture relies on modern browser SVG/foreignObject support. PDF text search/printing remain available through the existing open-in-new-tab action.
+### DELETE /api/e-learning/stewart/attachments
 
-## Changed implementation files
+JSON `{courseId, weekNumber, documentId?, attachment_id}`. Response `{removed:true}`. Ownership/context is checked before upstream deletion. Active explanation leases return 409; the file expires automatically if best-effort browser cleanup cannot finish. Cleanup is idempotent for already deleted records.
 
-| Area | Files |
-| --- | --- |
-| Viewer and shared workspace | `StudyWorkspace.tsx`, `DocumentViewer.tsx`, `viewers/PdfViewer.tsx`, new `capture-region.ts` under `src/app/e-learning/student/study-zone/_components/` |
-| Composer and browser requests | `StewartPanel.tsx`, `stewart.ts` in the same components directory |
-| Shared limits and file types | `src/lib/stewart/config.ts` |
-| Existing AI pipeline | `services/e-learning/student/stewart/chat.ts`, `upload-attachment.ts`, new `legacy-office.ts` |
-| Existing authenticated endpoints | `src/app/api/e-learning/stewart/chat/route.ts`, `attachments/route.ts`, `shared.ts` |
-| PDF.js assets and deployment | New `src/app/api/e-learning/pdfjs/[...asset]/route.ts`, `next.config.ts` |
-| Dependencies/types | `package.json`, `package-lock.json`, new `src/types/word-extractor.d.ts` |
-| Tests | `tests/elearning/stewart-document-chat.test.ts`, new `stewart-http.test.ts`, `tests/helpers/stewart-browser-harness.tsx`, `scripts/verify-stewart-capture.ts` |
+Errors use `{error, code?}` with safe messages. 401/403 cover authentication/ownership; 404 covers unavailable course/document; 413 covers body/file size; 422 covers invalid formats/IDs/expiry; 409 covers active processing/use; 503 covers temporary upstream/database failures. Recoverable codes include `ATTACHMENT_EXPIRED` and `ATTACHMENT_REATTACH_REQUIRED`. Upload failure details appear beside individual files.
 
-The chat JSON API accepts `attachments: string[]`; the original single `attachment` token remains supported. The attachment endpoint keeps its existing one-file multipart contract so each upload stays within the host's request limit. No tables, migrations, course-material storage changes, or new AI credentials are introduced.
+## AkadVerse → Concept Explainer contract
 
-## Verification result
+The existing `services/e-learning/ai-ingest/client.ts` is the only AI transport adapter. All requests use server-side `Authorization: Bearer AI_SERVICE_API_KEY`, no redirects, no-store and bounded timeouts.
 
-All 31 tutor/HTTP tests pass. The Chrome workflow checks pass on desktop and mobile, including real PDF pixels, Office scrolling, invalid selections, touch dragging and pointer cancellation. TypeScript and repository lint pass (seven pre-existing unused-variable warnings). AI responses are simulated in these checks; live provider answer quality is not asserted.
+- `POST /attachments`: native multipart FormData containing **only `file`**, original validated bytes, safe filename, canonical supported MIME. Fetch supplies the boundary. A 200 response must contain valid metadata; its size/MIME must match the forwarded file.
+- `GET /attachments/{id}`: metadata adapter available for reconciliation. It is **not** called before every explanation; local ownership/expiry records suffice.
+- `DELETE /attachments/{id}`: 204 and 404 are both successful cleanup.
+- `POST /explain`: JSON `{question,course_offering_id,week,session_id,attachment_ids?}`. Offering/week come from approved registration. IDs must belong to this student and this conversation and be unexpired. No provider/model SDK fallback remains in AkadVerse.
+- Existing external-search `POST /explain-with-grounding` remains multipart `question` only. It has no documented attachment contract, so attachments require turning that mode off.
 
-A full production build remains blocked: Turbopack encountered Google Fonts connectivity and a CSS worker port restriction; the webpack fallback compiled successfully and passed TypeScript, then failed collecting the existing document-access route because the existing `src/lib/db/elearning.ts` native `createRequire` loader is incompatible with that webpack build. The database loader was left unchanged. These build failures are separate from the passing component/browser and tutor API tests.
+Sources preserve attachment `source_type`, `attachment_id`, `filename`, nullable `document_id`, `material_type`, title and preview. Image sources can use the local original for a thumbnail. Lecturer source IDs are filtered against the authorized week's materials; attachment source IDs against the verified request. `ai_generated` provenance stays separate from course material; source previews are no longer repeated as answer content. Sources are grouped in a closed “View learning sources” disclosure. See [learning response presentation](stewart-learning-responses.md). Retrieval counters are returned unchanged when numeric: attachment chunk counters describe text chunks; `attachment_images_count` describes images.
+
+## Ownership, sessions and persistence
+
+`StewartAttachment` in the E-Learning database stores student ID, scoped session ID, upload fingerprint, remote attachment ID, safe filename, MIME, size, status, creation/expiry time and active-use lease. Binaries never enter either application database or course-material storage.
+
+Saved conversations now own independent random service sessions; authenticated ownership is checked before uploads or explanations. Legacy stateless consumers retain the earlier HMAC context session. New UI conversations and transcripts are persisted and can be reopened after reload. No fictional `/sessions` endpoint is called. See [persistent conversations](stewart-conversations.md) for history, ownership, retries and lifecycle. The microservice's separate history retains its documented 105-day lifetime.
+
+Database advisory locks serialize short reservation, use and deletion transactions across replicas. Pending upload reservations count toward eight active slots. Network calls run outside database transactions. The upload fingerprint makes a repeat request reuse a confirmed unexpired remote ID, including retry after a lost browser response. Failed uploads can retry; in-progress duplicates receive 409. A lost **upstream** response can still leave an unreferenced remote file until automatic expiry because the service provides no idempotency key or listing endpoint.
+
+## Expiry and cleanup policy
+
+The returned `expires_at` is authoritative (documented lifetime: six hours). Submitted references may be reused for follow-ups until removed or expired. Before explaining, the backend rejects expired records. A remote 422 with attachments invalidates those records and returns a recoverable reattachment code; this also covers unreadable/vision-rejected attachments without exposing provider detail.
+
+On expiry/rejection, the composer restores available originals to the pending queue, preserves the question, and asks for resubmission. Resubmitting uploads originals for fresh IDs. Missing local originals must be reselected or recaptured. It never silently sends without an expired attachment.
+
+Removing an uploaded pending/reference file requests upstream deletion. Saved-conversation uploads remain reusable after leaving the panel; legacy uploads still attempt cleanup on unmount. An explanation holds a three-minute use lease, so concurrent deletion cannot remove files in that request. A crash leaves a bounded lease. Network failures or page termination can prevent cleanup; the service's six-hour expiry is the fallback. Unreferenced metadata expired more than a day ago is opportunistically purged on a later upload; expired references belonging to saved conversations remain to require explicit reattachment/removal; no background job was introduced.
+
+## Configuration and rollout
+
+Server-only configuration: `CONCEPT_EXPLAINER_API_URL` (or existing `AI_SERVICE_URL`), `AI_SERVICE_API_KEY`, `NEXTAUTH_SECRET`, and the existing E-Learning database URLs. No new provider secret or browser environment variable is needed.
+
+Apply `prisma/elearning/patches/20261110_stewart_attachments.sql` to the E-Learning database **before** deploying these routes, or use the repository's established reviewed schema-push process. Regenerate the E-Learning Prisma client. The SQL patch is additive and contains no production data writes beyond creating its table/indexes; it has only been applied to the local test database during implementation.
+
+The service README requires at least 150 seconds for large attachment explanations. Upstream timeout is 150 seconds, browser explanation timeout 160 seconds, route `maxDuration` 180 seconds. Confirm the deployment plan/proxy permits that duration. Uploads have a 30-second upstream and 45-second browser budget.
+
+## Verification
+
+```sh
+npm run db:local:up
+npm run test:db:setup
+npm test
+npx tsc --noEmit
+
+# Set BROWSER_MODULE_DIR to a directory containing playwright-core.
+BROWSER_MODULE_DIR=/path/to/node_modules node --import tsx scripts/verify-stewart-capture.ts
+BROWSER_MODULE_DIR=/path/to/node_modules node --import tsx --experimental-test-module-mocks scripts/verify-stewart-attachment-e2e.ts
+```
+
+Browser scripts use installed Chrome on macOS and temporary local servers. The capture suite exercises actual Office/PDF pixels, selection/cancel/confirmation, mixed PDF/TXT/screenshot submission, file limits, ninth-file rejection, per-file retry, expiry recovery, sources and mobile touch/overflow. The attachment E2E script connects real browser components to the actual authenticated routes and local ownership database, then a recording HTTP microservice fixture and rendered reply. Authentication uses the existing test session seam; upstream generation is simulated.
+
+Backend tests exercise individual document/image validation, unchanged binary multipart forwarding, API-key authentication, partial failures, concurrency limits, stable sessions, foreign ownership rejection, expiry, upstream 422, safe errors, source filtering and deletion during use. Existing regression tests cover text-only chat, lecturer retrieval context, grounding and academic authorization.
+
+Live staging acceptance remains required: run a real PDF question, a captured equation, a mixed request, expired-ID recovery and a cross-student attempt using staging accounts. Confirm actual model vision quality/4 MiB acceptance, upstream migrations/history and hosting timeouts. Automated fixtures do not prove live generation quality or deployed service availability.
+
+### Recorded implementation checks (10 November 2026)
+
+- `npm test`: **180 passed, 0 failed**, with isolated local PostgreSQL and fake external providers.
+- `npx tsc --noEmit`: passed. ESLint for changed implementation/test files: passed.
+- `verify-stewart-capture.ts`: passed desktop Office/PDF, confirmation, mixed files, partial failure/retry, expiry, limits and mobile pointer checks.
+- `verify-stewart-attachment-e2e.ts`: passed browser → actual routes → database → multipart HTTP service fixture → explanation → rendered attachment sources, stable session and upload reuse. The browser never contacted the service endpoint or received its key.
+- No production database patch, deployment, live model generation or production build success is claimed by these checks.
+
+### Runtime database patch, 11 November 2026
+
+The application reported P2021 because its configured E-Learning database did not yet contain `public.StewartAttachment`. Applied the additive `20261110_stewart_attachments.sql` table/index definitions to that database. An initial interactive transaction timed out and rolled back; a single atomic PostgreSQL command then succeeded. Verified the table through the generated Prisma client's count query and confirmed the primary, unique and expiry/session indexes. This records schema availability, not a subsequent browser-upload result.

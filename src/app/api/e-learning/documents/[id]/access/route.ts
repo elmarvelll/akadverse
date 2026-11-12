@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server";
 import { requireElearningSession } from "@/services/e-learning/shared/auth";
 import { resolveDownload } from "@/services/e-learning/shared/course-materials/resolve-download";
+import { isDatabaseUnavailable } from "@/lib/database-availability";
 import { ServiceError } from "@/lib/service-error";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -22,6 +23,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ url, fileName }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (e instanceof ServiceError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (isDatabaseUnavailable(e)) {
+      console.warn("[document access] database temporarily unavailable");
+      return NextResponse.json({ error: "The academic database is temporarily unreachable. Please try again shortly." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
     console.error("[document access]", e);
     return NextResponse.json({ error: "Couldn't open that file." }, { status: 500 });
   }

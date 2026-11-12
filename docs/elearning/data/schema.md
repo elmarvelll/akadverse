@@ -48,3 +48,13 @@ Dean/VC get **no profile model** — nothing to scope them by until their functi
 ## Back-relations
 
 Every model above that references `AcademicSession`/`Semester`/`Department`/`Course` required an explicit list field added on the *other* side too (Prisma requires both sides of a relation to be declared) — visible as the growing `courseAssignments`/`learningResources`/`syllabuses`/`courseRegistrations`/`results`/`timeFrames`/`timetableEntries` lists on `AcademicSession`/`Semester` as each new model was added phase by phase. Not redundant data, just Prisma's relation declaration requirement.
+
+## Temporary Stewart attachment metadata (10 November 2026)
+
+`StewartAttachment` records the authenticated student, server-derived conversation scope, upload fingerprint, microservice attachment ID, safe filename/MIME/size, upload status, service creation/expiry and active explanation lease. No binaries are stored. Unique remote IDs and per-session fingerprints prevent duplicate confirmed upload references; transactional reservations enforce eight active slots across application replicas. Expiry metadata is indexed for opportunistic cleanup. Identity is an application-level Core user ID, following this database's existing cross-database identity convention.
+
+Apply `prisma/elearning/patches/20261110_stewart_attachments.sql` before deployment. See [Stewart attachment contracts and lifecycle](../systems/stewart-attachments.md) for authorization, six-hour binary expiry, cleanup, retry and test behavior.
+
+## Stewart conversations and messages (11 November 2026)
+
+`ChatConversation` owns a student's chat title, independent service session, academic context snapshot and generation lease. `ChatMessage` has a cascading conversation FK, USER/ASSISTANT enum, content, time, request identity, status and optional provenance/attachment JSON. Owner/activity indexes and unique request/role keys support pagination and retry safety. Core identity remains an application-level user ID across databases. The additive SQL patch is `prisma/elearning/patches/20261111_stewart_conversations.sql`. See [conversation contracts and rollout](../systems/stewart-conversations.md).

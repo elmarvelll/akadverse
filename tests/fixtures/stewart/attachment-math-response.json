@@ -1,0 +1,85 @@
+{
+  "answer": "### Understanding Ohm's Law\n\nThe equation shown in the screenshot, $V = IR$, is known as Ohm's law. This fundamental relationship describes how voltage ($V$), current ($I$), and resistance ($R$) interact within an electrical circuit. You can think of this like water flowing through a pipe: the voltage acts as the pressure pushing the water, the current is the flow of the water itself, and the resistance represents the size or obstruction of the pipe that limits that flow.\n\nIn any circuit, these three variables are mathematically linked. According to the attached *Circuit-notes.txt* and *Captured-equation.png*, the relationship is expressed as:\n\n$$V = IR$$\n\nTo help visualize these components, consider the following table:\n\n| Symbol | Definition | Unit |\n| :--- | :--- | :--- |\n| V | Voltage | Volts |\n| I | Current | Amperes |\n| R | Resistance | Ohms |\n\nIf you are working with a series circuit, it is important to remember that the current remains constant, meaning the circuit carries equal current through all resistors (*Circuit-notes.txt*).\n\nTo see how this works in practice, we can use the example values provided in the files:\n\n1. Given a voltage ($V$) of 12 volts and a resistance ($R$) of 4 ohms, we rearrange the formula to solve for current ($I = V / R$).\n2. By dividing 12 volts by 4 ohms, we find that the current ($I$) is 3 amperes (*Circuit-notes.txt*; *Captured-equation.png*).",
+  "sources": [
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Modern Conflict Theory (C. Wright Mills)\nFocuses on unequal distribution of power and resources within social structures, highlighting how elites maintain control opposed to the interests of the broad",
+      "source_type": "course_material",
+      "attachment_id": null,
+      "filename": null
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "5. Environmental conflict: This type of conflict arises due to disagreements over the use and management of natural resources and the environment.\n\nDifferent Theories of Conflict \n\nClassical Conflict ",
+      "source_type": "course_material",
+      "attachment_id": null,
+      "filename": null
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Conflict Types Cont’d\n\n1. Interpersonal conflict: This type of conflict occurs between two or more individuals who have different opinions, ideas, or beliefs about a particular issue.\n\n2. Intrapersona",
+      "source_type": "course_material",
+      "attachment_id": null,
+      "filename": null
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "PRESENTER\nNICK ESSIEN \n\n16x9\n\n4x3\nTypes and Theories of Conflict \nOutline of Presentation\n Introduction \nConceptual Clarification\nTYPES/FORMS OF CONFLICT\nTHEORIES OF CONFLICT \nConcluding Remarks\n\n\n\nIn",
+      "source_type": "course_material",
+      "attachment_id": null,
+      "filename": null
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Class conflict: Conflict that occurs among different social classes due to inequality, exploitation, or oppression.\nIntergroup conflict arises when there is tension between two or more groups of peopl",
+      "source_type": "course_material",
+      "attachment_id": null,
+      "filename": null
+    },
+    {
+      "document_id": "fixture-conflict-lecture",
+      "title": "note 1.pdf",
+      "material_type": "NOTES",
+      "chunk_preview": "Clashing personality styles, language and cultures as well as gender conflict often lead to harassment or discrimination charges. \n\n\nConflict Types Cont’d\n\n\nThis conflict is evident in office politics",
+      "source_type": "course_material",
+      "attachment_id": null,
+      "filename": null
+    },
+    {
+      "document_id": null,
+      "title": "Circuit-notes.txt",
+      "material_type": "ATTACHMENT",
+      "chunk_preview": "Ohm's law is V = IR. For V = 12 volts and R = 4 ohms, I = 3 amperes. A series circuit carries equal current through all resistors.",
+      "source_type": "attachment",
+      "attachment_id": "00000000-0000-4000-8000-000000000001",
+      "filename": "Circuit-notes.txt"
+    },
+    {
+      "document_id": null,
+      "title": "Captured-equation.png",
+      "material_type": "ATTACHMENT",
+      "chunk_preview": "[image: Captured-equation.png]",
+      "source_type": "attachment",
+      "attachment_id": "00000000-0000-4000-8000-000000000002",
+      "filename": "Captured-equation.png"
+    }
+  ],
+  "retrieval_info": {
+    "chunks_available": 6,
+    "chunks_above_threshold": 6,
+    "similarity_threshold": 0.4,
+    "attachment_chunks_available": 1,
+    "attachment_chunks_above_threshold": 1,
+    "attachment_images_count": 1
+  }
+}

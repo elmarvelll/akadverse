@@ -61,7 +61,18 @@ export async function captureRegion(surface: HTMLElement, rect: CaptureRect, pdf
     }
     if (!drawn) throw new Error("Select part of the document content.");
   }
-  const blob = await new Promise<Blob>((resolve, reject) => output.toBlob((b) => b ? resolve(b) : reject(new Error("Screenshot encoding failed.")), "image/png"));
+  let blob = await new Promise<Blob>((resolve, reject) => output.toBlob((b) => b ? resolve(b) : reject(new Error("Screenshot encoding failed.")), "image/png"));
+  // Reduce oversampling, never below one pixel per CSS pixel of selected text.
+  while (blob.size > 4 * 1024 * 1024 && output.width > rect.width * 1.05) {
+    const smaller = document.createElement("canvas");
+    smaller.width = Math.max(Math.ceil(rect.width), Math.floor(output.width * 0.8));
+    smaller.height = Math.max(Math.ceil(rect.height), Math.floor(output.height * 0.8));
+    smaller.getContext("2d")!.drawImage(output, 0, 0, smaller.width, smaller.height);
+    output.width = smaller.width; output.height = smaller.height;
+    ctx.drawImage(smaller, 0, 0);
+    blob = await new Promise<Blob>((resolve, reject) => output.toBlob((b) => b ? resolve(b) : reject(new Error("Screenshot encoding failed.")), "image/png"));
+  }
+  if (blob.size > 4 * 1024 * 1024) throw new Error("This screenshot exceeds 4 MiB. Select a smaller area to keep the text clear.");
   const date = new Date();
   const stamp = [date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()].map((n) => String(n).padStart(2, "0")).join("-");
   return new File([blob], `Screenshot-${stamp}.png`, { type: "image/png" });

@@ -1,0 +1,8 @@
+import React from "react";
+import { createRoot } from "react-dom/client";
+import StudyWorkspace from "../../src/app/e-learning/student/study-zone/_components/StudyWorkspace";
+import StewartResponse from "../../src/app/e-learning/student/study-zone/_components/LectureBoard";
+import type { StudyCourse, StudyWeek } from "../../services/e-learning/student/study-zone";
+const course = { id: "course", code: "ENG101", title: "Engineering", sessionName: "2026", semesterName: "First" } as StudyCourse;
+const weeks = [{ weekNumber: 1, documents: [{ id: "notes", title: "Circuit notes", kind: "docx", category: "Notes", fileSize: 1000, rangeLabel: "Week 1" }, { id: "extra", title: "Extra notes", kind: "docx", category: "Notes", fileSize: 1000, rangeLabel: "Week 1" }] }, { weekNumber: 2, documents: [] }] as unknown as StudyWeek[];
+createRoot(document.getElementById("root")!).render(<><StudyWorkspace course={course} weeks={weeks} /><section aria-label="Lecture fixture"><StewartResponse text="Legacy fallback" educational={{ version: 1, type: "lecture_board", title: "Ohm’s law", objectives: ["Relate voltage and current"], bigIdea: "V = IR", sections: [{ heading: "Principle", blocks: [{ kind: "equation", text: "V divided by R", math: { kind: "fraction", children: ["V", "R"] } }, { kind: "table", columns: ["Voltage", "Current"], rows: [["10 V", "2 A"]] }, { kind: "image", url: "https://example.com/circuit.svg", alt: "Circuit diagram" }] }], examples: [{ problem: "Find current", steps: ["Use I = V/R", "Substitute values"], answer: "2 A" }], questions: [{ id: "q", kind: "true_false", question: "Is voltage proportional to current?" }] }} onAnswer={text => { document.getElementById("answer")!.textContent = text; }} /><p id="answer" /></section></>);

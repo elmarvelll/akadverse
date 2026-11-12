@@ -33,7 +33,7 @@ export const looksLikePdf = (bytes: Uint8Array) => startsWith(bytes, [0x25, 0x50
 const looksLikeZip = (bytes: Uint8Array) => startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]); // PK\x03\x04
 
 // Minimal, bounded ZIP reader (stored + deflate entries; no ZIP64, no encryption — what Office writes).
-function openZip(bytes: Uint8Array) {
+export function openZip(bytes: Uint8Array) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let eocd = -1;
   for (let i = bytes.byteLength - 22; i >= Math.max(0, bytes.byteLength - 22 - 65535); i--) {

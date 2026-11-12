@@ -20,9 +20,9 @@
 // sidebar, mobile drawer).
 
 import { STEWART_MAX_ATTACHMENTS } from "@/lib/stewart/config";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, FileText, Loader2, RefreshCw } from "lucide-react";
+import { ChevronDown, FileText, Loader2, RefreshCw, PanelsTopLeft } from "lucide-react";
 import type { StudyCourse, StudyWeek } from "@/services/e-learning/student/study-zone";
 import WeekTabs, { WEEK_PANEL_ID, weekTabId } from "./WeekTabs";
 import DocumentViewer from "./DocumentViewer";
@@ -31,8 +31,45 @@ import StewartPanel from "./StewartPanel";
 import BackToStudyZone from "./BackToStudyZone";
 import { documentOptionLabels, initialWeek, resolveSelection, type ChosenDocuments } from "./study-selection";
 
+import styles from "./study-workspace.module.css";
+
 export default function StudyWorkspace({ course, weeks }: { course: StudyCourse; weeks: StudyWeek[] }) {
+  const [studyMode, setStudyMode] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState("notes");
+  const [notesWidth, setNotesWidth] = useState(50);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const leaveRef = useRef<HTMLButtonElement>(null);
+  const dragging = useRef(false);
+  useEffect(() => {
+    if (!studyMode) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    // Make the surrounding application inaccessible while this viewport workspace is open.
+    const siblings: { element: HTMLElement; inert: boolean }[] = [];
+    let node: HTMLElement | null = rootRef.current;
+    while (node?.parentElement && node !== document.body) {
+      for (const sibling of node.parentElement.children) if (sibling !== node && sibling instanceof HTMLElement) {
+        siblings.push({ element: sibling, inert: sibling.inert }); sibling.inert = true;
+      }
+      node = node.parentElement;
+    }
+    leaveRef.current?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) { setStudyMode(false); return; }
+      if (event.key !== "Tab") return;
+      const controls = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]') ?? []).filter(el => el.getClientRects().length > 0);
+      const first = controls[0], last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => { document.body.style.overflow = overflow; siblings.forEach(({ element, inert }) => { element.inert = inert; }); document.removeEventListener("keydown", keydown); previousFocus?.focus(); };
+  }, [studyMode]);
   const [pendingFiles, setPendingFiles] = useState<Record<string, File[]>>({});
+  const [composerKeys, setComposerKeys] = useState<Record<string, string>>({});
+  const [referenceCount, setReferenceCount] = useState(0);
   const [captureRequest, setCaptureRequest] = useState(0);
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
@@ -41,6 +78,7 @@ export default function StudyWorkspace({ course, weeks }: { course: StudyCourse;
 
   const { week, document: doc, chosenIsGone } = resolveSelection(weeks, activeWeek, chosenDoc);
   const threadKey = `w${week.weekNumber}-${doc?.id ?? "none"}`;
+  const composerKey = composerKeys[threadKey] ?? threadKey;
   const optionLabels = documentOptionLabels(week.documents);
   // Re-reads the course's documents from the server (the lecturer may have added or removed one since this page
   // loaded) without resetting the week, the conversation, or anything else on the page.
@@ -49,21 +87,23 @@ export default function StudyWorkspace({ course, weeks }: { course: StudyCourse;
   const weeksWithMaterial = weeks.filter((w) => w.documents.length > 0).length;
 
   return (
-    <div className="isolate @container space-y-3">
-      <div className="flex h-9 items-center gap-3">
-        <BackToStudyZone />
+    <div ref={rootRef} role={studyMode ? "dialog" : undefined} aria-modal={studyMode || undefined} aria-label={studyMode ? "Study Mode" : undefined} data-panel={mobilePanel} className={studyMode ? `${styles.study} @container` : "isolate @container space-y-3"}>
+      <div className={`${styles.workspaceHeading} flex min-h-12 shrink-0 items-center gap-3 py-1`}>
+        {!studyMode && <BackToStudyZone />}
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-sm font-semibold leading-5 text-gray-900 sm:text-base sm:leading-5" title={`${course.code} — ${course.title}`}>
+          <h1 className={`${styles.courseTitle} truncate text-sm font-semibold leading-5 text-gray-900 sm:text-base sm:leading-5`} title={`${course.code} — ${course.title}`}>
             <span className="font-bold text-blue-800">{course.code}</span> — {course.title}
           </h1>
-          <p className="truncate text-xs leading-4 text-gray-700">
+          <p className="mt-1.5 truncate text-xs leading-4 text-gray-700">
             {course.sessionName} · {course.semesterName} · {weeksWithMaterial} of {weeks.length} weeks have material
           </p>
         </div>
+        {studyMode ? <button ref={leaveRef} type="button" onClick={() => setStudyMode(false)} className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800">Leave Study Mode</button> : <button type="button" onClick={() => setStudyMode(true)} className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-800"><PanelsTopLeft size={16} aria-hidden />Study Mode</button>}
       </div>
+      {studyMode && <div className={styles.mobileTabs} aria-label="Study panels">{["notes", "stewart"].map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} onClick={() => setMobilePanel(panel)} className={`rounded-lg border px-4 py-2 text-sm font-semibold capitalize ${mobilePanel === panel ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white text-gray-800"}`}>{panel}</button>)}</div>}
 
-      <div className="grid grid-cols-1 gap-3 @4xl:grid-cols-[minmax(0,1fr)_18rem] @6xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="flex h-[calc(100dvh-9rem)] min-h-[24rem] min-w-0 flex-col sm:h-[calc(100dvh-10rem)]">
+      <div ref={layoutRef} style={{ "--notes-width": `${notesWidth}fr`, "--chat-width": `${100 - notesWidth}fr` } as CSSProperties} className={`${styles.layout} grid grid-cols-1 gap-3 @4xl:grid-cols-[minmax(0,1fr)_18rem] @6xl:grid-cols-[minmax(0,1fr)_22rem]`}>
+        <div className={`${styles.notes} flex h-[calc(100dvh-9rem)] min-h-[24rem] min-w-0 flex-col sm:h-[calc(100dvh-10rem)]`}>
           <WeekTabs weeks={weeks} active={week.weekNumber} onSelect={setActiveWeek} />
           <div id={WEEK_PANEL_ID} role="tabpanel" aria-labelledby={weekTabId(week.weekNumber)} className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-b-2xl rounded-tr-2xl border border-gray-200 bg-white">
             {week.documents.length > 0 && (
@@ -110,9 +150,9 @@ export default function StudyWorkspace({ course, weeks }: { course: StudyCourse;
             <div className="min-h-0 flex-1">
               {doc ? (
                 // Keyed by id: switching unmounts the previous viewer, so only one document is ever rendered.
-                <DocumentViewer key={doc.id} doc={doc} captureRequest={captureRequest} onCapture={(file) => { if ((pendingFiles[threadKey]?.length ?? 0) >= STEWART_MAX_ATTACHMENTS) throw new Error(`Use at most ${STEWART_MAX_ATTACHMENTS} pending files.`); setPendingFiles((all) => ({ ...all, [threadKey]: [...(all[threadKey] ?? []), file] })); }} />
+                <DocumentViewer onStudyMode={() => setStudyMode(true)} studyMode={studyMode} key={doc.id} doc={doc} captureRequest={captureRequest} onCapture={(file) => { if ((pendingFiles[composerKey]?.length ?? 0) + referenceCount >= STEWART_MAX_ATTACHMENTS) throw new Error(`Use at most ${STEWART_MAX_ATTACHMENTS} attachments.`); setPendingFiles((all) => ({ ...all, [composerKey]: [...(all[composerKey] ?? []), file] })); }} />
               ) : (
-                <StatusCard tone="neutral" title={`No material for Week ${week.weekNumber} yet`} body={chosenIsGone ? "The document you had open is no longer available, and this week has no other material." : "Your lecturer hasn't uploaded anything for this week."}>
+                <StatusCard tone="neutral" title={`No material for Week ${week.weekNumber} yet`} body={chosenIsGone ? "The document you had open is no longer available, and this week has no other material." : "Select a week with material, or use Add files in Stewart to attach your own study notes."}>
                   <button
                     type="button"
                     onClick={refreshDocuments}
@@ -136,11 +176,24 @@ export default function StudyWorkspace({ course, weeks }: { course: StudyCourse;
           </div>
         </div>
 
+        <div role="separator" aria-label="Resize notes and Stewart panels" aria-orientation="vertical" aria-valuemin={30} aria-valuemax={70} aria-valuenow={Math.round(notesWidth)} tabIndex={studyMode ? 0 : -1} className={styles.divider}
+          onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); setNotesWidth(n => e.key === "Home" ? 30 : e.key === "End" ? 70 : Math.max(30, Math.min(70, n + (e.key === "ArrowLeft" ? -2 : 2)))); } }}
+          onPointerDown={e => { if (e.button !== 0) return; dragging.current = true; e.currentTarget.setPointerCapture(e.pointerId); }}
+          onPointerMove={e => { if (!dragging.current) return; const box = layoutRef.current?.getBoundingClientRect(); if (!box) return; const min = Math.max(30, 320 / box.width * 100); setNotesWidth(Math.max(min, Math.min(100 - min, (e.clientX - box.left) / box.width * 100))); }}
+          onPointerUp={() => { dragging.current = false; }} onPointerCancel={() => { dragging.current = false; }} onLostPointerCapture={() => { dragging.current = false; }} />
         <StewartPanel
-          files={pendingFiles[threadKey] ?? []}
-          onFilesChange={(files) => setPendingFiles((all) => ({ ...all, [threadKey]: typeof files === "function" ? files(all[threadKey] ?? []) : files }))}
+          onReferenceCountChange={setReferenceCount}
+          onComposerKeyChange={(thread, key) => setComposerKeys((all) => ({ ...all, [thread]: key }))}
+          onConversationContextChange={(weekNumber, documentId) => {
+            const target = weeks.find((item) => item.weekNumber === weekNumber) ?? weeks[0];
+            const selected = target.documents.find((item) => item.id === documentId) ?? target.documents[0] ?? null;
+            setActiveWeek(target.weekNumber); if (documentId) setChosenDoc((all) => ({ ...all, [target.weekNumber]: documentId }));
+            return `w${target.weekNumber}-${selected?.id ?? "none"}`;
+          }}
+          files={pendingFiles[composerKey] ?? []}
+          onFilesChange={(files) => setPendingFiles((all) => ({ ...all, [composerKey]: typeof files === "function" ? files(all[composerKey] ?? []) : files }))}
           onRetake={() => setCaptureRequest((n) => n + 1)}
-          className="h-[34rem] @4xl:h-[calc(100dvh-10rem)] @4xl:min-h-[24rem]"
+          className={`${styles.chat} h-[34rem] @4xl:h-[calc(100dvh-10rem)] @4xl:min-h-[24rem]`}
           context={{ courseId: course.id, courseCode: course.code, weekNumber: week.weekNumber, documentId: doc?.id ?? null, documentTitle: doc?.title ?? null }}
           threadKey={`w${week.weekNumber}-${doc?.id ?? "none"}`}
           studyingLabel={`Week ${week.weekNumber} · ${doc?.title ?? "no material yet"}`}

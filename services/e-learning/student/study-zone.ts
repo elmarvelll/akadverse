@@ -50,6 +50,7 @@ export interface StudyCourse {
 
 export interface StudyWorkspaceData {
   course: StudyCourse;
+  offeringId?: string | null;
   // Empty when the course has no offering yet (no lecturer assigned, so nowhere for materials to live).
   weeks: StudyWeek[];
 }
@@ -77,13 +78,14 @@ export async function getStudyCourses(studentUserId: string, ctx: CurrentAcademi
 }
 
 // null when the course isn't one of this student's approved courses (the caller renders a 404).
-export async function getStudyWorkspace(studentUserId: string, ctx: CurrentAcademicContext, courseId: string): Promise<StudyWorkspaceData | null> {
-  const registered = (await getRegisteredCourses(studentUserId, ctx)).find((c) => c.id === courseId);
+export async function getStudyWorkspace(studentUserId: string, ctx: CurrentAcademicContext, courseId: string, options: { includeLecturerNames?: boolean } = {}): Promise<StudyWorkspaceData | null> {
+  const registered = (await getRegisteredCourses(studentUserId, ctx, options)).find((c) => c.id === courseId);
   if (!registered) return null;
   const course = toStudyCourse(registered);
   if (!registered.offeringId) return { course, weeks: [] };
 
-  const detail = await getOfferingDetail(registered.offeringId);
+  // Course display names already came from registration; the workspace only needs materials and weeks.
+  const detail = await getOfferingDetail(registered.offeringId, { includeLecturerNames: false });
   const typeOrder = (t: string) => MATERIAL_TYPES.indexOf(t as (typeof MATERIAL_TYPES)[number]);
   const weeks = Array.from({ length: detail.totalWeeks }, (_, i): StudyWeek => {
     const weekNumber = i + 1;
@@ -102,5 +104,5 @@ export async function getStudyWorkspace(studentUserId: string, ctx: CurrentAcade
       }));
     return { weekNumber, topic: documents[0]?.title ?? null, documents };
   });
-  return { course, weeks };
+  return { course, weeks, offeringId: registered.offeringId };
 }
