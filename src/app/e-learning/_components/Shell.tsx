@@ -17,6 +17,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Header from "./Header";
+import styles from "./student-portal.module.css";
 import Sidebar from "./Sidebar";
 import type { ElearningRole } from "@/services/e-learning/shared/auth";
 import { SIDEBAR_COOKIE } from "./nav-config";
@@ -63,7 +64,7 @@ export default function Shell({
   }, [open]);
 
   return (
-    <div className="elearning-shell min-h-screen bg-gray-50">
+    <div className={`elearning-shell min-h-screen bg-gray-50 ${role === "student" ? styles.portal : ""}`}>
       <Header role={role} name={name} menuOpen={open} onMenuToggle={() => setOpen((v) => !v)} onBrandClick={() => setOpen(false)} />
 
       {open && <div className="fixed inset-0 top-16 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}

@@ -18,7 +18,10 @@ export default function DeleteMaterialButton({ offeringId, materialId }: { offer
           start(async () => {
             const r = await deleteMaterialAction(offeringId, materialId);
             if (!r.ok) setError(r.error);
-            else router.refresh();
+            else {
+              if (r.cleanupPending) setError("Original file removed. AI index cleanup is pending and will be retried by the scheduler.");
+              router.refresh();
+            }
           });
         }}
         className="text-xs font-semibold text-red-700 underline disabled:opacity-60"

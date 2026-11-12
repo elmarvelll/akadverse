@@ -45,10 +45,24 @@ const { PrismaClient } = requireFromProjectRoot(
 
 const globalForElearningPrisma = globalThis as unknown as {
   elearningPrisma: ElearningClient.PrismaClient | undefined;
+  elearningPrismaUrl: string | undefined;
 };
 
-export const elearningDb = globalForElearningPrisma.elearningPrisma ?? new PrismaClient();
+const databaseUrl = process.env.ELEARNING_DATABASE_URL;
+const cachedClient = globalForElearningPrisma.elearningPrisma;
+const reuseClient = cachedClient && globalForElearningPrisma.elearningPrismaUrl === databaseUrl;
+
+// Next reloads .env during development, but globalThis survives module reloads.
+// Recreate the pool when its connection configuration changes.
+if (cachedClient && !reuseClient) {
+  void cachedClient.$disconnect().catch(() => {});
+}
+
+export const elearningDb = reuseClient
+  ? cachedClient
+  : new PrismaClient({ datasourceUrl: databaseUrl });
 
 if (process.env.NODE_ENV !== "production") {
   globalForElearningPrisma.elearningPrisma = elearningDb;
+  globalForElearningPrisma.elearningPrismaUrl = databaseUrl;
 }

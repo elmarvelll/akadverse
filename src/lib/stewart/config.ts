@@ -3,10 +3,8 @@
 // Limits and supported formats for Stewart (the Study Zone AI assistant), shared by the browser (fast feedback) and
 // the server (the actual enforcement — every limit here is re-checked in services/e-learning/student/stewart/*).
 
-// Up to eight files per conversation. PDFs/images are read natively; Office/text files are extracted server-side.
+// Concept Explainer accepts these formats, up to eight references per explanation.
 export const STEWART_ATTACHMENT_TYPES = {
-  doc: { label: "Word", mime: ["application/msword"] },
-  ppt: { label: "PowerPoint", mime: ["application/vnd.ms-powerpoint"] },
   png: { label: "Image", mime: ["image/png"] },
   jpg: { label: "Image", mime: ["image/jpeg"] },
   jpeg: { label: "Image", mime: ["image/jpeg"] },
@@ -35,8 +33,7 @@ export const STEWART_MAX_MESSAGE_CHARS = 4_000;
 // Older turns beyond this are dropped from what's sent (the attached document itself is always kept).
 export const STEWART_MAX_HISTORY_MESSAGES = 24;
 
-// How long an uploaded attachment stays usable. The file is stored with the AI provider with this expiry and the
-// signed handle the browser holds expires at the same time — "this chat session", not permanent storage.
+// Concept Explainer owns binary retention; its returned expires_at is authoritative.
 export const STEWART_ATTACHMENT_TTL_SECONDS = 6 * 60 * 60;
 
 export const extensionOfFile = (name: string) => (name.includes(".") ? name.split(".").pop()!.toLowerCase() : "");

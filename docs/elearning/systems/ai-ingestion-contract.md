@@ -58,7 +58,7 @@ Server-only values (never `NEXT_PUBLIC_`):
 `AI_SERVICE_CALLBACK_ALLOWED_HOSTS=akadverse.vercel.app` belongs on **Concept Explainer**, along with matching shared secrets. AkadVerse never needs the remote embedding provider key or remote database credentials.
 
 1. Start in an isolated staging environment. Keep `AI_INGEST_ENABLED=false`. Ensure the application has its normal Storage/database secrets and configure the shared values above in the deployment environment; local `.env` values are not automatically deployed.
-2. Deploy the E-learning schema using the existing `npm run db:elearning:push` convention, then regenerate its client (`npm run db:elearning:generate`). No Core/Marketplace migration is needed. A reviewable incremental SQL alternative is `prisma/elearning/patches/20261104_ai_ingestion_outbox.sql`, for a database already containing the earlier AI fields; apply it **instead of** db push, not after it. This is a standalone E-learning patch, not a Core Prisma migration. Fresh environments should use db push.
+2. Deploy the E-learning schema using the existing `npm run db:elearning:push` convention, then regenerate its client (`npm run db:elearning:generate`). No Core/Marketplace migration is needed. A reviewable incremental SQL alternative is `prisma/elearning/patches/20261104_ai_ingestion_outbox.sql`, for a database already containing the earlier AI fields; the patch is additive and safe to rerun, including after db push. It wraps the change in a transaction with lock/statement timeouts. This is a standalone E-learning patch, not a Core Prisma migration. Fresh environments should use db push.
 3. Run `npm run ai:ingest-backfill -- --dry-run`, then `npm run ai:ingest-backfill`. This adopts historical submissions for reconciliation without resending them, and queues only previously unsent notes. Run before accepting historical callbacks with the new task checks. Existing remotely ingested assignments/quizzes also retain their identities for cleanup.
 4. Configure the external scheduler, enable the staging worker and invoke its authenticated cron endpoint. Upload an isolated real note; confirm a positive chunk count callback, service-owned embeddings via the AI engineer, and continued access to the original. Test unsupported files, authorization, deletion, callback loss, worker crashes and failures. Do not use production lecture notes for destructive tests.
 5. Agree and validate the remote recovery/cancellation contracts above before claiming all reliability acceptance criteria. Promote only after staging passes and deployment readiness is confirmed. Keep production processing disabled otherwise.
@@ -86,3 +86,14 @@ node --import tsx --test tests/elearning/ai-ingest-policy.test.ts tests/elearnin
 ```
 
 No production database migration, upload, ingestion, deletion or deployment was performed.
+
+
+## Production error: missing AiIngestTask (P2021)
+
+`prisma generate` in the Vercel build generates code; it does not create database tables. If material confirmation fails with `public.AiIngestTask does not exist`, apply the reviewed additive patch to the E-Learning database used by that deployment:
+
+```sh
+npx prisma db execute --schema=prisma/elearning/schema.prisma --file=prisma/elearning/patches/20261104_ai_ingestion_outbox.sql
+```
+
+Confirm ELEARNING_DIRECT_URL targets the intended deployment before executing. Do not apply a Core migration or reset the database. Verify with the E-Learning Prisma client's aiIngestTask.count(), then retry the material upload/confirmation. The patch is rerunnable, but a preexisting table with a different definition still requires schema review. A schema-only repair does not require a Vercel redeploy when the deployed application already has the matching generated client.

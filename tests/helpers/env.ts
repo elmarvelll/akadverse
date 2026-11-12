@@ -37,4 +37,6 @@ process.env.PAYSTACK_SECRET_KEY = "sk_live_dummy_never_used";
 process.env.NEXT_PUBLIC_PAYSTACK_KEY = "pk_test_dummy";
 process.env.RESEND_API_KEY = "re_dummy_for_automated_tests";
 process.env.NEXTAUTH_URL = "https://akadverse.test";
+// Do not inherit a deployed origin from the shell/.env when checking email and callback URLs.
+process.env.APP_BASE_URL = "https://akadverse.test";
 process.env.ADMIN_EMAIL = "";
