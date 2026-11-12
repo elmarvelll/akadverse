@@ -3,11 +3,15 @@
 AkadVerse is the host application at the repository root. See
 [the local development guide](for_Developers/README.md) for setup.
 
-The standalone Productivity Layer source is in [schedule-manager](schedule-manager/README.md).
-It retains its own npm scripts and checks. Merging the source does not yet connect
-its development identity or browser storage to AkadVerse authentication and Prisma.
-Run its checks from that directory; root checks exclude the standalone app and
-checkpoint copies.
+The integrated Productivity Layer opens at `/studashboard/productivity-layer`
+using AkadVerse authentication and the Core Prisma database. See the
+[integration guide](docs/productivity-integration.md) for data mapping, migration,
+explicit local-data import, validation limits and rollback. Apply the prepared
+migration to a confirmed development database before using the feature.
+
+The original [schedule-manager](schedule-manager/README.md) remains available for
+exporting existing browser records. It retains its own npm scripts and checks;
+root checks exclude that standalone app and checkpoint copies.
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 

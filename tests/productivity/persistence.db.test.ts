@@ -1,0 +1,38 @@
+import "../helpers/env";
+import { signInAs } from "../helpers/session";
+import { after, before, it, mock } from "node:test";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { prisma } from "@/lib/prisma";
+import { makeUser } from "../helpers/fixtures";
+import { localNow, type Dataset } from "@/features/productivity/schedule/domain";
+import type { Task } from "@/features/productivity/tasks/domain";
+import type { Habit } from "@/features/productivity/habits/domain";
+import { ServiceError } from "@/lib/service-error";
+mock.module("@/services/productivity-layer/academics", { namedExports: { officialClasses: async () => [] } });
+let execute: typeof import("@/services/productivity-layer/operations").executeProductivity;
+before(async () => { ({ executeProductivity: execute } = await import("@/services/productivity-layer/operations")); });
+const users: string[] = [];
+after(async () => { try { if (users.length) await prisma.user.deleteMany({ where: { id: { in: users } } }); } finally { await prisma.$disconnect(); } });
+const call = <T = unknown>(operation: string, args: unknown[] = [], requestId = randomUUID()) => execute({ operation, args, requestId }) as Promise<T>;
+
+it("persists across fresh requests, isolates two users, enforces ownership FKs and concurrent occurrence uniqueness", async () => {
+  const a = await makeUser(), b = await makeUser(); users.push(a.id, b.id); signInAs(a);
+  const today = localNow("Africa/Lagos").date;
+  const source = await call<Habit>("habits.save", [{ name: "Read", description: "", type: "task", frequency: "daily", weekdays: [], priority: "medium", time: "", startDate: today }]);
+  await Promise.all(Array.from({ length: 4 }, () => call("habits.synchronize", [{ start: today, end: today }])));
+  assert.equal(await prisma.productivityOccurrence.count({ where: { ownerId: a.id, habitId: source.id, originalDate: today } }), 1);
+  const task = (await call<Task[]>("tasks.list"))[0]; await call("tasks.complete", [task.id]);
+  assert.equal((await call<Task>("tasks.get", [task.id])).status, "completed");
+  assert.equal((await prisma.productivityTask.findUniqueOrThrow({ where: { id: task.id } })).outcome, "completed");
+  await assert.rejects(prisma.productivityOccurrence.create({ data: { ownerId: a.id, habitId: source.id, originalDate: today } }), { code: "P2002" });
+  await assert.rejects(prisma.productivityOccurrence.create({ data: { ownerId: b.id, habitId: source.id, originalDate: "2030-01-01" } }), { code: "P2003" });
+  const key = randomUUID(), input = { title: "One durable task", priority: "medium" };
+  const created = await call<Task>("tasks.create", [input], key); assert.equal((await call<Task>("tasks.create", [input], key)).id, created.id);
+  signInAs(b); assert.deepEqual(await call("tasks.list"), []);
+  for (const operation of ["tasks.get", "tasks.delete", "tasks.complete"]) await assert.rejects(call(operation, [task.id]), e => e instanceof ServiceError && e.status === 404);
+  await assert.rejects(call("habits.record", [source.id, today, "completed"]), e => e instanceof ServiceError && e.status === 404);
+  assert.equal((await call<Dataset>("schedule.load")).events.length, 0);
+  signInAs(a); await call("habits.archive", [source.id, true]);
+  assert.equal((await call<Task>("tasks.get", [task.id])).status, "completed");
+});
