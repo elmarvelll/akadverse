@@ -16,12 +16,22 @@ import { PrismaClient } from "@prisma/client";
 // `prismaGlobal` property (globalThis is otherwise untyped for this).
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaDatabaseUrl?: string;
 };
+
+// Retain the connection target associated with a cached development client.
+// Auth's development-only writer must not mistake a hot-reloaded env URL for
+// the target of an older singleton. Unknown old instances require a restart.
+const cachedPrisma = globalForPrisma.prisma;
+const prismaDatabaseUrl = cachedPrisma ? globalForPrisma.prismaDatabaseUrl : process.env.DATABASE_URL;
+export function corePrismaMatchesCurrentEnvironment() {
+  return !!prismaDatabaseUrl && prismaDatabaseUrl === process.env.DATABASE_URL;
+}
 
 // Reuse the existing client if one was already created on a previous
 // hot-reload; otherwise create a fresh one.
 export const prisma =
-  globalForPrisma.prisma ??
+  cachedPrisma ??
   new PrismaClient(
     // Temporary diagnostic, gated behind an env var so it's zero-cost by
     // default: with DB_TIMING_DEBUG=1, logs each query's engine-reported
@@ -47,5 +57,6 @@ if (process.env.DB_TIMING_DEBUG === "1") {
 // Only cache the instance on `global` outside of production, since in
 // production the module is loaded once per server process anyway.
 if (process.env.NODE_ENV !== "production") {
+  if (!cachedPrisma) globalForPrisma.prismaDatabaseUrl = prismaDatabaseUrl;
   globalForPrisma.prisma = prisma;
 }

@@ -1,4 +1,5 @@
 "use client";
+import { productivityErrorMessage } from "../errors";
 import { useState, type FormEvent } from "react";
 import { Dialog } from "../schedule/Forms";
 import { taskSnapshot, type Task, type TaskInput } from "./domain";
@@ -7,7 +8,7 @@ export function TaskForm({ task, timezone, onSave, onClose }: { task?: Task; tim
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
-    try { await onSave(input); onClose(); } catch (error) { setError((error as Error).message); } finally { setBusy(false); }
+    try { await onSave(input); onClose(); } catch (error) { setError(productivityErrorMessage(error, "This task could not be saved. Review the fields and try again.")); } finally { setBusy(false); }
   }
   return <Dialog title={task ? "Edit task" : "New task"} onClose={() => { if (!busy) onClose(); }}>
     <form onSubmit={submit}>

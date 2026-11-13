@@ -1,4 +1,5 @@
 "use client";
+import { productivityErrorMessage } from "../errors";
 import {
   useEffect,
   useRef,
@@ -125,7 +126,7 @@ export function EventForm({
       await onSave(draft, event?.id, options);
       onClose();
     } catch (e) {
-      setError((e as Error).message);
+      setError(productivityErrorMessage(e, "These schedule changes could not be saved. Review the fields and try again."));
       if (e instanceof SlotConflictError) {
         setConflicts(e.conflicts);
         setConflictSlot(JSON.stringify(draft.slot));
@@ -334,7 +335,7 @@ export function ScheduleForm({
       await onSave(name, description, schedule?.id, academic);
       onClose();
     } catch (e) {
-      setError((e as Error).message);
+      setError(productivityErrorMessage(e, "These schedule changes could not be saved. Review the fields and try again."));
     } finally {
       setBusy(false);
     }

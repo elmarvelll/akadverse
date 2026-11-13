@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { executeProductivity } from "@/services/productivity-layer/operations";
 import { checkOrigin, command } from "@/services/productivity-layer/validation";
-import { badRequest, ServiceError } from "@/lib/service-error";
-import { SlotConflictError } from "@/features/productivity/schedule/domain";
+import { badRequest } from "@/lib/service-error";
+import { publicProductivityError } from "@/services/productivity-layer/errors";
+import { productivityAction } from "@/features/productivity/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  let action = "read the workspace request";
   try {
     checkOrigin(request);
     // Enforce the limit while reading; Content-Length alone is not trusted.
@@ -22,13 +25,17 @@ export async function POST(request: Request) {
     }
     let input: unknown;
     try { input = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { throw badRequest("Invalid JSON request."); }
-    const result = await executeProductivity(command(input), request.headers.get("x-productivity-user"));
+    const parsed = command(input);
+    action = productivityAction(parsed.operation);
+    const result = await executeProductivity(parsed, request.headers.get("x-productivity-user"));
     return NextResponse.json({ result }, { headers: { "Cache-Control": "private, no-store", Vary: "Cookie" } });
   } catch (error) {
+    unstable_rethrow(error);
     const headers = { "Cache-Control": "private, no-store", Vary: "Cookie" };
-    if (error instanceof SlotConflictError) return NextResponse.json({ error: error.message, code: "SLOT_CONFLICT", conflicts: error.conflicts }, { status: 409, headers });
-    if (error instanceof ServiceError) return NextResponse.json({ error: error.message }, { status: error.status, headers });
-    // Do not log database URLs, query parameters, snapshots or personal content.
-    return NextResponse.json({ error: "Your workspace could not be saved or loaded. Please retry." }, { status: 500, headers });
+    const { status, ...failure } = publicProductivityError(error);
+    const referenceId = crypto.randomUUID();
+    // Bounded metadata only: no raw exception, URLs, queries or personal content.
+    if (status >= 500) console.error("Productivity request failed", { referenceId, action, code: failure.code });
+    return NextResponse.json({ ...failure, referenceId }, { status, headers });
   }
 }

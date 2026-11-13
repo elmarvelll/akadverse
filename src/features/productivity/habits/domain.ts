@@ -1,3 +1,4 @@
+import { ProductivityError } from "../errors";
 import { addDays, validDate, validSlot, slotEndDate, type Priority } from "../schedule/domain";
 import { validTime, type Task } from "../tasks/domain";
 import { inTimezone } from "../schedule/time";
@@ -13,15 +14,18 @@ export interface HabitData { version: 1; habits: Habit[] }
 export interface HabitRepository { load(): Promise<HabitData>; save(data: HabitData): Promise<void> }
 export interface Occurrence { habitId: string; id: string; date: string; settings: HabitRevision; task?: Task; event?: PersonalEvent }
 export function validateHabit(input: HabitInput, timezone: string) {
-  if (!input || typeof input.name !== "string" || !input.name.trim() || input.name.trim().length > 100 || typeof input.description !== "string" || input.description.length > 10000) throw new Error("Enter a name up to 100 characters and a description up to 10,000 characters.");
-  if (!["task", "event"].includes(input.type) || !["daily", "weekdays"].includes(input.frequency) || !["low", "medium", "high"].includes(input.priority)) throw new Error("Choose valid habit settings.");
-  if (!Array.isArray(input.weekdays) || input.weekdays.some(day => !Number.isInteger(day) || day < 0 || day > 6) || new Set(input.weekdays).size !== input.weekdays.length || (input.frequency === "weekdays" && !input.weekdays.length)) throw new Error("Select at least one weekday.");
-  if ((input.startDate !== undefined && !validDate(input.startDate)) || (input.endDate !== undefined && (!validDate(input.endDate) || !!input.startDate && input.endDate < input.startDate))) throw new Error("Choose valid dates with the end date on or after the start date.");
-  if ((input.type === "task" && input.time !== "" && !validTime(input.time)) || (input.type === "event" && (!validTime(input.time) || !input.end || !validSlot({ date: "2026-01-01", start: input.time, end: input.end, timezone })))) throw new Error("Choose valid event times; the end must follow the start. Task deadlines are optional.");
+  if (!input || typeof input.name !== "string" || !input.name.trim() || input.name.trim().length > 100) throw new ProductivityError("Habit name must contain between 1 and 100 characters.");
+  if (typeof input.description !== "string" || input.description.length > 10000) throw new ProductivityError("Habit description must be at most 10,000 characters.");
+  if (!["task", "event"].includes(input.type)) throw new ProductivityError("Habit type must be Task or Event.");
+  if (!["daily", "weekdays"].includes(input.frequency)) throw new ProductivityError("Choose a daily habit or specific weekdays.");
+  if (!["low", "medium", "high"].includes(input.priority)) throw new ProductivityError("Habit priority must be Low, Medium, or High.");
+  if (!Array.isArray(input.weekdays) || input.weekdays.some(day => !Number.isInteger(day) || day < 0 || day > 6) || new Set(input.weekdays).size !== input.weekdays.length || (input.frequency === "weekdays" && !input.weekdays.length)) throw new ProductivityError("Select at least one weekday.");
+  if ((input.startDate !== undefined && !validDate(input.startDate)) || (input.endDate !== undefined && (!validDate(input.endDate) || !!input.startDate && input.endDate < input.startDate))) throw new ProductivityError("Choose valid dates with the end date on or after the start date.");
+  if ((input.type === "task" && input.time !== "" && !validTime(input.time)) || (input.type === "event" && (!validTime(input.time) || !input.end || !validSlot({ date: "2026-01-01", start: input.time, end: input.end, timezone })))) throw new ProductivityError("Choose valid event times; the end must follow the start. Task deadlines are optional.");
 }
 export function validateHabitSnapshot(value: HabitRevision, timezone: string) {
   validateHabit(value, timezone);
-  if (!validDate(value.effectiveDate) || typeof value.archived !== "boolean" || !Number.isFinite(Date.parse(value.at))) throw new Error("Invalid occurrence settings snapshot.");
+  if (!validDate(value.effectiveDate) || typeof value.archived !== "boolean" || !Number.isFinite(Date.parse(value.at))) throw new ProductivityError("Invalid occurrence settings snapshot.");
 }
 export function settingsFor(habit: Habit, date: string, recordedAt?: string) {
   return habit.revisions.filter(revision => revision.effectiveDate <= date && (!recordedAt || revision.at <= recordedAt)).at(-1);

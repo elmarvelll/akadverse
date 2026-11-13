@@ -1,3 +1,4 @@
+import { ProductivityError } from "../errors";
 import { validateHabitSnapshot } from "../habits/domain";
 import { validateOutcomeChanges } from "../habits/outcomes";
 ﻿import {
@@ -37,12 +38,12 @@ export function parseDataset(raw: string): Dataset {
   try {
     data = JSON.parse(raw);
   } catch {
-    throw new Error(
+    throw new ProductivityError(
       "Saved schedule is not valid JSON. It has been left untouched.",
     );
   }
   const invalid = () => {
-    throw new Error(
+    throw new ProductivityError(
       "Saved schedule has invalid or unsupported records. It has been left untouched.",
     );
   };

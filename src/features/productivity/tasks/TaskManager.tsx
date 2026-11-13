@@ -1,4 +1,5 @@
 "use client";
+import { productivityErrorMessage } from "../errors";
 import { habitDuplicateConflicts } from "../habits/duplicates";
 import { HabitBadge } from "../habits/HabitLabel";
 import { WorkspaceButton, useWorkspaceNavigation } from "../workspace/WorkspaceNavigation";
@@ -45,7 +46,7 @@ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
   useEffect(() => {
     if (!habitDay) return;
     let active = true;
-    void browserHabits.synchronize({ start: habitDay, end: habitDay }).then(() => service.listTasks()).then(records => { if (active) setTasks(records); }).catch(error => { if (active) setLoadError(error.message); });
+    void browserHabits.synchronize({ start: habitDay, end: habitDay }).then(() => service.listTasks()).then(records => { if (active) setTasks(records); }).catch(error => { if (active) setLoadError(productivityErrorMessage(error, "Your tasks could not be loaded or updated. Reload the task list and try again.")); });
     return () => { active = false; };
   }, [habitDay, timezone, habitSettings, service]);
   useEffect(() => {
@@ -62,13 +63,13 @@ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
     try {
       const [current, records, rules] = await Promise.all([service.getCurrentStudent(), service.listTasks(), browserHabits.list()]);
       setStudent(current); setTasks(records); setHabits(rules); setLoadError(""); setClock(new Date());
-    } catch (error) { setLoadError((error as Error).message); }
+    } catch (error) { setLoadError(productivityErrorMessage(error, "Your tasks could not be loaded or updated. Reload the task list and try again.")); }
   }, [service]);
   useEffect(() => {
     let active = true;
     Promise.all([service.getCurrentStudent(), service.listTasks(), browserHabits.list()]).then(([current, records, rules]) => {
       if (active) { setStudent(current); setTasks(records); setHabits(rules); setClock(new Date()); }
-    }).catch(error => { if (active) setLoadError((error as Error).message); });
+    }).catch(error => { if (active) setLoadError(productivityErrorMessage(error, "Your tasks could not be loaded or updated. Reload the task list and try again.")); });
     const changed = (event: StorageEvent) => { if (event.key === TASK_STORAGE_KEY || event.key === HABIT_STORAGE_KEY || event.key === null) void refresh(); };
     const reload = () => { void refresh(); };
     const resumed = () => { if (document.visibilityState === "visible") reload(); };
@@ -85,7 +86,7 @@ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
       const saved = await operation();
       setTasks(previous => previous?.map(task => task.id === saved.id ? saved : task));
       setNotice(message); return true;
-    } catch (error) { setSaveError((error as Error).message); return false; } finally { saving.current = false; setBusy(false); }
+    } catch (error) { setSaveError(productivityErrorMessage(error, "Your tasks could not be loaded or updated. Reload the task list and try again.")); return false; } finally { saving.current = false; setBusy(false); }
   }
   if (!tasks || !student) return <main className="loading"><h1>{loadError ? "Tasks could not be loaded" : "Loading your tasks…"}</h1>{loadError ? <><p role="alert" className="error">{loadError}</p><p>Saved records have not been replaced.</p><button onClick={() => void refresh()}>Retry loading</button></> : <p role="status">Reading your saved tasks.</p>}<WorkspaceButton section="schedule">Open Schedule Manager</WorkspaceButton></main>;
   const duplicateConflicts = habitDuplicateConflicts(tasks);

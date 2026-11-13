@@ -63,6 +63,9 @@ Thumbs.db
 # local backups written by scripts/cleanup-test-accounts.ts (contain emails / password hashes)
 .cleanup-backups/
 
+# Local PostgreSQL data, portable tools and private release backups
+.local-development/
+
 # Environment templates contain only placeholders / local-only values and MUST be committed
 # (the `.env*` rules above would otherwise ignore them). See for_Developers/.env.example.
 !.env.example

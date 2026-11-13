@@ -13,15 +13,21 @@
 //      only accepted with an institutional student email and is sent through the
 //      student sign-up (academic details + OTP) instead of being auto-created
 //      (see the `signIn` callback below).
+//   A separate Credentials provider is available only with the explicit local
+//   development-login gates; see docs/development-login.md.
 
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { prisma, corePrismaMatchesCurrentEnvironment } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/admin-identity";
 import { isEmailForRole } from "@/lib/account-domains";
 import { createGoogleSignupToken } from "@/services/auth/student-signup/google-signup-token";
+import { createDevelopmentLoginProvider } from "@/lib/dev-login";
+import { DEV_LOGIN_PROVIDER_ID, hasGoogleCredentials, isDedicatedTestStudent, requireDevLoginSetup } from "@/lib/dev-login-policy";
+
+const developmentProvider = createDevelopmentLoginProvider();
 
 export const authOptions: NextAuthOptions = {
   // Used by NextAuth to sign/encrypt the session JWT. Must be set in .env.
@@ -109,10 +115,11 @@ export const authOptions: NextAuthOptions = {
     // Google" (signup page) — it's the same provider either way; whether it
     // creates a new user or logs in an existing one is decided in the
     // `signIn` callback below.
-    GoogleProvider({
+    ...(hasGoogleCredentials() ? [GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    })] : []),
+    ...(developmentProvider ? [developmentProvider] : []),
   ],
 
   callbacks: {
@@ -129,7 +136,21 @@ export const authOptions: NextAuthOptions = {
     // sign-in, or after maxAge expires). That's an intentional trade-off:
     // re-querying Prisma on every request that touches the session would
     // add a database round trip to pages that don't need one.
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      if (account?.provider === DEV_LOGIN_PROVIDER_ID) token.devLogin = true;
+      if (token.devLogin) {
+        // Recheck on every session read, not only at login. NextAuth invalidates
+        // a JWT session when this callback throws. The proxy also checks the
+        // marker, so a dev cookie cannot open protected pages in production.
+        requireDevLoginSetup();
+        if (!corePrismaMatchesCurrentEnvironment()) throw new Error("DevLoginRestart");
+        const student = await prisma.user.findUnique({ where: { id: user?.id || token.id } });
+        if (!isDedicatedTestStudent(student)) throw new Error("DevLoginStudentInvalid");
+        token.id = student!.id; token.email = student!.email;
+        token.name = `${student!.firstName} ${student!.lastName}`; token.firstName = student!.firstName;
+        token.role = "student"; token.isAdmin = false;
+        return token;
+      }
       // `user` is only defined on the initial sign-in call, not on later
       // token refreshes.
       if (user?.email) {
@@ -184,7 +205,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         // Derived from the server-signed token's email as well, so sessions that
         // pre-date this rule pick it up without a fresh sign-in.
-        session.user.isAdmin = (token.isAdmin as boolean) || isAdminEmail(token.email);
+        session.user.isAdmin = token.devLogin ? false : (token.isAdmin as boolean) || isAdminEmail(token.email);
       }
       return session;
     },

@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { badRequest, conflict, forbidden, notFound, ServiceError } from "@/lib/service-error";
 import { TaskService } from "@/features/productivity/tasks/service";
@@ -14,6 +13,7 @@ import { loadData, saveData, json } from "./repository";
 import { importLocalData } from "./import";
 import * as v from "./validation";
 import type { ProductivityCommand, ProductivityContext } from "./types";
+import { ProductivityError } from "@/features/productivity/errors";
 
 const reads = new Set(["context", "tasks.list", "tasks.get", "tasks.history", "habits.list", "schedule.load", "schedule.history", "official.classes", "analytics.tasks", "analytics.schedule"]);
 const mutations = new Set(["tasks.create", "tasks.update", "tasks.delete", "tasks.complete", "tasks.miss", "habits.save", "habits.archive", "habits.synchronize", "habits.record", "habits.replan", "schedule.save", "schedule.category", "schedule.archive", "schedule.backup", "schedule.miss", "preferences.save", "import"]);
@@ -25,7 +25,6 @@ export async function executeProductivity(input: ProductivityCommand, expectedUs
   const requestHash = createHash("sha256").update(JSON.stringify([input.operation, input.args])).digest("hex");
   const receipt = mutations.has(input.operation) && input.operation !== "habits.synchronize";
   if (receipt && (!input.requestId || !/^[a-zA-Z0-9:-]{8,200}$/.test(input.requestId))) throw badRequest("A request identifier is required.");
-  try {
     return await prisma.$transaction(async tx => {
       // Per-user row locking covers all modules and app instances, including
       // multi-repository habit operations and simultaneous import/generation.
@@ -56,7 +55,7 @@ export async function executeProductivity(input: ProductivityCommand, expectedUs
       function range(value: unknown) { const o = v.object(value), r = { start: v.date(o.start), end: v.date(o.end) }; rangeDays(r); return r; }
       function ownEvent(value: unknown, personal = true) {
         const event = data.schedule.events.find(e => e.id === v.text(value));
-        if (!event || personal && event.source.kind !== "personal") throw notFound();
+        if (!event || personal && event.source.kind !== "personal") throw notFound("This event is unavailable in your workspace. Reload the schedule and select an existing event.");
         return event;
       }
       let result: unknown;
@@ -92,7 +91,7 @@ export async function executeProductivity(input: ProductivityCommand, expectedUs
           }
           case "habits.record":
             if (!["completed", "missed", "pending"].includes(String(args[2]))) throw badRequest("Invalid outcome.");
-            if (!data.habits.habits.some(h => h.id === v.text(args[0]))) throw notFound();
+            if (!data.habits.habits.some(h => h.id === v.text(args[0]))) throw notFound("This habit is unavailable in your workspace. Reload Habit Tracker and select an existing habit.");
             result = await habits.record(v.text(args[0]), v.date(args[1]), args[2] as "completed" | "missed" | "pending"); break;
           case "habits.replan": {
             const event = ownEvent(args[0], false);
@@ -110,7 +109,7 @@ export async function executeProductivity(input: ProductivityCommand, expectedUs
           }
           case "schedule.category": {
             const description = args[1]; if (typeof description !== "string" || description.length > 10000) throw badRequest("Invalid category description.");
-            result = await schedule.saveSubSchedule(v.text(args[0], 60), description, v.optionalId(args[2]), args[3] == null ? false : v.boolean(args[3])); break;
+            result = await schedule.saveSubSchedule(v.text(args[0], 60, "Category name"), description, v.optionalId(args[2]), args[3] == null ? false : v.boolean(args[3])); break;
           }
           case "schedule.archive": ownEvent(args[0]); result = await schedule.archiveEvent(v.text(args[0]), args[1] == null ? false : v.boolean(args[1])); break;
           case "schedule.backup": ownEvent(args[0]); result = await schedule.setBackup(v.text(args[0]), args[1] ? v.slot(args[1]) : undefined); break;
@@ -131,10 +130,10 @@ export async function executeProductivity(input: ProductivityCommand, expectedUs
         }
       } catch (error) {
         if (error instanceof ServiceError) throw error;
-        // These services are pure domain code; database failures occur outside
-        // this block and retain the host's generic error response convention.
-        if (error instanceof Error) {
-          if (/not found/i.test(error.message)) throw notFound();
+        // Only intentional domain messages are safe to return. Academic reads
+        // also run here and may throw database errors containing credentials.
+        if (error instanceof ProductivityError) {
+          if (/not found/i.test(error.message)) throw notFound("This record is unavailable in your workspace. Reload and select an existing record.");
           if (error.name === "SlotConflictError") throw error;
           throw badRequest(error.message);
         }
@@ -145,10 +144,6 @@ export async function executeProductivity(input: ProductivityCommand, expectedUs
       if (receipt) await tx.productivityRequest.create({ data: { ownerId: user.id, key: input.requestId!, requestHash, result: json({ value: result ?? null }) } });
       return result ?? null;
     }, { maxWait: 10000, timeout: 30000 });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2003", "P2034"].includes(error.code)) throw conflict("The records changed or a related record is unavailable. Reload and retry.");
-    throw error;
-  }
 }
 
 export type { ProductivityContext, PersonalEvent };

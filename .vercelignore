@@ -1,0 +1,5 @@
+# Local database data, release backups, tools and credentials must never upload.
+.local-development/
+.env
+.env.*
+checkpoints/

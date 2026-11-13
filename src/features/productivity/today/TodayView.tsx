@@ -1,4 +1,5 @@
 "use client";
+import { productivityErrorMessage } from "../errors";
 import { useCallback, useEffect, useState } from "react";
 import { authenticatedIdentity, authenticatedAcademics } from "../client";
 import { localNow } from "../schedule/domain";
@@ -22,22 +23,22 @@ export function TodayView() {
     const occurrences = await browserHabits.synchronize({ start: date, end: date }, { tasks: "today" });
     const [tasks, data, habits] = await Promise.all([browserHabits.tasks.listTasks(), remoteSchedule.load(), browserHabits.list()]);
     let classes: Awaited<ReturnType<typeof authenticatedAcademics.getClassSessions>> = [];
-    try { classes = await authenticatedAcademics.getClassSessions(student.id, date); setAcademicWarning(""); } catch { setAcademicWarning("Academic sessions could not be loaded. The schedule count includes personal and habit events only."); }
+    try { classes = await authenticatedAcademics.getClassSessions(student.id, date); setAcademicWarning(""); } catch (error) { setAcademicWarning(`Official classes could not be loaded. ${productivityErrorMessage(error, "The timetable service could not complete this request.")} The schedule count includes personal and habit events only.`); }
     setModel(selectToday({ tasks, data, habits, occurrences, classes, student, instant })); setError("");
   }, []);
   useEffect(() => {
     let active = true, timer: number;
-    const refresh = () => { if (active) void load().catch(error => { if (active) setError(error.message); }); };
+    const refresh = () => { if (active) void load().catch(error => { if (active) setError(productivityErrorMessage(error, "Today's activities could not be loaded. Retry loading your day.")); }); };
     const tick = () => { refresh(); timer = window.setTimeout(tick, millisecondsToNextMinute(new Date())); };
     const visible = () => { if (document.visibilityState === "visible") refresh(); };
     refresh(); timer = window.setTimeout(tick, millisecondsToNextMinute(new Date()));
     window.addEventListener("focus", refresh); window.addEventListener("storage", refresh); window.addEventListener(TASKS_CHANGED, refresh); window.addEventListener(HABITS_CHANGED, refresh); document.addEventListener("visibilitychange", visible);
     return () => { active = false; window.clearTimeout(timer); window.removeEventListener("focus", refresh); window.removeEventListener("storage", refresh); window.removeEventListener(TASKS_CHANGED, refresh); window.removeEventListener(HABITS_CHANGED, refresh); document.removeEventListener("visibilitychange", visible); };
   }, [load]);
-  if (!model) return <main className="loading"><h1>Today</h1>{error ? <><p role="alert" className="error">{error}</p><button onClick={() => void load().catch(error => setError(error.message))}>Retry loading</button></> : <p role="status">Preparing your day...</p>}</main>;
+  if (!model) return <main className="loading"><h1>Today</h1>{error ? <><p role="alert" className="error">{error}</p><button onClick={() => void load().catch(error => setError(productivityErrorMessage(error, "Today's activities could not be loaded. Retry loading your day.")))}>Retry loading</button></> : <p role="status">Preparing your day...</p>}</main>;
   return <div className="module-view today-module"><main className="content">
     <div className="page-heading"><div><p className="today-kicker">TODAY OVERVIEW</p><h1>{formatDate(model.date, true)}</h1><p>A little clarity for the day ahead.</p></div><StatusPill tone="blue">Today</StatusPill></div>
-    {error && <p className="error" role="alert">{error} <button onClick={() => void load().catch(error => setError(error.message))}>Retry loading</button></p>}
+    {error && <p className="error" role="alert">{error} <button onClick={() => void load().catch(error => setError(productivityErrorMessage(error, "Today's activities could not be loaded. Retry loading your day.")))}>Retry loading</button></p>}
     {academicWarning && <p className="notice" role="status">{academicWarning}</p>}
     <div className="today-stat-grid"><div className="today-stat"><span className="today-stat-icon"><Icon name="task"/></span><div><strong>{model.openTasks.length}</strong><span>Open tasks</span><small>{model.completedTasks} completed today</small></div></div><div className="today-stat"><span className="today-stat-icon green"><Icon name="habit"/></span><div><strong>{model.completedHabits}<small> / {model.habits.length}</small></strong><span>Habits completed</span><small>Scheduled for today</small></div></div><div className="today-stat"><span className="today-stat-icon purple"><Icon name="calendar"/></span><div><strong>{model.events.length + model.official.length}</strong><span>On your schedule</span><small>Personal, habits &amp; classes</small></div></div></div>
     <section className="today-focus"><div className="today-section-heading"><h2><Icon name="habit"/> Focus for today</h2><WorkspaceButton section="schedule">Open schedule <Icon name="arrow"/></WorkspaceButton></div><p>Activities you explicitly marked must complete today.</p>{model.focus.length ? <div className="today-focus-list">{model.focus.map(event => <WorkspaceButton key={event.id} section="schedule" eventId={event.id} scheduleDate={model.date}><span>{event.title}</span><small>{event.slot.start}–{event.slot.end}</small><Icon name="arrow"/></WorkspaceButton>)}</div> : <p className="today-empty-inline">No must-complete commitments selected for today.</p>}</section>

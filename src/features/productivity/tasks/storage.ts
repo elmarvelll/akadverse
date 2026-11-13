@@ -1,3 +1,4 @@
+import { ProductivityError } from "../errors";
 import { validateHabitSnapshot } from "../habits/domain";
 import { validateOutcomeChanges } from "../habits/outcomes";
 import { validateTaskInput, type TaskDataset } from "./domain";
@@ -9,15 +10,15 @@ const text = (value: unknown): value is string => typeof value === "string" && v
 const stamp = (value: unknown): value is string => text(value) && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value));
 export function parseTaskDataset(raw: string): TaskDataset {
   let value: unknown;
-  try { value = JSON.parse(raw); } catch { throw new Error("Saved tasks are not valid JSON. The original data has been left untouched."); }
-  const invalid = (): never => { throw new Error("Saved tasks have invalid or unsupported records. The original data has been left untouched."); };
+  try { value = JSON.parse(raw); } catch { throw new ProductivityError("Saved tasks are not valid JSON. The original data has been left untouched."); }
+  const invalid = (): never => { throw new ProductivityError("Saved tasks have invalid or unsupported records. The original data has been left untouched."); };
   if (!record(value) || (value.version !== 1 && value.version !== 2) || !Array.isArray(value.tasks)) return invalid();
   if (value.version === 1) {
     // Version one already used pending/completed/missed. Never infer an outcome
     // from a deadline, updatedAt, or an unrecognized legacy status.
     for (const task of value.tasks) {
       if (!record(task)) return invalid();
-      if (!["pending", "completed", "missed"].includes(String(task.status))) throw new Error("Saved tasks contain an ambiguous legacy status. Original records are untouched; recover or clarify that status before continuing.");
+      if (!["pending", "completed", "missed"].includes(String(task.status))) throw new ProductivityError("Saved tasks contain an ambiguous legacy status. Original records are untouched; recover or clarify that status before continuing.");
       const missed = Array.isArray(task.history) ? task.history.filter(entry => record(entry) && entry.kind === "missed") : [];
       if (missed.length && task.missedAt === undefined) task.missedAt = missed[0].at;
     }

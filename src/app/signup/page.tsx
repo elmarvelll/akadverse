@@ -24,6 +24,8 @@ import { StudentSignup } from "./StudentSignup";
 import { StaffSignup } from "./StaffSignup";
 import { useThemePreference } from "@/hooks/use-theme-preference";
 import { ACCOUNT_TYPES, type AccountTypeRole } from "@/lib/account-domains";
+import { authErrorMessage } from "@/lib/auth-error-message";
+import { useSignInProviders } from "@/hooks/use-sign-in-providers";
 
 // Small inline Google "G" logo used on the "Sign up with Google" button.
 function GoogleMark() {
@@ -58,7 +60,8 @@ const GOOGLE_ERRORS: Record<string, string> = {
 function SignUpForm() {
   const searchParams = useSearchParams();
   const googleToken = searchParams.get("google");
-  const urlError = GOOGLE_ERRORS[searchParams.get("error") ?? ""] ?? "";
+  const errorCode = searchParams.get("error");
+  const urlError = errorCode && Object.hasOwn(GOOGLE_ERRORS, errorCode) ? GOOGLE_ERRORS[errorCode] : authErrorMessage(errorCode);
   const { isDarkMode, setIsDarkMode } = useThemePreference();
 
   // Local part + role combine into the full email — the role picks the domain (AGENTS.md §8).
@@ -66,11 +69,17 @@ function SignUpForm() {
   const [accountType, setAccountType] = useState<AccountTypeRole>("student");
   const isStudent = googleToken ? true : accountType === "student";
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState("");
+  const providers = useSignInProviders();
 
   const handleGoogle = async () => {
+    if (googleLoading) return;
+    setGoogleError("");
     try {
       setGoogleLoading(true);
       await signIn("google", { callbackUrl: "/" });
+    } catch {
+      setGoogleError("Google sign-in could not start. Check your connection and try again.");
     } finally {
       setGoogleLoading(false);
     }
@@ -96,8 +105,8 @@ function SignUpForm() {
           </div>
 
           <div className="w-full space-y-4 mb-8">
-            {urlError && (
-              <div role="alert" className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-300 bg-red-900/30" : "text-red-800 bg-red-100"}`}>{urlError}</div>
+            {(googleError || urlError) && (
+              <div role="alert" className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-300 bg-red-900/30" : "text-red-800 bg-red-100"}`}>{googleError || urlError}</div>
             )}
 
             {!googleToken && (
@@ -130,7 +139,7 @@ function SignUpForm() {
               />
             )}
 
-            {!googleToken && (
+            {!googleToken && providers.google && (
               <>
                 <div className="flex items-center gap-3 py-1">
                   <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
@@ -149,6 +158,8 @@ function SignUpForm() {
                 </button>
               </>
             )}
+
+            {!googleToken && !providers.loading && !providers.google && <p className="text-sm text-gray-500">{providers.failed ? "Google sign-in options could not be loaded. Reload the page to retry." : "Google sign-in is unavailable in this environment. You can sign up with email instead."}</p>}
 
             <p className={`text-sm text-center pt-1 ${isDarkMode ? "text-[#c4c4c4]" : "text-gray-600"}`}>
               Already have an account?{" "}

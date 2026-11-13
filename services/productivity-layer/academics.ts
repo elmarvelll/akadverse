@@ -5,14 +5,17 @@ import { addDays, localNow, validDate, type OfficialClass } from "@/features/pro
 import { localInstant } from "@/features/productivity/analytics/periods";
 import { slotTouchesDates } from "@/features/productivity/schedule/timetable";
 import { badRequest } from "@/lib/service-error";
+import { OfficialTimetableError } from "./errors";
 
 async function loadTimetable(ownerId: string) {
+  try {
   const context = await getCurrentAcademicContext();
   const courses = context?.session && context.semester ? await getRegisteredCourses(ownerId, context) : [];
   const entries = courses.length && context?.session && context.semester ? await elearningDb.timetableEntry.findMany({ where: {
     courseId: { in: courses.map(c => c.id) }, academicSessionId: context.session.id, semesterId: context.semester.id, isApproved: true,
   } }) : [];
   return { context, courses, entries };
+  } catch (error) { throw new OfficialTimetableError(error); }
 }
 export interface AcademicRequestCache { source?: ReturnType<typeof loadTimetable> }
 

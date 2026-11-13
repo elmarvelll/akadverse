@@ -1,3 +1,4 @@
+import { ProductivityError } from "../errors";
 import type { Slot } from "./domain";
 
 function wallParts(instant: number, timezone: string) {
@@ -20,7 +21,7 @@ export function slotInterval(slot: Slot) {
   const nextDate = new Date(Date.parse(slot.date + "T12:00:00Z") + 86400000).toISOString().slice(0, 10);
   const start = localInstant(slot.date, slot.start, slot.timezone);
   const end = localInstant(slot.end < slot.start ? nextDate : slot.date, slot.end, slot.timezone);
-  if (start === undefined || end === undefined || end <= start) throw new Error("This local event time is unavailable in its timezone.");
+  if (start === undefined || end === undefined || end <= start) throw new ProductivityError("This local event time is unavailable in its timezone.");
   return { start, end };
 }
 export function inTimezone(slot: Slot, timezone: string): Slot {

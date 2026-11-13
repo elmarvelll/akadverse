@@ -1,12 +1,13 @@
+import { ProductivityError, productivityErrorMessage } from "../errors";
 import { addDays, localNow, validDate, type OfficialClass } from "../schedule/domain";
 
 export interface DateRange { start: string; end: string }
 export const maxAnalyticsDays = 366;
 export function rangeDays(range: DateRange): string[] {
-  if (!validDate(range.start) || !validDate(range.end) || range.end < range.start) throw new Error("Choose valid dates with the end on or after the start.");
+  if (!validDate(range.start) || !validDate(range.end) || range.end < range.start) throw new ProductivityError("Choose valid dates with the end on or after the start.");
   const days: string[] = [];
   for (let date = range.start; date <= range.end; date = addDays(date, 1)) {
-    if (days.length >= maxAnalyticsDays) throw new Error("Choose a range of at most 366 days.");
+    if (days.length >= maxAnalyticsDays) throw new ProductivityError("Choose a range of at most 366 days.");
     days.push(date);
   }
   return days;
@@ -45,7 +46,7 @@ export function localInstant(date: string, time: string, timezone: string): numb
 }
 export function dayBounds(date: string, timezone: string) {
   const start = localInstant(date, "00:00", timezone), end = localInstant(addDays(date, 1), "00:00", timezone);
-  if (start === undefined || end === undefined) throw new Error("A local day boundary could not be resolved in this timezone.");
+  if (start === undefined || end === undefined) throw new ProductivityError("A local day boundary could not be resolved in this timezone.");
   return { start, end };
 }
 export function instantInRange(at: string | undefined, range: DateRange, timezone: string) {
@@ -55,11 +56,11 @@ export function instantInRange(at: string | undefined, range: DateRange, timezon
 }
 export async function loadAcademicRange(range: DateRange, getClasses: (date: string) => Promise<OfficialClass[]>) {
   // Include the preceding day to cover a session continuing across midnight.
-  const dates = [addDays(range.start, -1), ...rangeDays(range)], rows: OfficialClass[] = [], failedDates: string[] = [];
+  const dates = [addDays(range.start, -1), ...rangeDays(range)], rows: OfficialClass[] = [], failedDates: string[] = [], errors = new Set<string>();
   for (let index = 0; index < dates.length; index += 4) {
     const batch = dates.slice(index, index + 4);
     const results = await Promise.allSettled(batch.map(date => getClasses(date)));
-    results.forEach((result, offset) => { if (result.status === "fulfilled") rows.push(...result.value); else failedDates.push(batch[offset]); });
+    results.forEach((result, offset) => { if (result.status === "fulfilled") rows.push(...result.value); else { failedDates.push(batch[offset]); errors.add(productivityErrorMessage(result.reason, "The official timetable service could not complete this request. Retry timetable data.")); } });
   }
-  return { rows, failedDates };
+  return { rows, failedDates, errors: [...errors] };
 }

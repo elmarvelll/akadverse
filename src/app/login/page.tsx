@@ -24,6 +24,8 @@ import { ThemeToggle } from "../components/theme-toggle";
 import { AuthVisualPanel } from "../components/auth-visual-panel";
 import { Mail } from "lucide-react";
 import { useThemePreference } from "@/hooks/use-theme-preference";
+import { authErrorMessage } from "@/lib/auth-error-message";
+import { useSignInProviders } from "@/hooks/use-sign-in-providers";
 
 // Small inline Google "G" logo used on the "Continue with Google" button.
 function GoogleMark() {
@@ -65,6 +67,15 @@ function LoginForm() {
   const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [error, setError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [devLoading, setDevLoading] = useState(false);
+  const providers = useSignInProviders();
+  const displayedError = error || authErrorMessage(searchParams.get("error"));
+  const secondaryButtonClassName = `w-full py-3 border rounded-full font-semibold text-sm flex items-center justify-center gap-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed ${
+    isDarkMode
+      ? "bg-[#171717] border-[#262626] text-white hover:bg-[#1f1f1f]"
+      : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
+  }`;
+  const helperTextClassName = `text-xs text-center ${isDarkMode ? "text-[#9CA3AF]" : "text-gray-600"}`;
 
   // `redirect: false` means NextAuth returns a result object instead of
   // doing a full-page redirect itself, so we can show our own error
@@ -94,8 +105,32 @@ function LoginForm() {
   };
 
   const handleGoogle = async () => {
+    if (googleLoading) return;
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl });
+    setError("");
+    try {
+      await signIn("google", { callbackUrl });
+    } catch {
+      setError("Google sign-in could not start. Check your connection and try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleDevelopmentLogin = async () => {
+    if (devLoading || googleLoading || status === "loading") return;
+    setDevLoading(true); setError("");
+    try {
+      const result = await signIn("dev-student", { redirect: false, callbackUrl: "/studashboard" });
+      if (!result?.ok || result.error) {
+        setError(authErrorMessage(result?.error || "Default"));
+        return;
+      }
+      router.push("/studashboard");
+      router.refresh();
+    } catch {
+      setError("Development sign-in could not be completed. Check your local server and try again.");
+    } finally { setDevLoading(false); }
   };
 
   return (
@@ -150,15 +185,15 @@ function LoginForm() {
               isDarkMode={isDarkMode}
             />
 
-            {error && (
-              <div className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-400 bg-red-900/20" : "text-red-700 bg-red-100"}`}>
-                {error}
+            {displayedError && (
+              <div role="alert" className={`text-sm p-3 rounded-lg ${isDarkMode ? "text-red-400 bg-red-900/20" : "text-red-700 bg-red-100"}`}>
+                {displayedError}
               </div>
             )}
 
             <button
               type="submit"
-              disabled={status === "loading"}
+              disabled={status === "loading" || googleLoading || devLoading}
               className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
               {status === "loading" ? "Signing in…" : "Log In"}
@@ -170,18 +205,24 @@ function LoginForm() {
               <div className={`flex-1 h-px ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
             </div>
 
-            <button
+            {providers.google && <button
               type="button"
               onClick={handleGoogle}
-              disabled={googleLoading}
-              className={`w-full py-3 border rounded-full font-semibold text-sm flex items-center justify-center gap-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                isDarkMode
-                  ? "bg-[#171717] border-[#262626] text-white hover:bg-[#1f1f1f]"
-                  : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
-              }`}
+              disabled={googleLoading || devLoading || status === "loading"}
+              className={secondaryButtonClassName}
             >
               {googleLoading ? "Redirecting…" : (<><GoogleMark /> Continue with Google</>)}
-            </button>
+            </button>}
+
+            {providers.loading && <p role="status" className={helperTextClassName}>Loading sign-in options…</p>}
+            {!providers.loading && !providers.google && <p className={helperTextClassName}>{providers.failed ? "Additional sign-in options could not be loaded. Reload the page to retry." : "Google sign-in is unavailable in this environment."}</p>}
+            {providers.devStudent && <div className="space-y-2">
+              <button type="button" onClick={handleDevelopmentLogin} disabled={devLoading || googleLoading || status === "loading"}
+                className={secondaryButtonClassName}>
+                {devLoading ? "Signing in…" : "Continue as Test Student"}
+              </button>
+              <p className={helperTextClassName}>Development only · Dedicated test student · No administrator access</p>
+            </div>}
 
             <p className={`text-sm text-center pt-1 ${isDarkMode ? "text-[#9CA3AF]" : "text-gray-600"}`}>
               Don&apos;t have an account?{" "}

@@ -1,3 +1,4 @@
+import { ProductivityError } from "../errors";
 import { habitDuplicateConflicts } from "./duplicates";
 import { id, localNow, type IdentityProvider, type ScheduleRepository, type PersonalEvent, type SchedulingOptions, type Slot, ScheduleService, type AcademicProvider } from "../schedule/domain";
 import { TaskService } from "../tasks/service";
@@ -14,7 +15,7 @@ export class HabitService {
       const student = await this.identity.getCurrentStudent(); validateHabit(input, student.timezone);
       const data = await this.repository.load(), now = this.clock(), today = localNow(student.timezone, now).date;
       let habit = data.habits.find(item => item.id === habitId && item.ownerId === student.id);
-      if (habitId && !habit) throw new Error("Habit not found for this student.");
+      if (habitId && !habit) throw new ProductivityError("Habit not found for this student.");
       const revision = { ...input, name: input.name.trim(), description: input.description.trim(), weekdays: [...input.weekdays], effectiveDate: habit ? today : input.startDate && input.startDate < today ? input.startDate : today, at: now.toISOString(), archived: habit?.revisions.at(-1)?.archived || false };
       if (habit) habit.revisions.push(revision);
       else { habit = { id: id(), ownerId: student.id, timezone: student.timezone, createdDate: today, createdAt: now.toISOString(), revisions: [revision] }; data.habits.push(habit); }
@@ -25,7 +26,7 @@ export class HabitService {
     return this.serialize(async () => {
       const student = await this.identity.getCurrentStudent(), data = await this.repository.load();
       const habit = data.habits.find(item => item.id === habitId && item.ownerId === student.id);
-      if (!habit) throw new Error("Habit not found for this student.");
+      if (!habit) throw new ProductivityError("Habit not found for this student.");
       const latest = habit.revisions.at(-1)!;
       if (latest.archived === archived) return;
       habit.revisions.push({ ...latest, archived, effectiveDate: localNow(student.timezone, this.clock()).date, at: this.clock().toISOString() });
@@ -38,7 +39,7 @@ export class HabitService {
     let tasks = await this.tasks.listTasks();
     const data = await this.schedules.load(), now = this.clock().toISOString(); let changed = false;
     const conflicts = habitDuplicateConflicts(tasks, data.events.filter(event => event.ownerId === student.id));
-    if (conflicts.length) throw new Error("Conflicting duplicate habit outcomes require review: " + conflicts.join(", ") + ". Saved records are untouched; no automatic merge was performed.");
+    if (conflicts.length) throw new ProductivityError("Conflicting duplicate habit outcomes require review: " + conflicts.join(", ") + ". Saved records are untouched; no automatic merge was performed.");
     const today = localNow(student.timezone, this.clock()).date;
     // Include already-generated future dates so edits/archiving withdraw those
     // instances even when a different month is currently displayed.
@@ -82,16 +83,16 @@ export class HabitService {
   record(habitId: string, date: string, kind: "completed" | "missed" | "pending") {
     return this.serialize(async () => {
       const [item] = (await this.generate({ start: date, end: date })).filter(item => item.habitId === habitId);
-      if (!item) throw new Error("This date is not scheduled.");
+      if (!item) throw new ProductivityError("This date is not scheduled.");
       const student = await this.identity.getCurrentStudent(), instant = this.clock(), actions = occurrenceActions(item, localNow(student.timezone, instant), student.timezone);
       const current = item.task?.status || item.event?.outcomeChanges?.at(-1)?.to.status || (item.event?.status === "completed" ? "completed" : item.event?.status === "requires-replanning" || item.event?.history.some(entry => entry.kind === "missed") && !item.event.outcomeChanges?.length ? "missed" : "pending");
       if (current === kind) return;
-      if (!(kind === "completed" ? actions.complete : kind === "missed" ? actions.missed : actions.clear)) throw new Error("This outcome is not available at the current scheduled time.");
+      if (!(kind === "completed" ? actions.complete : kind === "missed" ? actions.missed : actions.clear)) throw new ProductivityError("This outcome is not available at the current scheduled time.");
       if (item.task) {
         if (current === "pending" && kind !== "pending" && !item.task.outcomeChanges?.length) return kind === "completed" ? this.tasks.completeTask(item.task.id) : this.tasks.recordHabitMiss(item.task.id);
         return this.tasks.correctHabitOutcome(item.task.id, kind);
       }
-      if (!item.event) throw new Error("Occurrence could not be loaded. Retry.");
+      if (!item.event) throw new ProductivityError("Occurrence could not be loaded. Retry.");
       const data = await this.schedules.load(), event = data.events.find(event => event.id === item.event!.id && event.ownerId === student.id)!;
       const at = instant.toISOString();
       if (current === "pending" && kind !== "pending" && !event.outcomeChanges?.length) {
@@ -109,9 +110,9 @@ export class HabitService {
   replan(event: PersonalEvent, slot: Slot, options: SchedulingOptions) {
     return this.serialize(async () => {
       const habits = await this.list();
-      if (event.source.kind !== "habit" || !habits.some(habit => event.source.kind === "habit" && habit.id === event.source.habitId)) throw new Error("Habit event not found.");
+      if (event.source.kind !== "habit" || !habits.some(habit => event.source.kind === "habit" && habit.id === event.source.habitId)) throw new ProductivityError("Habit event not found.");
       const current = (await this.schedules.load()).events.find(item => item.id === event.id);
-      if (!current || current.status !== "requires-replanning") throw new Error("Record a missed attempt before replanning.");
+      if (!current || current.status !== "requires-replanning") throw new ProductivityError("Record a missed attempt before replanning.");
       const service = new ScheduleService(this.schedules, this.identity, this.academic, this.clock);
       // Imported habit events have no user-selected category. Other slot,
       // ownership, history and conflict checks use the existing schedule service.

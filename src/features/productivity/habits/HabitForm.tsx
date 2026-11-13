@@ -1,4 +1,5 @@
 "use client";
+import { productivityErrorMessage } from "../errors";
 import { useRef, useState } from "react";
 import { Dialog } from "../schedule/Forms";
 import { localNow } from "../schedule/domain";
@@ -10,7 +11,7 @@ export function HabitForm({ habit, onClose, onSave, timezone }: { habit?: Habit;
   function change<K extends keyof HabitInput>(key: K, value: HabitInput[K]) { setInput(previous => ({ ...previous, [key]: value })); }
   return <Dialog title={habit ? `Edit habit — ${habit.revisions.at(-1)!.name}` : "Add habit"} onClose={() => { if (!saving.current) onClose(); }}><form onSubmit={async event => {
     event.preventDefault(); if (saving.current) return; saving.current = true; setBusy(true); setError("");
-    try { validateHabit(input, timezone); await onSave(input); onClose(); } catch (error) { setError((error as Error).message); } finally { saving.current = false; setBusy(false); }
+    try { validateHabit(input, timezone); await onSave(input); onClose(); } catch (error) { setError(productivityErrorMessage(error, "This habit could not be saved. Review the habit settings and try again.")); } finally { saving.current = false; setBusy(false); }
   }}><fieldset disabled={busy} className="habit-form-fields">
     <label>Name<input required maxLength={100} value={input.name} onChange={e => change("name", e.target.value)} /></label>
     <label>Description (optional)<textarea maxLength={10000} value={input.description} onChange={e => change("description", e.target.value)} /></label>

@@ -1,4 +1,5 @@
 "use client";
+import { productivityErrorMessage } from "../errors";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WorkspaceButton, useWorkspaceNavigation } from "../workspace/WorkspaceNavigation";
 import { authenticatedIdentity } from "../client";
@@ -38,7 +39,7 @@ export function HabitTracker({ initialHabitId, initialDate, initialEdit }: { ini
     if (initialEdit && !editRequested.current) { const habit = (await browserHabits.list()).find(habit => habit.id === initialHabitId); if (habit) { editRequested.current = true; setEditor({ habit }); } } setItems(records); setFeedbackItems(feedbackRecords); setError(""); setLoading(false);
   }, [month, period, weekDate, initialEdit, initialHabitId]);
   useEffect(() => {
-    const refresh = () => { void load().catch(error => { setError((error as Error).message); setLoading(false); }); };
+    const refresh = () => { void load().catch(error => { setError(productivityErrorMessage(error, "Your habits could not be loaded or updated. Reload Habit Tracker and try again.")); setLoading(false); }); };
     refresh();
     let timer: number;
     const tick = () => { refresh(); timer = window.setTimeout(tick, millisecondsToNextMinute(new Date())); };
@@ -54,13 +55,17 @@ export function HabitTracker({ initialHabitId, initialDate, initialEdit }: { ini
   }, [load]);
   async function mutate(operation: () => Promise<unknown>, message: string) {
     if (saving.current) return; saving.current = true; setBusy(true); setError(""); setNotice("");
-    try { await operation(); setNotice(message); await load(); } catch (error) { setError((error as Error).message); } finally { saving.current = false; setBusy(false); }
+    try {
+      await operation(); setNotice(message);
+      try { await load(); }
+      catch (error) { setError(`Your change was saved, but Habit Tracker could not refresh. ${productivityErrorMessage(error)} Retry loading; do not repeat the saved action.`); }
+    } catch (error) { setError(productivityErrorMessage(error, "The habit change could not be saved. Reload Habit Tracker and retry the same action.")); } finally { saving.current = false; setBusy(false); }
   }
   const selectedKey = selected || (initialHabitId && initialDate ? { habitId: initialHabitId, date: initialDate } : undefined);
   const occurrence = selectedKey && items.find(item => item.habitId === selectedKey.habitId && item.date === selectedKey.date);
   const detailHabit = habits?.find(habit => habit.id === (detail || (!initialDate && initialHabitId)));
   const close = () => { if (!saving.current) { setSelected(undefined); setDetail(undefined); setReplanning(false); setCorrection(undefined); navigate({ section: "habits" }); } };
-  if (!habits || !student || !clock) return <main className="loading"><h1>Habit Tracker</h1>{error ? <p role="alert" className="error">{error}</p> : <p role="status">Loading habits...</p>}<button onClick={() => void load().catch(e => setError(e.message))}>Retry loading</button><WorkspaceButton section="schedule">Schedule Manager</WorkspaceButton></main>;
+  if (!habits || !student || !clock) return <main className="loading"><h1>Habit Tracker</h1>{error ? <p role="alert" className="error">{error}</p> : <p role="status">Loading habits...</p>}<button onClick={() => void load().catch(e => setError(productivityErrorMessage(e, "Your habits could not be loaded or updated. Reload Habit Tracker and try again.")))}>Retry loading</button><WorkspaceButton section="schedule">Schedule Manager</WorkspaceButton></main>;
   const today = localNow(student.timezone, clock).date, range = monthRange(month || today), now = localNow(student.timezone, clock);
   const currentOutcome = occurrence && outcome(occurrence);
   const outcomeChanges = occurrence?.task?.outcomeChanges || occurrence?.event?.outcomeChanges || [];
@@ -70,7 +75,7 @@ export function HabitTracker({ initialHabitId, initialDate, initialEdit }: { ini
   const openOccurrence = (item: Occurrence) => { setSelected({ habitId: item.habitId, date: item.date }); setError(""); };
   return <div className="module-view habits-module"><main className="content">
     <div className="page-heading"><div><p className="eyebrow">BUILD YOUR RHYTHM</p><h1>Habit Tracker</h1><p className="muted">Small steps. Meaningful progress. Build a rhythm that works for you.</p></div><ProdButton className="primary" disabled={busy} onClick={() => setEditor({})}><Icon name="plus"/> Add habit</ProdButton></div>
-    {error && <p className="error" role="alert">{error} <button onClick={() => void load().catch(e => setError(e.message))}>Retry loading</button></p>}{notice && <p className="notice" role="status">{notice}</p>}{busy && <p role="status">Saving...</p>}
+    {error && <p className="error" role="alert">{error} <button onClick={() => void load().catch(e => setError(productivityErrorMessage(e, "Your habits could not be loaded or updated. Reload Habit Tracker and try again.")))}>Retry loading</button></p>}{notice && <p className="notice" role="status">{notice}</p>}{busy && <p role="status">Saving...</p>}
     {initialHabitId && !habits.some(habit => habit.id === initialHabitId) && <p className="notice" role="status">The originating habit definition is unavailable for this student. Existing linked task or event records have been preserved; no repeating settings were inferred.</p>}
     <HabitSummaryCards habits={habits} occurrences={items} now={now} activeHabitId={activeHabit?.id} onSelect={setActiveHabitId} onEdit={id => { const habit = habits.find(item => item.id === id); if (habit) setEditor({ habit }); }}/>
     <div className="habit-calendar-layout">
@@ -88,7 +93,7 @@ export function HabitTracker({ initialHabitId, initialDate, initialEdit }: { ini
     </div>
     <footer className="page-footer">Saved to your AkadVerse account</footer>
   </main>
-  {editor && <HabitForm timezone={student.timezone} habit={editor.habit} onClose={() => setEditor(undefined)} onSave={async input => { await browserHabits.save(input, editor.habit?.id); setNotice("Habit saved. Changes to unrecorded occurrences apply from today."); await load().catch(error => setError(`Habit settings were saved, but generated occurrences could not be refreshed: ${error.message}. Retry loading; do not create the habit again.`)); }} />}
+  {editor && <HabitForm timezone={student.timezone} habit={editor.habit} onClose={() => setEditor(undefined)} onSave={async input => { await browserHabits.save(input, editor.habit?.id); setNotice("Habit saved. Changes to unrecorded occurrences apply from today."); await load().catch(error => setError(`Habit settings were saved, but generated occurrences could not be refreshed: ${productivityErrorMessage(error, "Your habits could not be loaded or updated. Reload Habit Tracker and try again.")}. Retry loading; do not create the habit again.`)); }} />}
   {detailHabit && !editor && <Dialog title={detailHabit.revisions.at(-1)!.name} onClose={close}><div className="detail"><p>{detailHabit.revisions.at(-1)!.description || "No description"}</p><dl><dt>Type</dt><dd>{detailHabit.revisions.at(-1)!.type}</dd><dt>Frequency</dt><dd>{detailHabit.revisions.at(-1)!.frequency === "daily" ? "Daily" : detailHabit.revisions.at(-1)!.weekdays.map(day => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day]).join(", ")}</dd><dt>Time</dt><dd>{detailHabit.revisions.at(-1)!.time || "No completion deadline"}{detailHabit.revisions.at(-1)!.type === "event" ? `–${detailHabit.revisions.at(-1)!.end}` : ""}</dd><dt>Priority</dt><dd>{detailHabit.revisions.at(-1)!.priority}</dd><dt>Start date</dt><dd>{detailHabit.revisions.at(-1)!.startDate || detailHabit.createdDate}</dd><dt>End date</dt><dd>{detailHabit.revisions.at(-1)!.endDate || "No end date"}</dd></dl><p>Latest settings take effect {detailHabit.revisions.at(-1)!.effectiveDate}. {detailHabit.revisions.at(-1)!.archived ? "Archived from that date; earlier history remains." : "Enabled from that date."}</p><div className="detail-actions"><button disabled={busy} onClick={() => { setEditor({ habit: detailHabit }); }}>Edit habit</button><button disabled={busy} onClick={() => void mutate(() => browserHabits.archive(detailHabit.id, !detailHabit.revisions.at(-1)!.archived), "Repeating settings updated from today. Past records preserved.")}>{detailHabit.revisions.at(-1)!.archived ? "Restore habit" : "Archive habit"}</button></div><details><summary>Settings history</summary>{detailHabit.revisions.map((revision, index) => <p key={index}>{revision.effectiveDate}: {revision.name}, {revision.type}, {revision.frequency}, {revision.time}{revision.end && revision.type === "event" ? `–${revision.end}` : ""}, {revision.archived ? "archived" : "enabled"} · <Stamp value={revision.at} timezone={student.timezone} /></p>)}</details></div></Dialog>}
   {occurrence && !replanning && <Dialog title={occurrence.task?.title || occurrence.event?.title || occurrence.settings.name} onClose={close}><div className="detail"><p>{occurrence.task?.description || occurrence.event?.description || occurrence.settings.description || "No description"}</p><dl><dt>Original date</dt><dd>{occurrence.date}</dd><dt>Scheduled time</dt><dd>{occurrence.task?.dueTime || (occurrence.event ? `${occurrence.event.originalSlot.start}–${occurrence.event.originalSlot.end}` : "No completion deadline")}</dd><dt>Outcome</dt><dd>{currentOutcome === "unrecorded" ? "No outcome recorded" : currentOutcome}</dd>{occurrence.event && <><dt>Current event time</dt><dd>{occurrence.event.slot.date} · {occurrence.event.slot.start}–{occurrence.event.slot.end}</dd></>}</dl>{(occurrence.task?.completedAt || occurrence.event?.completedAt) && <p>Completed: <Stamp value={(occurrence.task?.completedAt || occurrence.event?.completedAt)!} timezone={student.timezone} /></p>}{(occurrence.task?.missedAt || (occurrence.event?.outcomeChanges?.length ? occurrence.event.outcomeChanges.at(-1)?.to.missedAt : occurrence.event?.history.filter(entry => entry.kind === "missed").at(-1)?.at)) && <p>Missed outcome recorded: <Stamp value={(occurrence.task?.missedAt || (occurrence.event?.outcomeChanges?.length ? occurrence.event.outcomeChanges.at(-1)?.to.missedAt : occurrence.event?.history.filter(entry => entry.kind === "missed").at(-1)?.at))!} timezone={student.timezone} /></p>}
     {currentOutcome === "review" && <p className="notice">This event was rescheduled and then completed. Its outcome and timestamps are retained; grid-date credit and feedback completion credit require review.</p>}

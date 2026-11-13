@@ -1,4 +1,5 @@
 "use client";
+import { productivityErrorMessage } from "../errors";
 import { WorkspaceButton, useWorkspaceNavigation } from "../workspace/WorkspaceNavigation";
 import { Icon, ProdButton } from "../workspace/Design";
 import { Timetable } from "./ScheduleTimetable";
@@ -68,7 +69,7 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
       setData(d);
       setDate((prev) => prev || localNow(s.timezone).date);
     } catch (e) {
-      setLoadError((e as Error).message);
+      setLoadError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again."));
     } finally {
       setLoading(false);
     }
@@ -84,7 +85,7 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
         }
       })
       .catch((e) => {
-        if (active) setLoadError((e as Error).message);
+        if (active) setLoadError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -107,12 +108,13 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
         const results = await Promise.allSettled(timetableSourceDates(scheduleDates(rangeStart, timeView)).map(day => service.getOfficialClasses(day)));
         if (active) {
           setClasses(results.flatMap(result => result.status === "fulfilled" ? result.value : []));
-          setClassError(results.some(result => result.status === "rejected") ? "Some academic dates could not be loaded. Personal and habit events are still displayed." : "");
+          const failures = results.filter(result => result.status === "rejected");
+          setClassError(failures.length ? `${failures.length} timetable date(s) could not be loaded. ${productivityErrorMessage(failures[0].reason, "The timetable service could not complete this request.")} Personal and habit events are still displayed.` : "");
         }
       } catch (e) {
         if (active) {
           setClasses([]);
-          setClassError((e as Error).message);
+          setClassError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again."));
         }
       } finally {
         if (active) setClassLoading(false);
@@ -125,7 +127,7 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
   }, [rangeStart, rangeEnd, timeView, service, retry, student?.timezone]);
   useEffect(() => {
     const refresh = () => {
-      void Promise.all([service.load(), service.getCurrentStudent()]).then(([data, current]) => { setData(data); setStudent(current); }).catch(e => setLoadError((e as Error).message));
+      void Promise.all([service.load(), service.getCurrentStudent()]).then(([data, current]) => { setData(data); setStudent(current); setLoadError(""); }).catch(e => setLoadError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again.")));
       setRetry(value => value + 1);
     };
     const storageChanged = (event: StorageEvent) => {
@@ -154,7 +156,7 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
       if (message) setNotice(message);
       return true;
     } catch (e) {
-      setSaveError((e as Error).message);
+      setSaveError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again."));
       return false;
     } finally {
       setSaving(false);

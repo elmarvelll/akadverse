@@ -1,3 +1,4 @@
+import { ProductivityError } from "../errors";
 import { slotInterval } from "./time";
 export type LocalDate = string;
 export type Time = string;
@@ -109,9 +110,9 @@ export type SchedulingOptions =
   | { mode: "manual"; allowConflicts?: boolean }
   | { mode: "smart"; durationMinutes: number; earliest: Time; latest: Time };
 export type Conflict = { id: string; title: string; slot: Slot };
-export class SlotConflictError extends Error {
-  constructor(public conflicts: Conflict[]) {
-    super("Time conflict with " + conflicts.map(c => `${c.title} (${c.slot.start}–${c.slot.end})`).join(", ") + ". Choose another time or explicitly keep this time.");
+export class SlotConflictError extends ProductivityError {
+  constructor(public conflicts: Conflict[], referenceId?: string) {
+    super("Time conflict with " + conflicts.map(c => `${c.title} (${c.slot.start}–${c.slot.end})`).join(", ") + ". Choose another time or explicitly keep this time.", "SLOT_CONFLICT", referenceId);
     this.name = "SlotConflictError";
   }
 }
@@ -134,8 +135,8 @@ export function scheduleConflicts(events: PersonalEvent[], classes: OfficialClas
 export function findSmartSlot(date: string, timezone: string, options: Extract<SchedulingOptions, { mode: "smart" }>, events: PersonalEvent[], classes: OfficialClass[], now: { date: string; time: string }, excludeId?: string): Slot | null {
   const validTime = (time: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
   if (!validDate(date) || !validTime(options.earliest) || !validTime(options.latest) || options.earliest >= options.latest || !Number.isInteger(options.durationMinutes) || options.durationMinutes < 1 || options.durationMinutes > 1439)
-    throw new Error("Choose a valid scheduling window and duration between 1 and 1439 minutes.");
-  if (date < now.date) throw new Error("Smart scheduling needs today or a future date.");
+    throw new ProductivityError("Choose a valid scheduling window and duration between 1 and 1439 minutes.");
+  if (date < now.date) throw new ProductivityError("Smart scheduling needs today or a future date.");
   const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
   const time = (value: number) => `${Math.floor(value / 60).toString().padStart(2, "0")}:${(value % 60).toString().padStart(2, "0")}`;
   const start = Math.max(minutes(options.earliest), date === now.date ? minutes(now.time) + 1 : 0);
@@ -264,35 +265,35 @@ export function validateInput(
   importedHabit = false,
 ) {
   if (!input.title.trim() || input.title.trim().length > 100)
-    throw new Error("Enter a title between 1 and 100 characters.");
+    throw new ProductivityError("Enter a title between 1 and 100 characters.");
   if (!input.description.trim())
-    throw new Error("Enter detailed event instructions or a description.");
+    throw new ProductivityError("Enter detailed event instructions or a description.");
   if (!validSlot(input.slot))
-    throw new Error(
+    throw new ProductivityError(
       "Choose a valid date and different start/end times. An earlier end time means the following day.",
     );
   if (input.slot.timezone !== student.timezone)
-    throw new Error("Use the student's timezone.");
+    throw new ProductivityError("Use the student's timezone.");
   if (input.backup && (!validSlot(input.backup) || input.backup.timezone !== student.timezone || input.backup.date + input.backup.start <= input.slot.date + input.slot.start || duration(input.backup) !== duration(input.slot)))
-    throw new Error("Backup must be later than the event, use the same timezone, and preserve its duration.");
+    throw new ProductivityError("Backup must be later than the event, use the same timezone, and preserve its duration.");
   if (
     !["low", "medium", "high"].includes(input.priority) ||
     typeof input.mustComplete !== "boolean"
   )
-    throw new Error("Choose a valid priority and focus commitment.");
+    throw new ProductivityError("Choose a valid priority and focus commitment.");
   if (
     !importedHabit && (!input.subScheduleId || !data.schedules.some(
       (s) => s.id === input.subScheduleId && s.ownerId === student.id,
     ))
   )
-    throw new Error("Create a sub-category first, then select one of your existing sub-categories.");
+    throw new ProductivityError("Create a sub-category first, then select one of your existing sub-categories.");
 }
 function owned(data: Dataset, student: Student, eventId: string) {
   const e = data.events.find(
     (e) => e.id === eventId && e.ownerId === student.id,
   );
   if (!e)
-    throw new Error(
+    throw new ProductivityError(
       "Personal event not found. Official classes are read-only.",
     );
   return e;
@@ -356,7 +357,7 @@ export class ScheduleService {
       data = await this.load();
     name = name.trim();
     if (!name || name.length > 60)
-      throw new Error("Enter a sub-schedule name between 1 and 60 characters.");
+      throw new ProductivityError("Enter a sub-schedule name between 1 and 60 characters.");
     if (
       data.schedules.some(
         (s) =>
@@ -365,13 +366,13 @@ export class ScheduleService {
           s.name.toLowerCase() === name.toLowerCase(),
       )
     )
-      throw new Error("A sub-schedule with this name already exists.");
+      throw new ProductivityError("A sub-schedule with this name already exists.");
     const now = this.clock().toISOString();
     if (scheduleId) {
       const s = data.schedules.find(
         (s) => s.id === scheduleId && s.ownerId === student.id,
       );
-      if (!s) throw new Error("Sub-schedule not found.");
+      if (!s) throw new ProductivityError("Sub-schedule not found.");
       Object.assign(s, { name, description, academic, updatedAt: now });
     } else
       data.schedules.push({
@@ -390,36 +391,36 @@ export class ScheduleService {
     const student = await this.getCurrentStudent(),
       data = await this.load();
     const existing = eventId ? owned(data, student, eventId) : undefined;
-    if (scheduling.mode !== "manual" && scheduling.mode !== "smart") throw new Error("Choose manual or smart scheduling.");
+    if (scheduling.mode !== "manual" && scheduling.mode !== "smart") throw new ProductivityError("Choose manual or smart scheduling.");
     if (scheduling.mode === "smart" && (!existing || existing.status !== "requires-replanning" || existing.archivedAt))
-      throw new Error("Smart rescheduling is available only after an event is explicitly marked missed.");
+      throw new ProductivityError("Smart rescheduling is available only after an event is explicitly marked missed.");
     if (source.kind === "habit") {
-      if (!source.habitId.trim() || !source.occurrenceId.trim()) throw new Error("Habit and occurrence identifiers are required.");
+      if (!source.habitId.trim() || !source.occurrenceId.trim()) throw new ProductivityError("Habit and occurrence identifiers are required.");
       const occurrence = data.events.find(e => e.ownerId === student.id && e.source.kind === "habit" && e.source.habitId === source.habitId && e.source.occurrenceId === source.occurrenceId);
       if (occurrence && !eventId) return data;
     }
     if (source.kind === "task") {
-      if (!source.taskId.trim()) throw new Error("A task identifier is required.");
+      if (!source.taskId.trim()) throw new ProductivityError("A task identifier is required.");
       if (!eventId && data.events.some(e => e.ownerId === student.id && e.source.kind === "task" && e.source.taskId === source.taskId)) return data;
     }
     if (scheduling.mode === "smart") {
-      if (!validDate(input.slot.date)) throw new Error("Choose a valid date.");
+      if (!validDate(input.slot.date)) throw new ProductivityError("Choose a valid date.");
       const classes = await this.academic.getClassSessions(student.id, input.slot.date);
       const suggested = findSmartSlot(input.slot.date, student.timezone, scheduling, data.events.filter(e => e.ownerId === student.id), classes, localNow(student.timezone, this.clock()), eventId);
-      if (!suggested) throw new Error("No free slot fits this duration and window on the selected day. Choose another date, widen the window, or use manual scheduling.");
+      if (!suggested) throw new ProductivityError("No free slot fits this duration and window on the selected day. Choose another date, widen the window, or use manual scheduling.");
       input = { ...input, slot: suggested };
     }
     validateInput(input, student, data, source.kind === "habit" || existing?.source.kind === "habit");
     slotInterval(input.slot);
     if (input.backup) slotInterval(input.backup);
     if (existing && (existing.status === "completed" || existing.archivedAt))
-      throw new Error("Only active pending events can be edited.");
+      throw new ProductivityError("Only active pending events can be edited.");
     const moved =
       existing && JSON.stringify(existing.slot) !== JSON.stringify(input.slot);
     if (moved || existing?.status === "requires-replanning") {
       const now = localNow(student.timezone, this.clock());
       if (input.slot.date + input.slot.start <= now.date + now.time)
-        throw new Error("Choose a future time when moving an event.");
+        throw new ProductivityError("Choose a future time when moving an event.");
     }
     const classDates = [...new Set([input.slot.date, slotEndDate(input.slot)])];
     const classes = (await Promise.all(classDates.map(date => this.academic.getClassSessions(student.id, date)))).flat();
@@ -480,7 +481,7 @@ export class ScheduleService {
       e = owned(data, student, eventId);
     if (e.status === "completed") return data;
     if (e.archivedAt)
-      throw new Error("Restore this event before completing it.");
+      throw new ProductivityError("Restore this event before completing it.");
     const now = this.clock().toISOString();
     e.status = "completed";
     e.completedAt = now;
@@ -521,7 +522,7 @@ export class ScheduleService {
   private async setBackupInternal(eventId: string, backup?: Slot) {
     const student = await this.getCurrentStudent(), data = await this.load();
     const e = owned(data, student, eventId);
-    if (e.status === "completed" || e.archivedAt) throw new Error("Only active events can have a backup.");
+    if (e.status === "completed" || e.archivedAt) throw new ProductivityError("Only active events can have a backup.");
     validateInput({ ...e, backup }, student, data);
     e.backup = backup;
     e.updatedAt = this.clock().toISOString();
@@ -533,11 +534,11 @@ export class ScheduleService {
   private async recordMissedAttemptInternal(eventId: string) {
     const student = await this.getCurrentStudent(), data = await this.load();
     const e = owned(data, student, eventId);
-    if (e.status === "completed" || e.archivedAt) throw new Error("Only active events can be marked missed.");
+    if (e.status === "completed" || e.archivedAt) throw new ProductivityError("Only active events can be marked missed.");
     if (e.status === "requires-replanning") return data;
     const now = localNow(e.slot.timezone, this.clock());
     if (slotEndDate(e.slot) + e.slot.end > now.date + now.time)
-      throw new Error("Wait until the planned event ends before marking it missed.");
+      throw new ProductivityError("Wait until the planned event ends before marking it missed.");
     e.history.push({ id: id(), kind: "missed", at: this.clock().toISOString(), planned: { ...e.slot }, mustComplete: e.mustComplete });
     e.status = "requires-replanning";
     e.updatedAt = this.clock().toISOString();

@@ -1,3 +1,4 @@
+import { ProductivityError } from "../errors";
 import type { TaskService } from "./service";
 // Shared task-occurrence gateway. The tracker recurrence service uses the same
 // TaskService operations, rather than maintaining a second completion field.
@@ -6,7 +7,7 @@ export class HabitTaskGateway {
   receive: TaskService["receiveHabitOccurrence"] = (input, dates) => this.tasks.receiveHabitOccurrence(input, dates);
   async getOccurrence(habitId: string, occurrenceId: string) {
     const occurrence = (await this.tasks.listTasks()).find(task => task.source.kind === "habit" && task.source.habitId === habitId && task.source.occurrenceId === occurrenceId);
-    if (!occurrence) throw new Error("Habit occurrence not found for this student.");
+    if (!occurrence) throw new ProductivityError("Habit occurrence not found for this student.");
     return occurrence;
   }
   async completeOccurrence(habitId: string, occurrenceId: string) {

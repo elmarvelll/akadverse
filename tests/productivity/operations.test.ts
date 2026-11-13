@@ -7,7 +7,8 @@ import { memoryPrisma, resetDatabase, rows, failWrite } from "./memory-db";
 
 mock.module("@/lib/auth", { namedExports: { authOptions: {} } });
 mock.module("@/lib/prisma", { namedExports: { prisma: memoryPrisma } });
-mock.module("@/services/productivity-layer/academics", { namedExports: { officialClasses: async () => [] } });
+let academicFailure: unknown;
+mock.module("@/services/productivity-layer/academics", { namedExports: { officialClasses: async () => { if (academicFailure) throw academicFailure; return []; } } });
 let execute: typeof import("@/services/productivity-layer/operations").executeProductivity;
 let ServiceError: typeof import("@/lib/service-error").ServiceError;
 let taskViewStatus: typeof import("@/features/productivity/tasks/domain").taskViewStatus;
@@ -30,11 +31,16 @@ const task = (extra = {}) => ({ title: "Read", priority: "medium", ...extra });
 const habit = (extra = {}) => ({ name: "Daily reading", description: "", type: "task", frequency: "daily", weekdays: [], priority: "medium", time: "13:00", startDate: "2030-01-14", ...extra });
 const denied = (error: unknown) => error instanceof ServiceError && [401, 403, 404].includes(error.status);
 beforeEach(() => {
+  academicFailure = undefined;
   resetDatabase(); rows("user").push(A, B); signInAs(A);
   mock.timers.reset(); mock.timers.enable({ apis: ["Date"], now: new Date("2030-01-15T12:00:00Z") });
 });
 
 describe("authenticated productivity operations", () => {
+  it("does not turn unexpected academic dependency errors into public validation messages", async () => {
+    const failure = new Error("private database connection details"); academicFailure = failure;
+    await assert.rejects(call("official.classes", ["2030-01-15"]), error => error === failure && !(error instanceof ServiceError));
+  });
   it("requires the existing session on every operation and rejects account/role mismatch", async () => {
     signInAs(null);
     for (const operation of ["context", "tasks.list", "tasks.create", "habits.list", "schedule.load", "analytics.tasks", "import"]) await assert.rejects(call(operation), denied);
