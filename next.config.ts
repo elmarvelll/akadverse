@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   // follow, so the files that client needs at runtime (its entry, runtime, schema and the platform's query engine
   // binary) must be traced explicitly. Keep in sync with prisma/elearning/schema.prisma's generator `output`.
   outputFileTracingIncludes: {
-    "/api/e-learning/pdfjs/*": ["./node_modules/pdfjs-dist/package.json", "./node_modules/pdfjs-dist/build/pdf.worker.min.mjs", "./node_modules/pdfjs-dist/cmaps/**", "./node_modules/pdfjs-dist/standard_fonts/**", "./node_modules/pdfjs-dist/wasm/**"],
+    "/api/e-learning/pdfjs/**": ["./node_modules/pdfjs-dist/package.json", "./node_modules/pdfjs-dist/build/pdf.worker.min.mjs", "./node_modules/pdfjs-dist/cmaps/**", "./node_modules/pdfjs-dist/standard_fonts/**", "./node_modules/pdfjs-dist/wasm/**"],
     "/*": [
       "./src/generated/prisma-elearning/package.json",
       "./src/generated/prisma-elearning/index.js",
