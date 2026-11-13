@@ -6,7 +6,7 @@
 // "Loading" to screen readers; the grey blocks themselves are decorative (aria-hidden).
 
 export function Bone({ className = "" }: { className?: string }) {
-  return <div aria-hidden className={`animate-pulse rounded-lg bg-gray-200 ${className}`} />;
+  return <div aria-hidden className={`motion-safe:animate-pulse rounded-lg bg-gray-200 ${className}`} />;
 }
 
 export function LoadingRegion({ label = "Loading", children }: { label?: string; children: React.ReactNode }) {
