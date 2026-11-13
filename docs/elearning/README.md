@@ -59,3 +59,7 @@ A role-based academic portal at `/e-learning/<role>/...` for six roles — Stude
 4. Check [`todo/roadmap.md`](todo/roadmap.md) before starting new work.
 
 Concept Explainer endpoint audit, deployment and verification: [integration engineering report](systems/concept-explainer-integration.md).
+
+## CCMAS 2023 migration
+
+See [implementation and final reset review](migration/ccmas-2023-implementation-report.md), [source review](migration/ccmas-2023-source-review.md), and [preservation audit](migration/ccmas-2023-audit.md). The approved reset is complete and EEE/CPE/ICE link to CCMAS 2023. DAPU semester allocation and HOD approval remain required before student registration.

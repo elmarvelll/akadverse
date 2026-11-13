@@ -66,3 +66,7 @@ Thumbs.db
 # Environment templates contain only placeholders / local-only values and MUST be committed
 # (the `.env*` rules above would otherwise ignore them). See for_Developers/.env.example.
 !.env.example
+
+# Private curriculum/reset inventories and database backups
+.local/ccmas/
+.elearning-reset/

@@ -12,8 +12,9 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { elearningDb as db } from "../../src/lib/db/elearning";
+import type { Prisma } from "../../src/generated/prisma-elearning";
 
-const DEFAULT_JSON = "src/lib/resources/ccmas/Engineering-CCMAS.json";
+const DEFAULT_JSON = "src/lib/resources/ccmas/Engineering-CCMAS-2023.json";
 
 type Tally = { new: number; updated: number; unchanged: number };
 const tally = (): Tally => ({ new: 0, updated: 0, unchanged: 0 });
@@ -102,6 +103,9 @@ async function main() {
 
   const version = doc.source.version!;
   const existingDoc = await db.cCMASDocument.findUnique({ where: { name_version: { name: doc.source.name, version } } });
+  if (existingDoc?.sha256 && doc.source.sha256 && existingDoc.sha256 !== doc.source.sha256) {
+    throw new Error("This reference version belongs to a different PDF checksum. Use a separate version rather than overwriting its source provenance.");
+  }
   const docData = {
     title: doc.source.title ?? null,
     source: doc.source.name,
@@ -152,17 +156,22 @@ async function main() {
         (await db.cCMASProgrammeCourse.findMany({ where: { programmeId: prog.id } })).map((r) => [`${r.courseId}|${r.level}`, r])
       );
 
+      // Batch missing identities/placements: one network round trip per row
+      // made remote imports unnecessarily slow. Preserve first-seen identity
+      // wording and programme-specific values exactly as before.
+      const missing = new Map<string, JsonCourse>();
+      for (const course of p.courses) if (!knownCourses.has(course.code) && !missing.has(course.code)) missing.set(course.code, course);
+      if (missing.size) {
+        const created = await db.cCMASCourse.createMany({ data: [...missing.values()].map(c => ({ documentId: document.id, code: c.code, title: c.title, creditUnits: c.creditUnits })), skipDuplicates: true });
+        T.course.new += created.count;
+        for (const course of await db.cCMASCourse.findMany({ where: { documentId: document.id, code: { in: [...missing.keys()] } } })) knownCourses.set(course.code, course);
+      }
+      const placements: Prisma.CCMASProgrammeCourseCreateManyInput[] = [];
+
       for (const c of p.courses) {
         // CCMASCourse = identity (first title/units seen for the code in this
         // document); programme-specific wording lives on the programme-course.
-        let course = knownCourses.get(c.code);
-        if (!course) {
-          course = await db.cCMASCourse.create({
-            data: { documentId: document.id, code: c.code, title: c.title, creditUnits: c.creditUnits },
-          });
-          knownCourses.set(c.code, course);
-          T.course.new++;
-        }
+        const course = knownCourses.get(c.code)!;
 
         const data = {
           semester: c.semester,
@@ -181,8 +190,7 @@ async function main() {
         };
         const row = existingPc.get(`${course.id}|${c.level}`);
         if (!row) {
-          await db.cCMASProgrammeCourse.create({ data: { programmeId: prog.id, courseId: course.id, level: c.level, ...data } });
-          T.programmeCourse.new++;
+          placements.push({ programmeId: prog.id, courseId: course.id, level: c.level, ...data });
         } else if (Object.entries(data).some(([k, v]) => !same((row as Record<string, unknown>)[k], v))) {
           await db.cCMASProgrammeCourse.update({ where: { id: row.id }, data });
           T.programmeCourse.updated++;
@@ -190,6 +198,11 @@ async function main() {
           T.programmeCourse.unchanged++;
         }
       }
+      if (placements.length) {
+        const created = await db.cCMASProgrammeCourse.createMany({ data: placements, skipDuplicates: true });
+        T.programmeCourse.new += created.count;
+      }
+      console.log(`Reference programme complete: ${p.name} (${p.courses.length} course placements)`);
     }
   }
 

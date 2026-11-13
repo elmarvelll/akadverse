@@ -64,10 +64,10 @@ export default function Shell({
   }, [open]);
 
   return (
-    <div className={`elearning-shell min-h-screen bg-gray-50 ${role === "student" ? styles.portal : ""}`}>
+    <div className={`elearning-shell min-h-screen bg-gray-50 ${styles.portal}`}>
       <Header role={role} name={name} menuOpen={open} onMenuToggle={() => setOpen((v) => !v)} onBrandClick={() => setOpen(false)} />
 
-      {open && <div className="fixed inset-0 top-16 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
+      {open && <div className="fixed inset-0 top-14 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
 
       <div className="pt-16 max-w-[1600px] mx-auto lg:flex">
         <aside

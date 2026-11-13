@@ -8,6 +8,7 @@ import Link from "next/link";
 import { requireElearningRole, requireHodProfile } from "@/services/e-learning/shared/auth";
 import { listAdvisorContexts } from "@/services/e-learning/hod/level-advisors";
 import { assignLevelAdvisorAction } from "./actions";
+import UnassignAdviser from "./UnassignAdviser";
 import SubmitButton from "@/app/e-learning/_components/SubmitButton";
 
 const LEVELS = [100, 200, 300, 400, 500, 600];
@@ -97,6 +98,8 @@ export default async function LevelAdvisorsPage({ searchParams }: { searchParams
                     </select>
                     <SubmitButton className="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800">{c.assignment ? "Change Level Advisor" : "Assign Level Advisor"}</SubmitButton>
                   </form>
+
+                  {c.assignment && <UnassignAdviser assignmentId={c.assignment.id} facultyUserId={c.assignment.facultyUserId} facultyName={c.assignment.facultyName} sessionId={session.id} programmeFilter={q.programme ?? ""} levelFilter={q.level ?? ""} />}
 
                   {c.assignment && c.assignment.history.length > 0 && (
                     <details className="mt-3 text-sm text-gray-900">

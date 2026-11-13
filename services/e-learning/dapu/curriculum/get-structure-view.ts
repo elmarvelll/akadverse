@@ -4,6 +4,7 @@
 // already selected, and where else each course already sits (information only, never a block).
 
 import { elearningDb } from "@/lib/db/elearning";
+import sourceReview from "@/lib/resources/ccmas/Engineering-CCMAS-2023-review.json";
 import { resolveContext, currentCurriculum, EDITABLE, type StructureContext } from "@/services/e-learning/dapu/curriculum/context";
 
 export async function getStructureView(ctx: StructureContext) {
@@ -57,6 +58,9 @@ export async function getStructureView(ctx: StructureContext) {
       id: r.id, code: r.course.code, title: r.titleAsListed, creditUnits: r.creditUnits, level: r.level,
       statusLetter: r.statusLetter, courseType: r.courseType, lectureHours: r.lectureHours, practicalHours: r.practicalHours,
       duration: r.duration, prerequisites: r.prerequisites, description: r.description, sourcePage: r.sourcePage,
+      sourceWarnings: programme.ccmasProgramme?.discipline.document.sha256 === sourceReview.sourceSha256
+        ? (sourceReview.programmes as Record<string, Record<string, string[]>>)[programme.ccmasProgramme.name]?.[r.course.code] ?? []
+        : [],
       alreadySelected: selectedCodes.has(r.course.code),
       elsewhere: elsewhereByCode.get(r.course.code) ?? [],
     })),

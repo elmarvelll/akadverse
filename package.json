@@ -25,7 +25,13 @@
     "ai:ingest-backfill": "tsx scripts/ai-ingest-backfill.ts",
     "ccmas:extract": "python3 scripts/ccmas/extract_ccmas.py",
     "db:ccmas:import": "tsx scripts/ccmas/import-ccmas.ts",
-    "sync:vercel-env": "./scripts/sync-vercel-env.sh production"
+    "sync:vercel-env": "./scripts/sync-vercel-env.sh production",
+    "ccmas:verify": "tsx --env-file-if-exists=.env scripts/ccmas/verify-reference.ts",
+    "db:elearning:inventory": "tsx --env-file-if-exists=.env scripts/elearning-reset/inventory.ts",
+    "db:elearning:reset:plan": "node scripts/elearning-reset/plan.mjs",
+    "db:elearning:reset": "tsx --env-file-if-exists=.env scripts/elearning-reset/execute.ts",
+    "test:ccmas:extract": "python3 -m unittest discover -s tests/ccmas -v",
+    "test:elearning:reset": "node tests/ccmas/reset-rehearsal.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

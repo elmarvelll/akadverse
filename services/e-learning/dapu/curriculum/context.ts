@@ -39,7 +39,7 @@ export async function resolveContext(ctx: StructureContext) {
     throw badRequest("Level must be 100, 200, 300, 400, 500 or 600.");
   }
   const [programme, semester] = await Promise.all([
-    elearningDb.programme.findUnique({ where: { id: ctx.programmeId }, include: { department: true, ccmasProgramme: true } }),
+    elearningDb.programme.findUnique({ where: { id: ctx.programmeId }, include: { department: true, ccmasProgramme: { include: { discipline: { include: { document: true } } } } } }),
     elearningDb.semester.findUnique({ where: { id: ctx.semesterId }, include: { academicSession: true } }),
   ]);
   if (!programme || programme.departmentId !== ctx.departmentId || programme.department.collegeId !== ctx.collegeId) {
