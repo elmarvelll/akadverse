@@ -16,7 +16,7 @@ export const SIGNUP_SCOPE = {
   collegeCodes: ["CoE"] as string[] | null, // College of Engineering
   departmentCodes: ["EIENG"] as string[] | null, // Electrical and Information Engineering
   programmeCodes: ["EEE"] as string[] | null, // Electrical and Electronics Engineering
-  levels: [300] as number[],
+  levels: [300, 400] as number[],
 };
 
 const inScope = (list: string[] | null, code: string) => !list || list.includes(code);
