@@ -2,6 +2,12 @@
 
 The Core database needs `prisma/migrations/20261112000000_productivity_layer/migration.sql` before the integrated workspace can load. It adds seven tables, one enum, indexes, and ownership foreign keys. It does not drop or rewrite existing application tables. Generating Prisma clients does not apply this SQL.
 
+## Current runtime connection
+
+On 14 November 2026, at the user's request, `.env.local` was switched back to the preserved shared Core database for ordinary Akadverse login. `ENABLE_DEV_LOGIN=false`. The local session secret, localhost callback origin, and existing Google settings were preserved. Only the Core runtime/direct URLs and development-login flag changed; E-Learning still uses its existing local database configuration.
+
+The Core Prisma client is shared by authentication and Productivity, so saves from this app now target the shared Core database as well. This configuration change did not migrate data or change shared records. `.env` remains configured for local database tooling. The previous fully local runtime configuration is retained privately in `.local-development/env.local.before-shared-login-*`; do not commit or upload these files. The already-running app on port 3000 was restarted so it would not retain its old cached local Prisma connection; no database server was started. Use your existing complete Akadverse email and password at `http://localhost:3000/login`. On a future startup, use `npm.cmd run dev`.
+
 ## Local development on this Windows workspace
 
 Docker Desktop could not start. Portable PostgreSQL 17 tools were obtained from the official EDB Windows archive and placed in the Git-ignored `.local-development/tools/pgsql` directory. This is a local alternative to Docker, with no Windows service installation. Only `127.0.0.1:5433` is exposed. Data survives application restarts in `.local-development/postgres-data`.
@@ -13,13 +19,13 @@ npm.cmd run db:portable:up
 npm.cmd run dev
 ```
 
-Use `http://localhost:3000/login` and **Continue as Test Student**. This is a real NextAuth session backed by a dedicated local Core User. The test login remains unavailable in production. To stop the local database without removing its data:
+For isolated testing, first restore local Core database URLs and enable the development login as described in `docs/development-login.md`. Then use `http://localhost:3000/login` and **Continue as Test Student**. This is a real NextAuth session backed by a dedicated local Core User. The test login is disabled with a shared Core target and remains unavailable in production. To stop the local database without removing its data:
 
 ```powershell
 npm.cmd run db:portable:down
 ```
 
-`.env` and `.env.local` now use the isolated local databases. Other existing environment values are preserved. The original `.env.local` is privately retained at `.local-development/env.local.before-local`. It contains shared credentials: do not commit, upload, or paste it. Local tools, backups, logs, and database files are excluded by `.gitignore`; `.vercelignore` also excludes private local files from CLI deployment uploads.
+During the earlier isolated verification, both `.env` and `.env.local` used local databases. The current runtime selection is described above. Other existing environment values are preserved. The original shared `.env.local` is privately retained at `.local-development/env.local.before-local`. It contains shared credentials: do not commit, upload, or paste it. Local tools, backups, logs, and database files are excluded by `.gitignore`; `.vercelignore` also excludes private local files from CLI deployment uploads.
 
 On another machine, use the established Docker workflow in `docs/development-login.md`, or extract the official PostgreSQL Windows binary archive's `pgsql/bin`, `pgsql/lib`, and `pgsql/share` directories into `.local-development/tools/pgsql`. Do not run Docker and the portable database on port 5433 simultaneously. After creating a fresh cluster, run `npm run db:local:setup` with all four database URLs targeting localhost.
 

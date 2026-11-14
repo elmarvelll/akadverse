@@ -1,0 +1,17 @@
+{
+  "checks": [
+    "selected habit uses a seven-column monthly calendar",
+    "calendar and feedback sit side by side on desktop",
+    "real recorded outcomes appear as green and pink tiles",
+    "card selects calendar without opening a dialog or writing records",
+    "weekday recurrence leaves unscheduled dates inactive",
+    "unscheduled date does not open an occurrence",
+    "Rule opens the selected source habit",
+    "future occurrence opens details without outcome actions",
+    "ArrowDown moves by one calendar week",
+    "month navigation uses real calendar lengths",
+    "mobile calendar keeps all seven columns inside the page",
+    "feedback stacks below the calendar on mobile"
+  ],
+  "errors": []
+}

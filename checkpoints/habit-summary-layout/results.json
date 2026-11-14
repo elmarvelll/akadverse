@@ -1,0 +1,84 @@
+{
+  "passed": 16,
+  "checks": [
+    "Short summary matches a four-week calendar",
+    "Thirty items do not stretch the calendar or row",
+    "Long summary content scrolls internally",
+    "Scroll region can shrink and shows a right-side scrollbar",
+    "Heading stays fixed while the content scrolls",
+    "Last item and Inspect rule remain reachable",
+    "Last summary item remains keyboard accessible",
+    "Six-week month increases both heights automatically",
+    "Expanded content cannot change row height",
+    "Narrow desktop keeps matching heights as calendar headings wrap",
+    "Mobile summary has a viewport-relative bound and internal scrolling",
+    "Mobile panels stack without page overflow",
+    "Mobile heading remains visible while reaching the last item",
+    "Mobile last item and footer are accessible",
+    "Short mobile viewport retains a usable scroll area",
+    "Short list remains bounded in stacked layout"
+  ],
+  "measurements": {
+    "short": {
+      "calendar": 499.6875,
+      "summary": 499.6875,
+      "scroll": 394,
+      "content": 401,
+      "header": 53,
+      "rows": 1,
+      "width": 1440,
+      "height": 1000
+    },
+    "long": {
+      "calendar": 499.6875,
+      "summary": 499.6875,
+      "scroll": 394,
+      "content": 1778,
+      "header": 53,
+      "rows": 30,
+      "width": 1440,
+      "height": 1000
+    },
+    "sixWeeks": {
+      "calendar": 631.6875,
+      "summary": 631.6875,
+      "scroll": 526,
+      "content": 1778,
+      "header": 53,
+      "rows": 30,
+      "width": 1440,
+      "height": 1000
+    },
+    "mobile": {
+      "calendar": 609.078125,
+      "summary": 590.796875,
+      "scroll": 485,
+      "content": 1846,
+      "header": 678.078125,
+      "rows": 30,
+      "width": 390,
+      "height": 844
+    },
+    "small": {
+      "calendar": 609.078125,
+      "summary": 350,
+      "scroll": 245,
+      "content": 1846,
+      "header": 330.078125,
+      "rows": 30,
+      "width": 390,
+      "height": 500
+    },
+    "mobileShort": {
+      "calendar": 501.078125,
+      "summary": 350,
+      "scroll": 245,
+      "content": 401,
+      "header": 222.078125,
+      "rows": 1,
+      "width": 390,
+      "height": 500
+    }
+  },
+  "errors": []
+}
