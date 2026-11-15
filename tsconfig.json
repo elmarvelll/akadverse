@@ -31,5 +31,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "schedule-manager", "checkpoints"]
+  "exclude": ["node_modules", "schedule-manager", "checkpoints", ".local", ".local-development", ".elearning-reset"]
 }

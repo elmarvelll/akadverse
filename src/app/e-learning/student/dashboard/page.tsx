@@ -36,7 +36,7 @@ export default async function StudentDashboardPage() {
   const [registration, registeredCourses, gpaSummary] = profile
     ? await Promise.all([
         findRegistration(session.user.id, academicContext),
-        academicContext ? getRegisteredCourses(session.user.id, academicContext) : Promise.resolve([]),
+        academicContext ? getRegisteredCourses(session.user.id, academicContext, { includeLecturerNames: false }) : Promise.resolve([]),
         getGpaCgpaSummary(session.user.id),
       ])
     : [null, [], null];
