@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -7,12 +7,14 @@ import { Workspace } from "./workspace/Workspace";
 import { setProductivityAccount } from "./client";
 import { ProductivityError, productivityErrorMessage } from "./errors";
 import { WorkspaceFailure } from "./WorkspaceFailure";
+import { ProductivityReadCache } from "./read-cache";
 
-function AccountWorkspace({ userId }: { userId: string }) {
+function AccountWorkspace({ userId, enabled }: { userId: string; enabled: boolean }) {
+  const cache = useRef(new ProductivityReadCache(userId));
   const [expired, setExpired] = useState("");
   const [setupFailure, setSetupFailure] = useState<ProductivityError>();
   useLayoutEffect(() => {
-    setProductivityAccount(userId);
+    setProductivityAccount(userId, cache.current);
     return () => setProductivityAccount("");
   }, [userId]);
   useEffect(() => {
@@ -27,7 +29,7 @@ function AccountWorkspace({ userId }: { userId: string }) {
   }, []);
   if (expired) return <div role="alert"><p>{expired}</p><Link href="/login?callbackUrl=%2Fstudashboard%2Fproductivity-layer">Sign in</Link> <button onClick={() => window.location.reload()}>Reload workspace</button></div>;
   if (setupFailure) return <WorkspaceFailure message={`${setupFailure.message} Automatic workspace requests are paused. Complete the database setup for this environment before reloading.`} referenceId={setupFailure.referenceId} />;
-  return <Workspace />;
+  return <Workspace enabled={enabled} />;
 }
 
 export function ProductivityClient({ userId }: { userId: string }) {
@@ -36,7 +38,7 @@ export function ProductivityClient({ userId }: { userId: string }) {
   const currentId = session?.user?.id;
   useEffect(() => { if (status === "authenticated" && currentId !== userId) router.refresh(); }, [currentId, status, userId, router]);
   // Remove the entire data-bearing subtree before a different account renders.
-  // No user data is held in a global cache or persisted in browser storage.
-  if (status !== "authenticated" || currentId !== userId) return <div role="status">{status === "unauthenticated" ? <Link href="/login?callbackUrl=%2Fstudashboard%2Fproductivity-layer">Sign in to open your workspace</Link> : "Loading your account…"}</div>;
-  return <AccountWorkspace key={userId} userId={userId} />;
+  // Its per-account cache is discarded on logout and never persisted in browser storage.
+  if (status === "unauthenticated" || status === "authenticated" && currentId !== userId) return <div role="status">{status === "unauthenticated" ? <Link href="/login?callbackUrl=%2Fstudashboard%2Fproductivity-layer">Sign in to open your workspace</Link> : "Loading your account…"}</div>;
+  return <AccountWorkspace key={userId} userId={userId} enabled={status === "authenticated"} />;
 }

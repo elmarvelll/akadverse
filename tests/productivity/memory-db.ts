@@ -39,6 +39,11 @@ function client(state: Tables) {
 resetDatabase();
 export const memoryPrisma = {
   get user() { return client(tables).user; },
+  get productivityPreferences() { return client(tables).productivityPreferences; },
+  get productivityTask() { return client(tables).productivityTask; },
+  get productivityHabit() { return client(tables).productivityHabit; },
+  get productivityEvent() { return client(tables).productivityEvent; },
+  get productivityCategory() { return client(tables).productivityCategory; },
   $transaction<T>(fn: (tx: unknown) => Promise<T>) {
     const task = queue.then(async () => {
       const draft = structuredClone(tables);

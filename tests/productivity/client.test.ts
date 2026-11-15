@@ -9,6 +9,20 @@ const originalWindow = globalThis.window;
 beforeEach(() => { globalThis.window = new EventTarget() as unknown as Window & typeof globalThis; setProductivityAccount(""); });
 after(() => { globalThis.fetch = originalFetch; globalThis.window = originalWindow; setProductivityAccount(""); });
 
+it("deduplicates simultaneous account reads, settles failures and retries only on a new explicit call", async () => {
+  setProductivityAccount("A"); let calls = 0;
+  let resolve!: (response: Response) => void;
+  globalThis.fetch = async () => { calls++; return new Promise<Response>(done => { resolve = done; }); };
+  const results = Promise.allSettled([rpc("context"), rpc("context")]);
+  assert.equal(calls, 1);
+  resolve(Response.json({ code: "DATABASE_TIMEOUT", error: "Database account read timed out." }, { status: 503 }));
+  assert.ok((await results).every(result => result.status === "rejected"));
+  await Promise.resolve(); assert.equal(calls, 1);
+  const retried = rpc("context"); assert.equal(calls, 2);
+  resolve(Response.json({ result: { student: { id: "A" } } }));
+  assert.deepEqual(await retried, { student: { id: "A" } });
+});
+
 it("rejects in-flight data from the previous account and sends the new identity guard", async () => {
   setProductivityAccount("A");
   let resolve!: (response: Response) => void;

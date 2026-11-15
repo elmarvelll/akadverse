@@ -19,8 +19,8 @@ export function HabitFeedback({ habit, habits, occurrences, monthOccurrences, no
       {period === "week" && <label>Week containing<input type="date" value={weekDate} onChange={event => { if (event.target.value) onWeekDate(event.target.value); }} /></label>}
     </div>
     <p className="habit-consistency-summary">{counts.due ? <>You completed <strong>{counts.completed} of {counts.due}</strong> eligible occurrences for <strong>{name}</strong>; <strong>{counts.missed}</strong> missed, <strong>{counts.unrecorded}</strong> with no recorded outcome.</> : <>No eligible occurrences yet for <strong>{name}</strong>.</>}</p>
-    <div className="habit-completion-label"><span>Completion rate</span><strong>{counts.due ? `${rate}%` : "—"}</strong></div>
-    <progress className="habit-completion-progress" value={counts.completed} max={counts.due || 1} aria-label={`${name} completion rate`} />
+    <div className="habit-completion-meter"><div className="habit-completion-label"><span>Completion rate</span><strong>{counts.due ? `${rate}%` : "—"}</strong></div>
+    <progress className="habit-completion-progress" value={counts.completed} max={counts.due || 1} aria-label={`${name} completion rate`} /></div>
     {counts.review > 0 && <p className="notice">{counts.review} rescheduled completion(s) need review and are excluded from feedback counts.</p>}
     <details className="habit-feedback-explanation"><summary>How progress is counted</summary><p>Counts include past scheduled dates and today&apos;s elapsed or explicitly recorded occurrences. Future dates are excluded. Untimed unrecorded tasks become elapsed after their local day ends.</p></details>
     {showToday && <div className="habit-today-list"><h3>Today&apos;s habits</h3>{habits.map(item => {

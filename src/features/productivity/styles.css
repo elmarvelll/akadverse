@@ -50,6 +50,14 @@
 .productivity-host .analytics-total { font-size: 26px !important; font-weight: 600; color: var(--ink) !important; }
 .productivity-host .analytics-total span { font-size: 13px; font-weight: 400; }
 .productivity-host .analytics-loading { padding: 24px; background: white; border-radius: 12px; }
+.productivity-host .productivity-refresh { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 220ms ease, opacity 180ms ease; }
+.productivity-host .productivity-refresh[data-active="true"] { grid-template-rows: 1fr; opacity: 1; }
+.productivity-host .productivity-refresh-clip { min-height: 0; overflow: hidden; }
+.productivity-host .productivity-refresh-content { display: flex; align-items: center; gap: 9px; padding: 10px 0; color: #64748b; font-size: 12px; }
+.productivity-host .productivity-refresh-spinner { width: 14px; height: 14px; flex: 0 0 14px; border: 2px solid #dbeafe; border-top-color: #185cff; border-radius: 50%; animation: productivity-refresh-spin 900ms linear infinite; animation-play-state: paused; }
+.productivity-host .productivity-refresh[data-active="true"] .productivity-refresh-spinner { animation-play-state: running; }
+.productivity-host .productivity-refresh-announcement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@keyframes productivity-refresh-spin { to { transform: rotate(360deg); } }
 .productivity-host .analytics-bar-row { display: grid; grid-template-columns: minmax(75px, 1fr) minmax(60px, 2fr) auto; align-items: center; gap: 10px; margin: 12px 0; font-size: 12px; }
 .productivity-host .analytics-bar-track { height: 18px; background: #edf2ef; border-radius: 4px; overflow: hidden; }
 .productivity-host .analytics-bar-track > span { display: block; height: 100%; background: #518566; border-radius: 4px; }
@@ -692,6 +700,10 @@
   margin-top: 20px;
 }
 .productivity-host dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 0;
@@ -703,6 +715,11 @@
 .productivity-host dialog::backdrop {
   background: #172b3c66;
 }
+.productivity-host .productivity-save-notifications { display: grid; gap: 8px; padding: 16px 24px 0; }
+.productivity-host .productivity-save-notifications:empty { display: none; }
+.productivity-host .productivity-save-notification { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-radius: 12px; overflow-wrap: anywhere; }
+.productivity-host .productivity-save-notification > span { min-width: 0; }
+.productivity-host .productivity-save-notification > button { flex: 0 0 auto; min-width: 36px; min-height: 36px; padding: 4px; }
 .productivity-host .dialog-header {
   display: flex;
   align-items: center;
@@ -818,6 +835,9 @@
   flex-wrap: wrap;
   border-top: 1px solid var(--border);
   padding-top: 20px;
+}
+.productivity-host .productivity-pagination {
+  align-items: center;
 }
 .productivity-host .danger {
   color: #a24c41;
@@ -1151,6 +1171,14 @@
 .productivity-host .portal-identity small { display: block; font-size: 11px; color: #64748b; }
 .productivity-host .portal-tag { color: #185cff; background: #eef4ff; border-radius: 100px; margin-left: 10px; padding: 4px 9px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .productivity-host .portal-top-right { display: flex; align-items: center; gap: 16px; }
+.productivity-host .back-to-akadverse { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid #185cff; border-radius: 12px; background: #185cff; color: #fff; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; box-shadow: 0 2px 6px #185cff25; transition: background-color 150ms ease, box-shadow 150ms ease; }
+.productivity-host .back-to-akadverse:hover { background: #124de0; box-shadow: 0 4px 12px #185cff30; }
+.productivity-host .back-to-akadverse:focus-visible { outline: 3px solid #185cff88; outline-offset: 3px; }
+.productivity-host .back-to-akadverse-icon { font-size: 20px; line-height: 1; }
+.productivity-host .prod-sidebar-bottom { margin-top: 20px; }
+.productivity-host .prod-sidebar-bottom .back-to-akadverse { display: flex; width: 100%; margin-top: 16px; }
+.productivity-host .sidebar-collapsed .back-to-akadverse { padding: 10px; }
+.productivity-host .sidebar-collapsed .back-to-akadverse-label { display: none; }
 .productivity-host .portal-date { padding: 6px 12px; border-radius: 100px; font-size: 12px; background: #eef0f4; }
 .productivity-host .local-storage-label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b; white-space: nowrap; }
 .productivity-host .local-storage-label > span { width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; }
@@ -1294,7 +1322,7 @@
    Stretch then uses the height determined by the calendar alone. */
 .productivity-host .habit-consistency-panel { padding: 20px; contain: size; align-self: stretch; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .productivity-host .habit-consistency-heading { flex: 0 0 auto; }
-.productivity-host .habit-consistency-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding: 3px; margin: -3px; }
+.productivity-host .habit-consistency-content { display: grid; align-content: start; gap: 16px; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 3px; margin: -3px; }
 .productivity-host .habit-panel-eyebrow { margin: 0 0 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #185cff; }
 .productivity-host .habit-consistency-panel h2 { font-size: 17px; margin: 0 0 16px; }
 .productivity-host .habit-feedback-controls { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -1313,6 +1341,8 @@
 .productivity-host .habit-today-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; margin-top: 6px; border-radius: 10px; background: #f7f8fa; font-size: 12px; }
 .productivity-host .habit-today-row > span { min-width: 0; overflow-wrap: anywhere; }
 .productivity-host .productivity-workspace .habit-today-status { flex-shrink: 0; padding: 5px 8px; font-size: 10px; border: none; border-radius: 7px; }
+.productivity-host .habit-consistency-content > * { margin-block: 0; }
+.productivity-host .habit-consistency-content .habit-today-list h3 { margin-top: 0; }
 @media (max-width: 1150px) {
   .productivity-host .habit-calendar-layout { grid-template-columns: minmax(0, 1fr); }
   .productivity-host .habit-consistency-panel { contain: none; max-height: 70vh; max-height: 70dvh; }
@@ -1401,7 +1431,8 @@
 .productivity-host .today-columns { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr); gap: 24px; align-items: start; }
 .productivity-host .today-section { background: white; border: 1px solid #e5e7eb80; border-radius: 16px; padding: 22px; margin-bottom: 24px; box-shadow: 0 1px 2px #0f172a0a; min-width: 0; }
 .productivity-host .today-section-description { font-size: 11px; color: #64748b; margin: 8px 0 18px; }
-.productivity-host .productivity-workspace .today-activity-row, .productivity-host .productivity-workspace .today-habit-row { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; padding: 14px 0; border: none; border-bottom: 1px solid #f1f5f9; border-radius: 0; min-width: 0; }
+.productivity-host .productivity-workspace .today-activity-row, .productivity-host .productivity-workspace .today-habit-row { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; padding: 14px 10px; border: none; border-bottom: 1px solid #f1f5f9; border-radius: 10px; min-width: 0; transition: background-color 160ms ease, border-color 160ms ease; }
+.productivity-host .productivity-workspace :is(.today-activity-row, .today-habit-row):is(:hover, :focus-visible) { background: #f3f4f6; border-bottom-color: transparent; }
 .productivity-host .today-activity-row:last-child, .productivity-host .today-habit-row:last-child { border-bottom: none; }
 .productivity-host .today-row-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: #eef4ff; color: #185cff; flex-shrink: 0; }
 .productivity-host .today-row-icon .prod-icon { width: 17px; height: 17px; }
@@ -1431,6 +1462,7 @@
   .productivity-host .productivity-workspace .task-card .outcome-missed { grid-column: 3; grid-row: 2; }
 }
 @media (max-width: 760px) {
+  .productivity-host .sidebar-collapsed .back-to-akadverse-label { display: inline; }
   .productivity-host .prod-topbar { padding: 0 16px; gap: 8px; }
   .productivity-host .mobile-menu { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: none; }
   .productivity-host .portal-identity { gap: 9px; } .productivity-host .portal-identity strong { font-size: 12px; } .productivity-host .portal-avatar { width: 30px; height: 30px; font-size: 10px; }

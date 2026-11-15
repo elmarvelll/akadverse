@@ -6,9 +6,12 @@ import { millisecondsToNextMinute, type Task } from "../tasks/domain";
 import { loadAcademicRange, presetRange, rangeDays, type DateRange } from "./periods";
 import { scheduleAnalytics, taskAnalytics } from "./calculations";
 import { ScheduleAnalyticsView, TaskAnalyticsView } from "./AnalyticsView";
+import { localNow } from "../schedule/domain";
+import { useSectionActive } from "../workspace/queries";
 
 type Props = { student: Student } & ({ kind: "schedule"; data: Dataset; academic: Pick<ScheduleService, "getOfficialClasses"> } | { kind: "tasks"; tasks: Task[] });
 export function AnalyticsPanel(props: Props) {
+  const sectionActive = useSectionActive();
   const [clock, setClock] = useState<Date>(), [range, setRange] = useState<DateRange>();
   const [preset, setPreset] = useState<"week" | "month" | "custom">("week");
   const [draft, setDraft] = useState<DateRange>({ start: "", end: "" }), [validationError, setValidationError] = useState("");
@@ -16,24 +19,33 @@ export function AnalyticsPanel(props: Props) {
   const [retry, setRetry] = useState(0);
   const timezone = props.student.timezone, academic = props.kind === "schedule" ? props.academic : undefined;
   useEffect(() => {
+    if (!sectionActive) return;
     let active = true;
-    Promise.resolve().then(() => { if (!active) return; const now = new Date(), initial = presetRange("week", timezone, now); setClock(now); setRange(initial); setDraft(initial); }).catch(error => { if (active) setValidationError(productivityErrorMessage(error, "Analytics could not start because the saved timezone or date could not be read. Check your timezone in Account & import and reload.")); });
+    Promise.resolve().then(() => { if (!active) return; const now = new Date(), initial = presetRange("week", timezone, now); setClock(now); setRange(previous => previous || initial); setDraft(previous => previous.start ? previous : initial); }).catch(error => { if (active) setValidationError(productivityErrorMessage(error, "Analytics could not start because the saved timezone or date could not be read. Check your timezone in Account settings and reload.")); });
     let timer: number;
     const tick = () => { setClock(new Date()); timer = window.setTimeout(tick, millisecondsToNextMinute(new Date())); };
-    const focus = () => { setClock(new Date()); setRetry(value => value + 1); };
+    const focus = () => { setClock(new Date()); };
     const visible = () => { if (document.visibilityState === "visible") setClock(new Date()); };
     timer = window.setTimeout(tick, millisecondsToNextMinute(new Date()));
     window.addEventListener("focus", focus);
     document.addEventListener("visibilitychange", visible);
     return () => { active = false; window.clearTimeout(timer); window.removeEventListener("focus", focus); document.removeEventListener("visibilitychange", visible); };
-  }, [timezone]);
+  }, [timezone, sectionActive]);
+  const localDate = clock && localNow(timezone, clock).date;
+  useEffect(() => {
+    if (!clock || !localDate || preset === "custom") return;
+    let active = true;
+    const selected = presetRange(preset, timezone, clock);
+    void Promise.resolve().then(() => { if (active) setRange(previous => previous?.start === selected.start && previous.end === selected.end ? previous : selected); });
+    return () => { active = false; };
+  }, [clock, localDate, preset, timezone]);
   const start = range?.start, end = range?.end, rangeKey = start && end ? `${start}:${end}` : "";
   useEffect(() => {
-    if (!academic || !start || !end) return;
+    if (!sectionActive || !academic || !start || !end) return;
     let active = true;
     loadAcademicRange({ start, end }, date => academic.getOfficialClasses(date)).then(result => { if (active) setAcademicResult({ ...result, key: `${start}:${end}` }); }).catch(error => { if (active) setAcademicResult({ key: `${start}:${end}`, rows: [], failedDates: [], error: productivityErrorMessage(error, "Analytics could not be calculated. Reload the records and choose a valid date range.") }); });
     return () => { active = false; };
-  }, [academic, start, end, retry, props.student.id]);
+  }, [sectionActive, academic, start, end, retry, props.student.id]);
   if (!clock || !range) return validationError ? <section className="error" role="alert">{validationError} <button onClick={() => window.location.reload()}>Reload analytics</button></section> : <section className="analytics-loading" role="status">Preparing analytics…</section>;
   function choose(value: "week" | "month" | "custom") {
     setPreset(value); setValidationError("");
@@ -52,8 +64,8 @@ export function AnalyticsPanel(props: Props) {
       <div role="group" aria-label="Analytics period" className="analytics-period-buttons">{([ ["week", "This week"], ["month", "This month"], ["custom", "Custom date range"] ] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={preset === value} onClick={() => choose(value)}>{label}</button>)}</div>
       {preset === "custom" && <form className="analytics-range-form" onSubmit={event => { event.preventDefault(); try { rangeDays(draft); setRange({ ...draft }); setValidationError(""); } catch (error) { setValidationError(productivityErrorMessage(error, "Analytics could not be calculated. Reload the records and choose a valid date range.")); } }}><label>Start date<input type="date" required value={draft.start} onChange={event => setDraft({ ...draft, start: event.target.value })} /></label><label>End date<input type="date" required value={draft.end} onChange={event => setDraft({ ...draft, end: event.target.value })} /></label><button type="submit">Apply range</button></form>}
       {validationError && <p className="error" role="alert">{validationError} Charts retain the last valid range.</p>}
-      <p><strong>{range.start} to {range.end}</strong> · {timezone} · Monday starts the week. Maximum custom range: 366 days.</p>
-      <p className="hint">Each chart states its population: planned slots, recorded actions, task creation, completion timestamps or passed deadlines. Analytics do not change outcomes.</p>
+      <p><strong>{range.start} to {range.end}</strong></p>
+      <details><summary>About these figures</summary><p className="hint">Dates use {timezone}. Weeks start on Monday; custom ranges allow up to 366 days. Each chart identifies its scope. Analytics do not change recorded outcomes.</p></details>
     </div>
     {loading && <p className="analytics-loading" role="status">Loading applicable timetable sessions for this period…</p>}
     {(retrievalError || calculationError) && <p className="error" role="alert">Analytics could not be fully retrieved or calculated: {retrievalError || calculationError} <button type="button" onClick={() => { setClock(new Date()); setRetry(value => value + 1); }}>Retry analytics</button></p>}

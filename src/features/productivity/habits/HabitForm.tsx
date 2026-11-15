@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Dialog } from "../schedule/Forms";
 import { localNow } from "../schedule/domain";
 import { validateHabit, type Habit, type HabitInput } from "./domain";
+import { saveTiming } from "../save-timing";
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export function HabitForm({ habit, onClose, onSave, timezone }: { habit?: Habit; onClose: () => void; onSave: (input: HabitInput) => Promise<void>; timezone: string }) {
   const [input, setInput] = useState<HabitInput>(() => habit ? { ...habit.revisions.at(-1)!, startDate: habit.revisions.at(-1)!.startDate || habit.createdDate } : { name: "", description: "", type: "task", frequency: "daily", weekdays: [], priority: "medium", time: "", end: "", startDate: localNow(timezone).date });
@@ -11,7 +12,8 @@ export function HabitForm({ habit, onClose, onSave, timezone }: { habit?: Habit;
   function change<K extends keyof HabitInput>(key: K, value: HabitInput[K]) { setInput(previous => ({ ...previous, [key]: value })); }
   return <Dialog title={habit ? `Edit habit — ${habit.revisions.at(-1)!.name}` : "Add habit"} onClose={() => { if (!saving.current) onClose(); }}><form onSubmit={async event => {
     event.preventDefault(); if (saving.current) return; saving.current = true; setBusy(true); setError("");
-    try { validateHabit(input, timezone); await onSave(input); onClose(); } catch (error) { setError(productivityErrorMessage(error, "This habit could not be saved. Review the habit settings and try again.")); } finally { saving.current = false; setBusy(false); }
+    const started = performance.now();
+    try { validateHabit(input, timezone); saveTiming("habits.save", "client-validation", started); await onSave(input); saveTiming("habits.save", "submit-to-confirmed-ui", started); onClose(); } catch (error) { setError(productivityErrorMessage(error, "This habit could not be saved. Review the habit settings and try again.")); } finally { saving.current = false; setBusy(false); }
   }}><fieldset disabled={busy} className="habit-form-fields">
     <label>Name<input required maxLength={100} value={input.name} onChange={e => change("name", e.target.value)} /></label>
     <label>Description (optional)<textarea maxLength={10000} value={input.description} onChange={e => change("description", e.target.value)} /></label>

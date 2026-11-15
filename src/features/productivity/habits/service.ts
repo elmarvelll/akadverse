@@ -4,6 +4,7 @@ import { id, localNow, type IdentityProvider, type ScheduleRepository, type Pers
 import { TaskService } from "../tasks/service";
 import { rangeDays, type DateRange } from "../analytics/periods";
 import { occurrenceId, scheduledFor, settingsFor, occurrenceActions, type HabitInput, type HabitRepository, type Occurrence, validateHabit } from "./domain";
+function sameSlot(a: Slot, b: Slot) { return a.date === b.date && a.start === b.start && a.end === b.end && a.timezone === b.timezone; }
 
 export class HabitService {
   private queue: Promise<unknown> = Promise.resolve();
@@ -33,8 +34,8 @@ export class HabitService {
       await this.repository.save(data);
     });
   }
-  synchronize(range: DateRange, options: { tasks?: "all" | "today" } = {}) { return this.serialize(() => this.generate(range, options.tasks || "all")); }
-  private async generate(range: DateRange, taskScope: "all" | "today" = "all"): Promise<Occurrence[]> {
+  synchronize(range: DateRange, options: { tasks?: "all" | "today"; reconcile?: "all" | "range" } = {}) { return this.serialize(() => this.generate(range, options.tasks || "all", options.reconcile !== "range")); }
+  private async generate(range: DateRange, taskScope: "all" | "today" = "all", reconcileAll = true): Promise<Occurrence[]> {
     const dates = rangeDays(range), habits = await this.list(), student = await this.identity.getCurrentStudent();
     let tasks = await this.tasks.listTasks();
     const data = await this.schedules.load(), now = this.clock().toISOString(); let changed = false;
@@ -44,8 +45,10 @@ export class HabitService {
     // Include already-generated future dates so edits/archiving withdraw those
     // instances even when a different month is currently displayed.
     const needed = new Set(dates);
-    for (const task of tasks) if (task.source.kind === "habit" && habits.some(habit => habit.id === (task.source.kind === "habit" && task.source.habitId))) needed.add(task.source.scheduledDate);
-    for (const event of data.events) if (event.ownerId === student.id && event.source.kind === "habit" && habits.some(habit => habit.id === (event.source.kind === "habit" && event.source.habitId))) needed.add(event.originalSlot.date);
+    if (reconcileAll) {
+      for (const task of tasks) if (task.source.kind === "habit" && habits.some(habit => habit.id === (task.source.kind === "habit" && task.source.habitId))) needed.add(task.source.scheduledDate);
+      for (const event of data.events) if (event.ownerId === student.id && event.source.kind === "habit" && habits.some(habit => habit.id === (event.source.kind === "habit" && event.source.habitId))) needed.add(event.originalSlot.date);
+    }
     for (const habit of habits) for (const date of needed) {
       const settings = scheduledFor(habit, date), key = occurrenceId(habit.id, date);
       const existingTask = tasks.find(task => task.source.kind === "habit" && task.source.habitId === habit.id && task.source.scheduledDate === date);
@@ -58,7 +61,7 @@ export class HabitService {
       if (existingEvent && date >= today && !hasOutcome(existingEvent)) {
         const enabled = settings?.type === "event" && !(existingTask && existingTask.status !== "pending");
         const slot = enabled ? { date, start: settings.time, end: settings.end!, timezone: date < today ? habit.timezone : student.timezone } : existingEvent.slot;
-        if (!!existingEvent.archivedAt === enabled || (enabled && (existingEvent.title !== settings.name || existingEvent.description !== (settings.description || settings.name) || existingEvent.priority !== settings.priority || JSON.stringify(existingEvent.slot) !== JSON.stringify(slot) || JSON.stringify(existingEvent.habitSettings) !== JSON.stringify(settings)))) {
+        if (!!existingEvent.archivedAt === enabled || (enabled && (existingEvent.title !== settings.name || existingEvent.description !== (settings.description || settings.name) || existingEvent.priority !== settings.priority || !sameSlot(existingEvent.slot, slot) || JSON.stringify(existingEvent.habitSettings) !== JSON.stringify(settings)))) {
           existingEvent.history.push({ id: id(), kind: enabled ? "edited" : "archived", at: now, planned: { ...existingEvent.slot }, next: enabled ? slot : undefined, mustComplete: false });
           Object.assign(existingEvent, enabled ? { slot, originalSlot: { ...slot }, habitSettings: structuredClone(settings), title: settings.name, description: settings.description || settings.name, priority: settings.priority, archivedAt: undefined, updatedAt: now } : { archivedAt: now, updatedAt: now }); changed = true;
         }

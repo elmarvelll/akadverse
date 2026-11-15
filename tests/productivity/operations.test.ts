@@ -37,13 +37,28 @@ beforeEach(() => {
 });
 
 describe("authenticated productivity operations", () => {
+  it("loads the existing account and pure reads without mutation transactions or initialization", async () => {
+    rows("productivityPreferences").push({ ownerId: A.id, timezone: "Europe/London" });
+    const countBefore = rows("user").length;
+    const transaction = mock.method(memoryPrisma, "$transaction", () => { throw new Error("Pure reads must not acquire the mutation lock"); });
+    try {
+      const context = await call<{ student: { id: string; timezone: string }; email: string }>("context");
+      assert.equal(context.student.id, A.id); assert.equal(context.student.timezone, "Europe/London"); assert.equal(context.email, A.email);
+      for (const operation of ["tasks.list", "tasks.history", "habits.list", "official.classes"]) await call(operation, operation === "official.classes" ? ["2030-01-15"] : []);
+      assert.equal((await call<Dataset>("schedule.load")).events.length, 0);
+      assert.equal(transaction.mock.callCount(), 0);
+      assert.equal(rows("user").length, countBefore); assert.equal(rows("productivityOccurrence").length, 0); assert.equal(rows("productivityTask").length, 0);
+      signInAs(B); const other = await call<{ student: { id: string; timezone: string } }>("context");
+      assert.equal(other.student.id, B.id); assert.equal(other.student.timezone, "Africa/Lagos");
+    } finally { transaction.mock.restore(); }
+  });
   it("does not turn unexpected academic dependency errors into public validation messages", async () => {
     const failure = new Error("private database connection details"); academicFailure = failure;
     await assert.rejects(call("official.classes", ["2030-01-15"]), error => error === failure && !(error instanceof ServiceError));
   });
   it("requires the existing session on every operation and rejects account/role mismatch", async () => {
     signInAs(null);
-    for (const operation of ["context", "tasks.list", "tasks.create", "habits.list", "schedule.load", "analytics.tasks", "import"]) await assert.rejects(call(operation), denied);
+    for (const operation of ["context", "workspace.initial", "workspace.view", "official.range", "tasks.list", "tasks.create", "habits.list", "schedule.load", "analytics.tasks", "import"]) await assert.rejects(call(operation), denied);
     signInAs(A);
     await assert.rejects(execute({ operation: "context", args: [] }, B.id), denied);
     rows("user")[0] = { ...A, role: "faculty" };

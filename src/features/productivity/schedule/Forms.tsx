@@ -1,5 +1,7 @@
 "use client";
 import { productivityErrorMessage } from "../errors";
+import { saveTiming } from "../save-timing";
+import { useSectionActive } from "../workspace/queries";
 import {
   useEffect,
   useRef,
@@ -18,11 +20,13 @@ export function Dialog({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const active = useSectionActive();
   useEffect(() => {
     const d = ref.current!;
-    d.showModal();
+    if (active) d.showModal();
+    else d.close();
     return () => d.close();
-  }, []);
+  }, [active]);
   return (
     <dialog
       ref={ref}
@@ -38,6 +42,7 @@ export function Dialog({
           ✕
         </button>
       </header>
+      <div data-productivity-notifications />
       {children}
     </dialog>
   );
@@ -117,13 +122,18 @@ export function EventForm({
   const [conflictSlot, setConflictSlot] = useState("");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const saving = useRef(false);
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (saving.current) return;
+    saving.current = true;
+    const started = performance.now();
     setBusy(true);
     setError("");
     try {
       const options = scheduling.mode === "manual" ? { ...scheduling, allowConflicts: allowConflicts && conflictSlot === JSON.stringify(draft.slot) } : scheduling;
       await onSave(draft, event?.id, options);
+      saveTiming("schedule.save", "submit-to-confirmed-ui", started);
       onClose();
     } catch (e) {
       setError(productivityErrorMessage(e, "These schedule changes could not be saved. Review the fields and try again."));
@@ -133,6 +143,7 @@ export function EventForm({
         setAllowConflicts(false);
       }
     } finally {
+      saving.current = false;
       setBusy(false);
     }
   }

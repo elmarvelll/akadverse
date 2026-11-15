@@ -1,10 +1,13 @@
 "use client";
+import { RefreshIndicator } from "../workspace/RefreshIndicator";
 import { productivityErrorMessage } from "../errors";
 import { WorkspaceButton, useWorkspaceNavigation } from "../workspace/WorkspaceNavigation";
 import { Icon, ProdButton } from "../workspace/Design";
 import { Timetable } from "./ScheduleTimetable";
 import { scheduleDates, selectTimetableEvents, slotTouchesDates, timetableSourceDates, type TimetableEntry } from "./timetable";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useWorkspaceSnapshot, useSectionActive } from "../workspace/queries";
 import {
   addDays,
   localNow,
@@ -13,36 +16,28 @@ import {
   type Dataset,
   type OfficialClass,
   type PersonalEvent,
-  type Student,
   type SubSchedule,
 } from "./domain";
-import { STORAGE_KEY } from "./storage";
-import { remoteSchedule } from "../client";
+import { remoteSchedule, rpc, peekStudent, invalidateWorkspace } from "../client";
 import { Dialog, EventForm, ScheduleForm, Stamp, formatDate } from "./Forms";
 import { HabitBadge, HabitRecurrence } from "../habits/HabitLabel";
-import { eventOutcome, type Habit } from "../habits/domain";
-import { HABITS_CHANGED, HABIT_STORAGE_KEY } from "../habits/storage";
-import { browserHabits } from "../habits/browser";
+import { eventOutcome } from "../habits/domain";
 import { EventBackup } from "./EventBackup";
-import { AnalyticsPanel } from "../analytics/AnalyticsPanel";
+const AnalyticsPanel = dynamic(() => import("../analytics/AnalyticsPanel").then(module => module.AnalyticsPanel));
 export function ScheduleManager({ initialEventId, initialDate }: { initialEventId?: string; initialDate?: string } = {}) {
   const selectWorkspace = useWorkspaceNavigation();
-  const [habitRules, setHabitRules] = useState<Habit[]>([]);
   const [timeView, setTimeView] = useState<"day" | "week">("week");
   const [analytics, setAnalytics] = useState(false);
   const [service] = useState<Pick<ScheduleService, "getCurrentStudent" | "load" | "getOfficialClasses" | "saveSubSchedule" | "saveEvent" | "archiveEvent" | "recordMissedAttempt">>(
     () =>
       remoteSchedule,
   );
-  const [data, setData] = useState<Dataset>(),
-    [student, setStudent] = useState<Student>(),
-    [loadError, setLoadError] = useState(""),
-    [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(initialDate || ""),
+  const [date, setDate] = useState(initialDate || localNow(peekStudent()?.timezone || "Africa/Lagos").date),
     [classes, setClasses] = useState<OfficialClass[]>([]),
     [classError, setClassError] = useState(""),
     [classLoading, setClassLoading] = useState(false),
-    [retry, setRetry] = useState(0);
+    [retry, changeRetry] = useState(0);
+  const setRetry = (update: (value: number) => number) => { invalidateWorkspace(["official"]); changeRetry(update); };
   const [view, setView] = useState("main"),
     [focus, setFocus] = useState(false),
     [history, setHistory] = useState(false);
@@ -54,122 +49,60 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
     [official, setOfficial] = useState<OfficialClass>(),
     [archiveId, setArchiveId] = useState<string>();
   const [saving, setSaving] = useState(false),
-    [saveError, setSaveError] = useState(""),
     [notice, setNotice] = useState("");
+  const [historyPage, setHistoryPage] = useState(0);
+  const active = useSectionActive();
   const rangeDates = scheduleDates(date, timeView), rangeStart = rangeDates[0], rangeEnd = rangeDates.at(-1) || date;
-  const load = useCallback(async () => {
-    setLoading(true);
-    setLoadError("");
-    try {
-      const [s, d] = await Promise.all([
-        service.getCurrentStudent(),
-        service.load(),
-      ]);
-      setStudent(s);
-      setData(d);
-      setDate((prev) => prev || localNow(s.timezone).date);
-    } catch (e) {
-      setLoadError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again."));
-    } finally {
-      setLoading(false);
-    }
-  }, [service]);
+  const { snapshot, setSnapshot, error: loadError, refreshing, loadingAdditional, refresh: load } = useWorkspaceSnapshot({ section: "schedule", start: rangeStart, end: rangeEnd, history, page: historyPage, categoryId: !["main", "habits", "academic"].includes(view) ? view : undefined, eventId: initialEventId });
+  const data = snapshot?.data.schedule, student = snapshot?.student, habitRules = snapshot?.data.habits.habits || [], loading = !data || !student;
+  const setData = (updated: Dataset) => setSnapshot(previous => previous ? { ...previous, data: { ...previous.data, schedule: updated } } : previous);
+  const previousLink = useRef("");
   useEffect(() => {
-    let active = true;
-    Promise.all([service.getCurrentStudent(), service.load()])
-      .then(([s, d]) => {
-        if (active) {
-          setStudent(s);
-          setData(d);
-          setDate((prev) => prev || localNow(s.timezone).date);
-        }
-      })
-      .catch((e) => {
-        if (active) setLoadError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again."));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [service]);
+    const key = JSON.stringify([initialEventId, initialDate]);
+    if (!active || previousLink.current === key) return;
+    previousLink.current = key;
+    void Promise.resolve().then(() => { if (initialDate) setDate(initialDate); setDetailId(initialEventId); });
+  }, [initialEventId, initialDate, active]);
   useEffect(() => {
-    if (!rangeStart || !rangeEnd) return;
-    let active = true;
-    async function get() {
-      setClassLoading(true);
-      setClassError("");
-      try {
-        await browserHabits.synchronize({ start: rangeStart, end: rangeEnd }, { tasks: "today" });
-        const rules = await browserHabits.list();
-        const updated = await service.load();
-        if (active) { setData(updated); setHabitRules(rules); }
-        const results = await Promise.allSettled(timetableSourceDates(scheduleDates(rangeStart, timeView)).map(day => service.getOfficialClasses(day)));
-        if (active) {
-          setClasses(results.flatMap(result => result.status === "fulfilled" ? result.value : []));
-          const failures = results.filter(result => result.status === "rejected");
-          setClassError(failures.length ? `${failures.length} timetable date(s) could not be loaded. ${productivityErrorMessage(failures[0].reason, "The timetable service could not complete this request.")} Personal and habit events are still displayed.` : "");
-        }
-      } catch (e) {
-        if (active) {
-          setClasses([]);
-          setClassError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again."));
-        }
-      } finally {
-        if (active) setClassLoading(false);
-      }
-    }
-    void get();
-    return () => {
-      active = false;
-    };
-  }, [rangeStart, rangeEnd, timeView, service, retry, student?.timezone]);
+    if (!active || history || !rangeStart || !student) return;
+    let current = true;
+    const dates = timetableSourceDates(scheduleDates(rangeStart, timeView));
+    void Promise.resolve().then(() => { if (current) { setClassLoading(true); setClassError(""); } });
+    void rpc<{ rows: OfficialClass[]; failedDates: string[]; error: string }>("official.range", [{ start: dates[0], end: dates.at(-1)! }]).then(result => {
+      if (current) { setClasses(result.rows); setClassError(result.failedDates.length ? result.error + " Personal and habit events remain available." : ""); }
+    }).catch(error => { if (current) setClassError(productivityErrorMessage(error)); }).finally(() => { if (current) setClassLoading(false); });
+    return () => { current = false; };
+  }, [active, history, rangeStart, timeView, student, retry, snapshot?.serverTime]);
+  const [analyticsData, setAnalyticsData] = useState<Dataset>(), [analyticsError, setAnalyticsError] = useState("");
+  const [analyticsRetry, setAnalyticsRetry] = useState(0);
   useEffect(() => {
-    const refresh = () => {
-      void Promise.all([service.load(), service.getCurrentStudent()]).then(([data, current]) => { setData(data); setStudent(current); setLoadError(""); }).catch(e => setLoadError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again.")));
-      setRetry(value => value + 1);
-    };
-    const storageChanged = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY || event.key === HABIT_STORAGE_KEY || event.key === null) refresh();
-    };
-    const resumed = () => { if (document.visibilityState === "visible") refresh(); };
-    const timer = window.setInterval(refresh, 60000);
-    document.addEventListener("visibilitychange", resumed);
-    window.addEventListener(HABITS_CHANGED, refresh);
-    window.addEventListener("focus", refresh);
-    window.addEventListener("storage", storageChanged);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", resumed);
-      window.removeEventListener(HABITS_CHANGED, refresh);
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("storage", storageChanged);
-    };
-  }, [service]);
-  async function action(operation: () => Promise<Dataset>, message: string) {
+    if (!active || !analytics) return;
+    let current = true;
+    void service.load().then(value => { if (current) { setAnalyticsData(value); setAnalyticsError(""); } }).catch(error => { if (current) setAnalyticsError(productivityErrorMessage(error)); });
+    return () => { current = false; };
+  }, [analytics, active, service, analyticsRetry, snapshot?.serverTime]);
+  async function action(operation: () => Promise<Dataset>) {
     setSaving(true);
-    setSaveError("");
+
     setNotice("");
     try {
       setData(await operation());
-      if (message) setNotice(message);
+
       return true;
-    } catch (e) {
-      setSaveError(productivityErrorMessage(e, "Your schedule could not be loaded or updated. Reload Schedule Manager and try again."));
+    } catch {
       return false;
     } finally {
       setSaving(false);
     }
   }
-  if (loading)
+  if (loading && !loadError)
     return (
       <main className="loading" aria-live="polite">
         <div className="brand-mark">P</div>
         <h1>Loading your schedule…</h1>
       </main>
     );
-  if (loadError || !data || !student)
+  if (!data || !student)
     return (
       <main className="loading">
         <h1>Your schedule couldn’t be loaded</h1>
@@ -251,7 +184,9 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
             </div>}
           </div>
           <div className="analytics-view-switch" role="group" aria-label="Schedule view"><button type="button" aria-pressed={!analytics} onClick={() => setAnalytics(false)}>Schedule</button><button type="button" aria-pressed={analytics} onClick={() => setAnalytics(true)}>Analytics</button></div>
-          {analytics ? <AnalyticsPanel kind="schedule" student={student} data={data} academic={service} /> : <>
+          {loadError && <p className="error" role="alert">{loadError} <button onClick={() => void load()}>Retry loading</button></p>}
+          <RefreshIndicator active={refreshing || loadingAdditional || (!analytics && !history && classLoading)} label={loadingAdditional ? "Loading this date range..." : "Refreshing schedule..."}/>
+          {analytics ? analyticsData ? <AnalyticsPanel kind="schedule" student={student} data={analyticsData} academic={service} /> : <section role="status">{analyticsError || "Loading schedule analytics..."}{analyticsError && <button onClick={() => setAnalyticsRetry(value => value + 1)}>Retry analytics</button>}</section> : <>
           <section className="schedule-panel" aria-label="Schedule">
             <div className="category-filters" role="group" aria-label="Sub-category filters">
               <button aria-pressed={view === "main"} onClick={() => navigate("main")}>All</button>
@@ -263,13 +198,13 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
               <div className="tabs">
                 <button
                   className={"tab " + (!history ? "active" : "")}
-                  onClick={() => setHistory(false)}
+                  onClick={() => { setHistory(false); setHistoryPage(0); }}
                 >
                   Schedule
                 </button>
                 <button
                   className={"tab " + (history ? "active" : "")}
-                  onClick={() => setHistory(true)}
+                  onClick={() => { setHistory(true); setHistoryPage(0); }}
                 >
                   History
                 </button>
@@ -335,19 +270,9 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
                 </p>
               </div>
             )}
-            {saveError && (
-              <p className="error banner" role="alert">
-                {saveError}
-              </p>
-            )}
             {notice && (
               <p className="success banner" role="status">
                 {notice}
-              </p>
-            )}
-            {!history && classLoading && (
-              <p className="banner" role="status">
-                Loading official classes…
               </p>
             )}
             {!history && classError && (
@@ -500,7 +425,6 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
             const updated = await service.saveEvent(input, eventId, undefined, scheduling);
             const saved = updated.events.find(e => e.id === eventId) || updated.events.at(-1)!;
             setData(updated);
-            setNotice(`Scheduled for ${saved.slot.date}, ${saved.slot.start}–${saved.slot.end}.`);
             setDate(saved.slot.date);
           }}
         />
@@ -511,7 +435,7 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
           onClose={() => setScheduleEditor(null)}
           onSave={async (name, description, id, academic) => {
             setData(await service.saveSubSchedule(name, description, id, academic));
-            setNotice("Sub-category saved.");
+
           }}
         />
       )}
@@ -585,11 +509,6 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
                 </li>
               ))}
             </ol>
-            {saveError && (
-              <p className="error" role="alert">
-                {saveError}
-              </p>
-            )}
             {selected.source.kind !== "personal" && <p className="notice">Imported activity: manage its fields and outcomes in the originating section. <WorkspaceButton section={selected.source.kind === "habit" ? "habits" : "tasks"} habitId={selected.source.kind === "habit" ? selected.source.habitId : undefined} occurrenceDate={selected.source.kind === "habit" ? selected.originalSlot.date : undefined}>Open originating section</WorkspaceButton>{selected.source.kind === "habit" && <> <WorkspaceButton section="habits" habitId={selected.source.habitId} editHabit>Edit habit</WorkspaceButton></>}</p>}
             {selected.source.kind === "personal" && <div className="detail-actions">
               {selected.archivedAt ? (
@@ -597,8 +516,7 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
                   disabled={saving}
                   onClick={() =>
                     void action(
-                      () => service.archiveEvent(selected.id, true),
-                      "Event restored with history intact.",
+                      () => service.archiveEvent(selected.id, true)
                     )
                   }
                 >
@@ -688,11 +606,6 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
               where you can restore it. No other event or sub-category is
               removed.
             </p>
-            {saveError && (
-              <p className="error" role="alert">
-                {saveError}
-              </p>
-            )}
             <footer className="dialog-footer">
               <button disabled={saving} onClick={() => setArchiveId(undefined)}>
                 Cancel
@@ -703,8 +616,7 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
                 onClick={async () => {
                   if (
                     await action(
-                      () => service.archiveEvent(archiveId),
-                      "Event archived. Find it in History to restore it.",
+                      () => service.archiveEvent(archiveId)
                     )
                   )
                     setArchiveId(undefined);

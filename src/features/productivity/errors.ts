@@ -12,7 +12,7 @@ export function productivityErrorMessage(error: unknown, fallback = "An unexpect
 }
 
 const actions: Record<string, string> = {
-  context: "load your workspace account", "tasks.list": "load your tasks", "tasks.get": "load this task", "tasks.history": "load task history",
+  context: "load your workspace account", "workspace.initial": "prepare your workspace", "workspace.view": "load this section", "official.range": "load your official timetable", "tasks.list": "load your tasks", "tasks.get": "load this task", "tasks.history": "load task history",
   "tasks.create": "create this task", "tasks.update": "save this task", "tasks.delete": "delete this task", "tasks.complete": "complete this task", "tasks.miss": "mark this task missed",
   "habits.list": "load your habits", "habits.save": "save this habit", "habits.archive": "update this habit's archive status",
   "habits.synchronize": "load and generate scheduled habit occurrences", "habits.record": "save this habit outcome", "habits.replan": "replan this habit event",

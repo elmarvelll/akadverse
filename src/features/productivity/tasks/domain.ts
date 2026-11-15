@@ -62,6 +62,11 @@ export function taskViewStatus(task: Task, timezone: string, instant = new Date(
   const arrived = task.dueTime ? task.dueDate + task.dueTime <= now.date + now.time : task.dueDate < now.date;
   return arrived ? "pending" : "active";
 }
+// Stored habit projections are plans, not an open workload until their local date.
+// Recorded outcomes remain eligible for history regardless of their scheduled date.
+export function isTaskListEligible(task: Task, timezone: string, instant = new Date()): boolean {
+  return !task.deletedAt && !task.habitWithdrawn && (task.source.kind !== "habit" || task.status !== "pending" || task.source.scheduledDate === localNow(timezone, instant).date);
+}
 export function millisecondsToNextMinute(instant: Date) {
   return 60000 - instant.getTime() % 60000 + 1;
 }

@@ -1,14 +1,17 @@
 "use client";
 import { productivityErrorMessage } from "../errors";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { saveTiming } from "../save-timing";
 import { Dialog } from "../schedule/Forms";
 import { taskSnapshot, type Task, type TaskInput } from "./domain";
 export function TaskForm({ task, timezone, onSave, onClose }: { task?: Task; timezone: string; onSave: (input: TaskInput) => Promise<void>; onClose: () => void }) {
   const [input, setInput] = useState<TaskInput>(() => task ? taskSnapshot(task) : { title: "", description: "", priority: "medium" });
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const saving = useRef(false);
   async function submit(event: FormEvent) {
-    event.preventDefault(); setBusy(true); setError("");
-    try { await onSave(input); onClose(); } catch (error) { setError(productivityErrorMessage(error, "This task could not be saved. Review the fields and try again.")); } finally { setBusy(false); }
+    event.preventDefault(); if (saving.current) return; saving.current = true; setBusy(true); setError("");
+    const started = performance.now();
+    try { await onSave(input); saveTiming(task ? "tasks.update" : "tasks.create", "submit-to-confirmed-ui", started); onClose(); } catch (error) { setError(productivityErrorMessage(error, "This task could not be saved. Review the fields and try again.")); } finally { saving.current = false; setBusy(false); }
   }
   return <Dialog title={task ? "Edit task" : "New task"} onClose={() => { if (!busy) onClose(); }}>
     <form onSubmit={submit}>

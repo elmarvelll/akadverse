@@ -1,6 +1,6 @@
 import { localNow } from "../schedule/domain";
 import { scheduledFor, type Habit } from "../habits/domain";
-import type { Task } from "./domain";
+import { isTaskListEligible, type Task } from "./domain";
 import { presetRange } from "../analytics/periods";
 
 // A display scope only: history, analytics and shared outcome operations must
@@ -11,9 +11,8 @@ export function todoTasks(tasks: readonly Task[], habits: readonly Habit[], time
   const seen = new Set<string>();
   return tasks.filter(task => {
     if (task.source.kind !== "habit") return true;
-    if (task.habitWithdrawn || task.deletedAt) return false;
+    if (!isTaskListEligible(task, timezone, instant)) return false;
     const recorded = task.status !== "pending";
-    if (!recorded && task.source.scheduledDate !== today) return false;
     const habit = rules.get(task.source.habitId);
     if (!recorded && (!habit || habit.ownerId !== task.ownerId || scheduledFor(habit, today)?.type !== "task")) return false;
     const key = JSON.stringify([task.ownerId, task.source.habitId, task.source.scheduledDate]);

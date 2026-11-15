@@ -2,16 +2,125 @@
 import { SlotConflictError, type Student, type Dataset, type EventInput, type EventSource, type SchedulingOptions, type Slot, type OfficialClass, type PersonalEvent } from "./schedule/domain";
 import type { Task, TaskInput } from "./tasks/domain";
 import type { Habit, HabitInput, Occurrence } from "./habits/domain";
-import type { DateRange } from "./analytics/periods";
+import { rangeDays, type DateRange } from "./analytics/periods";
 import { ProductivityError, productivityAction } from "./errors";
+import { ProductivityReadCache } from "./read-cache";
+import { localNow } from "./schedule/domain";
+import type { ViewOptions, WorkspaceSnapshot, WorkspaceInitial } from "./workspace/data";
+import { monthRange } from "./habits/domain";
+import { scheduleDates, slotTouchesDates } from "./schedule/timetable";
+import { applySavedSchedule } from "./workspace/schedule-cache";
+import { saveNotifications, saveSuccessMessage } from "./notifications";
+import { applyCreatedTask, applyCreatedHabit, type SavedHabit } from "./workspace/create-cache";
+import { saveTiming } from "./save-timing";
 
 let account = "";
 let accountEpoch = 0;
 let setupFailure: ProductivityError | undefined;
 const retries = new Map<string, string>();
-export function setProductivityAccount(id: string) { if (id !== account) { account = id; accountEpoch++; retries.clear(); setupFailure = undefined; } }
+let cache = new ProductivityReadCache("");
+let contextStudent: Student | undefined;
+let initial: Promise<WorkspaceInitial> | undefined;
+const officialCoverage: { key: string; range: DateRange }[] = [];
+const officialPending = new Map<string, { range: DateRange; promise: Promise<unknown> }>();
+export function setProductivityAccount(id: string, nextCache?: ProductivityReadCache) { if (id !== account) { saveNotifications.clear(); cache.clear(); cache = nextCache || new ProductivityReadCache(id); account = id; accountEpoch++; retries.clear(); setupFailure = undefined; contextStudent = undefined; initial = undefined; officialCoverage.length = 0; officialPending.clear(); } }
 const setupCodes = new Set(["DATABASE_SCHEMA_MISSING", "DATABASE_CONFIGURATION", "DATABASE_ACCESS_DENIED", "DATABASE_NOT_FOUND"]);
-const readOperations = new Set(["context", "tasks.list", "tasks.get", "tasks.history", "habits.list", "schedule.load", "schedule.history", "official.classes", "analytics.tasks", "analytics.schedule", "habits.synchronize"]);
+const readOperations = new Set(["context", "workspace.initial", "workspace.view", "official.range", "tasks.list", "tasks.get", "tasks.history", "habits.list", "schedule.load", "schedule.history", "official.classes", "analytics.tasks", "analytics.schedule", "habits.synchronize"]);
+function stable(value: unknown): unknown { return Array.isArray(value) ? value.map(stable) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([,item]) => item !== undefined).sort(([a],[b]) => a.localeCompare(b)).map(([key,item]) => [key,stable(item)])) : value; }
+function keyFor(operation: string, args: unknown[]) { return JSON.stringify([account, operation, stable(args), localNow(contextStudent?.timezone || "Africa/Lagos").date, contextStudent?.timezone || "pending"]); }
+function freshness(serverTime?: string) { const at = serverTime ? Date.parse(serverTime) : Date.now(); return Number.isFinite(at) ? Math.max(0, Math.min(60000, at + 60000 - Date.now())) : 0; }
+function readTags(operation: string, args: unknown[]) { return operation === "workspace.initial" ? ["initial"] : operation === "workspace.view" ? [String((args[0] as ViewOptions).section)] : operation === "context" ? ["context"] : operation.startsWith("official.") ? ["official"] : (operation.startsWith("tasks.") || operation === "analytics.tasks") ? ["tasks"] : operation.startsWith("habits.") ? ["habits"] : ["schedule"]; }
+function normalizeView(options: ViewOptions): ViewOptions {
+  const today = contextStudent && localNow(contextStudent.timezone).date;
+  const range = !options.start && today && options.section === "habits" ? monthRange(today) : !options.start && today && options.section === "schedule" ? (() => { const days = scheduleDates(today, "week"); return { start: days[0], end: days.at(-1)! }; })() : {};
+  return { status: "active", sort: "newest", period: "all", page: 0, history: false, ...range, ...options };
+}
+export function peekWorkspaceView(options: ViewOptions) { return account ? cache.peek<WorkspaceSnapshot>(keyFor("workspace.view", [normalizeView(options)])) : undefined; }
+export function isWorkspaceViewFresh(options: ViewOptions) { return !!account && !!cache.fresh(keyFor("workspace.view", [normalizeView(options)])); }
+export async function loadWorkspaceView(options: ViewOptions) {
+  const expected = account, epoch = accountEpoch;
+  try { await prepareWorkspace(); } catch { /* A failed batch can be retried as a local section read. */ }
+  if (expected !== account || epoch !== accountEpoch) throw new ProductivityError("Your account changed. Reload your workspace.", "ACCOUNT_CHANGED");
+  return rpc<WorkspaceSnapshot>("workspace.view", [normalizeView(options)]);
+}
+function rememberContext(context: { student: Student; email?: string; serverTime?: string }) {
+  const previous = contextStudent;
+  contextStudent = context.student;
+  cache.seed(keyFor("context", []), context, ["context"], freshness(context.serverTime));
+  if (previous?.id !== context.student.id || previous?.timezone !== context.student.timezone || previous?.name !== context.student.name) window.dispatchEvent(new Event("productivity:context-ready"));
+}
+function seedView(options: ViewOptions, snapshot: WorkspaceSnapshot) { cache.seed(keyFor("workspace.view", [normalizeView(options)]), snapshot, [options.section], freshness(snapshot.serverTime)); }
+export function prepareWorkspace(force = false): Promise<WorkspaceInitial> {
+  if (force) { cache.invalidate(["initial"]); initial = undefined; }
+  if (!initial) {
+    const expected = account, epoch = accountEpoch, stamp = cache.stamp(["tasks", "today", "habits", "schedule"]);
+    initial = rpc<WorkspaceInitial>("workspace.initial").then(result => {
+      if (expected !== account || epoch !== accountEpoch) throw new ProductivityError("Your account changed. Reload your workspace.", "ACCOUNT_CHANGED");
+      // A mutation racing the initial batch must not seed an older snapshot.
+      if (stamp !== cache.stamp(["tasks", "today", "habits", "schedule"])) { initial = undefined; return prepareWorkspace(true); }
+      const snapshot = result.snapshot;
+      if (snapshot.student.id !== expected) throw new ProductivityError("Your account changed. Reload your workspace.", "ACCOUNT_CHANGED");
+      rememberContext({ student: snapshot.student, email: snapshot.email, serverTime: snapshot.serverTime });
+      const date = localNow(snapshot.student.timezone).date, month = monthRange(date);
+      seedView({ section: "today" }, snapshot);
+      seedView({ section: "schedule" }, snapshot);
+      seedView({ section: "habits", ...month }, { ...snapshot, occurrences: snapshot.occurrences.filter(item => item.date >= month.start && item.date <= month.end) });
+      if (result.taskPages) for (const status of ["active", "pending", "completed", "missed"] as const) {
+        const page = result.taskPages[status], ids = new Set(page.ids);
+        seedView({ section: "tasks", status }, { ...snapshot, data: { ...snapshot.data, tasks: { version: 2, tasks: snapshot.data.tasks.tasks.filter(task => ids.has(task.id)) } }, hasMore: page.hasMore });
+      }
+      return result;
+    });
+  }
+  return initial;
+}
+type OfficialRange = { rows: OfficialClass[]; failedDates: string[]; error: string };
+export async function prepareOfficialRange(range: DateRange) { return rpc<OfficialRange>("official.range", [range]); }
+export function peekStudent() { return contextStudent; }
+export function invalidateWorkspace(tags: string[]) { cache.invalidate(tags); }
+export async function rpc<T>(operation: string, args: unknown[] = []): Promise<T> {
+  if (!account) throw new ProductivityError("Sign in to open your workspace.", "SIGN_IN_REQUIRED");
+  if (operation === "habits.synchronize") return request<T>(operation, args);
+  if (!readOperations.has(operation)) return saveNotifications.run(JSON.stringify([accountEpoch, operation, stable(args)]), () => request<T>(operation, args), saveSuccessMessage(operation));
+  if (operation === "official.range") {
+    const requested = args[0] as DateRange;
+    const slice = (value: OfficialRange) => { const dates = rangeDays(requested), failedDates = value.failedDates.filter(date => dates.includes(date)); return { rows: value.rows.filter(row => slotTouchesDates(row.slot, dates)), failedDates, error: failedDates.length ? value.error : "" } as T; };
+    for (const coverage of officialCoverage) {
+      if (coverage.range.start > requested.start || coverage.range.end < requested.end) continue;
+      const value = cache.fresh<OfficialRange>(coverage.key);
+      if (value) return slice(value);
+    }
+    for (const pending of officialPending.values()) if (pending.range.start <= requested.start && pending.range.end >= requested.end) {
+      const expected = account, epoch = accountEpoch, stamp = cache.stamp(["official"]);
+      const value = await pending.promise as OfficialRange;
+      if (expected !== account || epoch !== accountEpoch) throw new ProductivityError("Your account changed. Reload your workspace.", "ACCOUNT_CHANGED");
+      if (stamp !== cache.stamp(["official"])) return rpc<T>(operation, args);
+      return slice(value);
+    }
+  }
+  const currentCache = cache, expected = account, epoch = accountEpoch, tags = readTags(operation, args), stamp = currentCache.stamp(tags);
+  const key = keyFor(operation, args);
+  const promise = currentCache.read(key, () => {
+    if (account !== expected || accountEpoch !== epoch) throw new ProductivityError("Your account changed. Reload your workspace.", "ACCOUNT_CHANGED");
+    return request<T>(operation, args);
+  }, tags);
+  if (operation === "official.range") officialPending.set(key, { range: args[0] as DateRange, promise });
+  let result: T;
+  try { result = await promise; }
+  catch (error) { if (account !== expected || accountEpoch !== epoch) throw new ProductivityError("Your account changed. Reload your workspace.", "ACCOUNT_CHANGED"); throw error; }
+  finally { if (officialPending.get(key)?.promise === promise) officialPending.delete(key); }
+  if (account !== expected || accountEpoch !== epoch) throw new ProductivityError("Your account changed. Reload your workspace.", "ACCOUNT_CHANGED");
+  if (currentCache.stamp(tags) !== stamp) return rpc<T>(operation, args);
+  if (operation === "workspace.view" || operation === "context") {
+    const context = result as { student: Student; email?: string; serverTime?: string };
+    if (context.student.id !== expected) throw new ProductivityError("Your account changed. Reload your workspace.", "ACCOUNT_CHANGED");
+    rememberContext({ student: context.student, email: context.email, serverTime: context.serverTime });
+    currentCache.seed(keyFor(operation, args), result, readTags(operation, args), freshness(context.serverTime));
+    if (operation === "workspace.view") currentCache.seed(keyFor(operation, [normalizeView(args[0] as ViewOptions)]), result, tags, freshness(context.serverTime));
+  }
+  if (operation === "official.range") { const key = keyFor(operation, args); if (!officialCoverage.some(item => item.key === key)) officialCoverage.push({ key, range: args[0] as DateRange }); }
+  return result;
+}
 const publicCodes = new Set(["SLOT_CONFLICT", "INVALID_INPUT", "SIGN_IN_REQUIRED", "ACCESS_DENIED", "RECORD_NOT_FOUND", "RECORD_CONFLICT", "REQUEST_FAILED", "DATABASE_SCHEMA_MISSING", "DATABASE_ACCESS_DENIED", "DATABASE_UNAVAILABLE", "DATABASE_NOT_FOUND", "DATABASE_TIMEOUT", "DATABASE_CONFIGURATION", "DUPLICATE_RECORD", "RELATED_RECORD_MISSING", "CONCURRENT_UPDATE", "UNEXPECTED_ERROR"]);
 function statusMessage(status: number) {
   if (status === 401) return "Your session has expired. Sign in again to continue.";
@@ -23,7 +132,7 @@ function statusMessage(status: number) {
   if ([502, 503, 504].includes(status)) return "The workspace server is unavailable or did not respond in time. Try again shortly.";
   return status >= 500 ? "The workspace server could not complete the request. Retry the same action; if it continues, contact the developer." : "The server rejected this request. Review the entered values and try again.";
 }
-export async function rpc<T>(operation: string, args: unknown[] = []): Promise<T> {
+async function request<T>(operation: string, args: unknown[] = []): Promise<T> {
   const expected = account;
   const expectedEpoch = accountEpoch;
   if (!expected) throw new ProductivityError("Sign in to open your workspace.", "SIGN_IN_REQUIRED");
@@ -38,6 +147,7 @@ export async function rpc<T>(operation: string, args: unknown[] = []): Promise<T
   let body: Record<string, unknown> | undefined;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 45000);
+  const networkStarted = performance.now();
   try {
     response = await fetch("/api/productivity", { method: "POST", credentials: "same-origin", cache: "no-store",
       headers: { "Content-Type": "application/json", "X-Productivity-User": expected },
@@ -50,7 +160,7 @@ export async function rpc<T>(operation: string, args: unknown[] = []): Promise<T
     assertAccount();
     const reason = controller.signal.aborted ? "The request timed out." : "The connection to the workspace server failed. Check your internet connection.";
     throw new ProductivityError(`Could not ${productivityAction(operation)}. ${reason} ${requestId ? "The save could not be confirmed. Retry the same action to check or finish it without creating a duplicate." : "Please retry loading."}`, controller.signal.aborted ? "REQUEST_TIMEOUT" : "NETWORK_ERROR");
-  } finally { clearTimeout(timeout); }
+  } finally { clearTimeout(timeout); if (requestId) saveTiming(operation, "network-and-response-body", networkStarted); }
   assertAccount();
   const code = typeof body?.code === "string" && publicCodes.has(body.code) ? body.code : "HTTP_ERROR";
   const referenceId = typeof body?.referenceId === "string" && /^[a-f0-9-]{36}$/i.test(body.referenceId) ? body.referenceId : undefined;
@@ -78,8 +188,34 @@ export async function rpc<T>(operation: string, args: unknown[] = []): Promise<T
   }
   retries.delete(key);
   if (!readOperations.has(operation)) {
-    window.dispatchEvent(new Event("productivity-layer:tasks-changed"));
-    window.dispatchEvent(new Event("productivity-layer:habits-changed"));
+    const cacheStarted = performance.now();
+    const email = cache.peek<{ email?: string }>(keyFor("context", []))?.email;
+    const tags = operation.startsWith("tasks.") ? ["tasks", "today", ...((body.result as Task)?.source?.kind === "habit" ? ["habits"] : [])] : operation.startsWith("schedule.") ? ["schedule", "today"] : operation === "preferences.save" ? ["tasks", "habits", "schedule", "today", "context", "official"] : ["tasks", "habits", "schedule", "today"];
+    cache.invalidate(tags);
+    if (operation === "tasks.create" || operation === "habits.save" && !args[1]) {
+      cache.updateReady(tags, (value, entryKey) => {
+        const [, cachedOperation, cachedArgs] = JSON.parse(entryKey) as [string, string, ViewOptions[]];
+        const snapshot = value as WorkspaceSnapshot;
+        if (cachedOperation !== "workspace.view" || snapshot.student?.id !== expected) return;
+        return { value: operation === "tasks.create" ? applyCreatedTask(snapshot, body.result as Task, cachedArgs[0]) : applyCreatedHabit(snapshot, body.result as SavedHabit, cachedArgs[0]), ttl: freshness(snapshot.serverTime) };
+      });
+    }
+    if (operation.startsWith("schedule.") && body.result && typeof body.result === "object" && Array.isArray((body.result as Dataset).events) && Array.isArray((body.result as Dataset).schedules)) {
+      const saved = body.result as Dataset;
+      cache.updateReady(["schedule", "today"], (value, entryKey) => {
+        const [, cachedOperation, cachedArgs] = JSON.parse(entryKey) as [string, string, ViewOptions[]];
+        if (cachedOperation === "schedule.load") return { value: saved, ttl: 60000 };
+        const snapshot = value as WorkspaceSnapshot;
+        if (cachedOperation !== "workspace.view" || snapshot.student?.id !== expected) return;
+        return { value: applySavedSchedule(snapshot, saved, cachedArgs[0]), ttl: freshness(snapshot.serverTime) };
+      });
+    }
+    if (operation === "preferences.save" && (body.result as Student)?.id === expected) rememberContext({ student: body.result as Student, email, serverTime: new Date().toISOString() });
+    window.dispatchEvent(new CustomEvent("productivity:invalidated", { detail: tags }));
+    if (tags.includes("tasks")) window.dispatchEvent(new Event("productivity-layer:tasks-changed"));
+    if (tags.includes("habits")) window.dispatchEvent(new Event("productivity-layer:habits-changed"));
+    if (tags.includes("schedule")) window.dispatchEvent(new Event("productivity-layer:schedule-changed"));
+    saveTiming(operation, "confirmed-cache-and-notify", cacheStarted);
   }
   return body.result as T;
 }

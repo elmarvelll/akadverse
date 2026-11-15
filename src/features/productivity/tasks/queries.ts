@@ -1,5 +1,5 @@
 import { localNow } from "../schedule/domain";
-import { taskViewStatus, type Task, type TaskViewStatus } from "./domain";
+import { isTaskListEligible, taskViewStatus, type Task, type TaskViewStatus } from "./domain";
 import { taskHref } from "../workspace/navigation";
 export { taskHref } from "../workspace/navigation";
 export interface TaskFilters { createdDate?: string; dueDate?: string; priority?: string }
@@ -7,7 +7,7 @@ export type TaskSort = "newest" | "oldest" | "due-earliest" | "due-latest" | "pr
 const rank = { low: 0, medium: 1, high: 2 };
 export function queryTasks(tasks: readonly Task[], options: { status?: TaskViewStatus; filters?: TaskFilters; sort?: TaskSort; timezone: string; instant?: Date }) {
   const { filters = {}, sort = "newest", timezone, instant = new Date() } = options;
-  const selected = tasks.filter(task => !task.deletedAt && !task.habitWithdrawn && taskViewStatus(task, timezone, instant) === (options.status || "active") && (!filters.createdDate || localNow(timezone, new Date(task.createdAt)).date === filters.createdDate) && (!filters.dueDate || task.dueDate === filters.dueDate) && (!filters.priority || task.priority === filters.priority));
+  const selected = tasks.filter(task => isTaskListEligible(task, timezone, instant) && taskViewStatus(task, timezone, instant) === (options.status || "active") && (!filters.createdDate || localNow(timezone, new Date(task.createdAt)).date === filters.createdDate) && (!filters.dueDate || task.dueDate === filters.dueDate) && (!filters.priority || task.priority === filters.priority));
   const tie = (a: Task, b: Task) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
   return selected.sort((a, b) => {
     if (sort === "newest") return b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id);
@@ -28,6 +28,6 @@ export function taskDaySummary(tasks: readonly Task[], date: string, timezone = 
 }
 export function taskStatusCounts(tasks: readonly Task[], timezone: string, instant = new Date()): Record<TaskViewStatus, number> {
   const counts = { active: 0, pending: 0, completed: 0, missed: 0 };
-  for (const task of tasks) if (!task.deletedAt && !task.habitWithdrawn) counts[taskViewStatus(task, timezone, instant)]++;
+  for (const task of tasks) if (isTaskListEligible(task, timezone, instant)) counts[taskViewStatus(task, timezone, instant)]++;
   return counts;
 }

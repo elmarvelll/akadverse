@@ -6,10 +6,10 @@ export interface WorkspaceSelection { section: "today" | "schedule" | "tasks" | 
 // Fragments identify an initial section/item inside the host route. Sidebar
 // switching continues to use selection state without rewriting the URL.
 export function workspaceLocation(hash: string): WorkspaceSelection {
-  if (hash === "#today") return { section: "today" };
-  if (hash === "#tasks") return { section: "tasks" };
-  if (hash.startsWith("#tasks?")) {
-    return { section: "tasks", taskId: new URLSearchParams(hash.slice(7)).get("task") || undefined };
-  }
-  return { section: "schedule" };
+  const [name, query] = hash.replace(/^#/, "").split("?");
+  const params = new URLSearchParams(query);
+  if (name === "tasks") return { section: "tasks", taskId: params.get("task") || undefined };
+  if (name === "schedule") return { section: "schedule", eventId: params.get("event") || undefined, scheduleDate: params.get("date") || undefined };
+  if (name === "habits") return { section: "habits", habitId: params.get("habit") || undefined, occurrenceDate: params.get("date") || undefined, editHabit: params.get("edit") === "true" || params.get("edit") === "1" };
+  return { section: "today" };
 }

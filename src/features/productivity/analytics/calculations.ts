@@ -1,6 +1,7 @@
 import { habitDuplicateConflicts } from "../habits/duplicates";
 import { addDays, type Dataset, type OfficialClass, type PersonalEvent, type Slot } from "../schedule/domain";
-import { taskViewStatus, type Task } from "../tasks/domain";
+import { isTaskListEligible, taskViewStatus, type Task } from "../tasks/domain";
+import { taskStatusCounts } from "../tasks/queries";
 import { dayBounds, instantInRange, localInstant, rangeDays, type DateRange } from "./periods";
 
 export interface Interval { start: number; end: number }
@@ -122,8 +123,8 @@ export function scheduleAnalytics(data: Dataset, classes: readonly OfficialClass
 export function taskAnalytics(records: readonly Task[], ownerId: string, range: DateRange, timezone: string, now: Date) {
   const dates = rangeDays(range), tasks = uniqueTasks(records, ownerId), warnings = new Set<string>();
   if (habitDuplicateConflicts(records.filter(task => task.ownerId === ownerId)).length) warnings.add("Conflicting duplicate habit outcomes need review; occurrence totals are deduplicated and may be incomplete.");
-  if (tasks.some(task => !task.createdAt || !Number.isFinite(Date.parse(task.createdAt)))) warnings.add("Some task creation timestamps are unavailable; the creation-period status cohort may be incomplete.");
-  const created = tasks.filter(task => instantInRange(task.createdAt, range, timezone));
+  if (tasks.some(task => task.source.kind !== "habit" && (!task.createdAt || !Number.isFinite(Date.parse(task.createdAt))))) warnings.add("Some ordinary task creation timestamps are unavailable; the creation-period status cohort may be incomplete.");
+  const created = tasks.filter(task => isTaskListEligible(task, timezone, now) && (task.source.kind === "habit" ? task.source.scheduledDate >= range.start && task.source.scheduledDate <= range.end : instantInRange(task.createdAt, range, timezone)));
   const statuses = percentages(["active", "pending", "completed", "missed"].map(key => ({ key, label: key[0].toUpperCase() + key.slice(1), count: created.filter(task => taskViewStatus(task, timezone, now) === key).length })));
   const completions = new Map(dates.map(date => [date, 0]));
   const days = dates.map(date => ({ date, ...dayBounds(date, timezone) }));
@@ -151,5 +152,5 @@ export function taskAnalytics(records: readonly Task[], ownerId: string, range: 
     else counts.late++;
   }
   const deadline = percentages([{ key: "onTime", label: "Completed on time", count: counts.onTime }, { key: "late", label: "Completed late", count: counts.late }, { key: "missed", label: "Explicitly missed", count: counts.missed }, { key: "overdue", label: "Still pending and overdue", count: counts.overdue }, { key: "unclassified", label: "Unclassified", count: counts.unclassified }]);
-  return { statuses, createdTotal: created.length, daily: dates.map(date => ({ date, count: completions.get(date)! })), completedTotal: [...completions.values()].reduce((sum, count) => sum + count, 0), deadline, eligibleTotal: deadline.reduce((sum, row) => sum + row.count, 0), warnings: [...warnings] };
+  return { workload: taskStatusCounts(tasks, timezone, now), statuses, createdTotal: created.length, daily: dates.map(date => ({ date, count: completions.get(date)! })), completedTotal: [...completions.values()].reduce((sum, count) => sum + count, 0), deadline, eligibleTotal: deadline.reduce((sum, row) => sum + row.count, 0), warnings: [...warnings] };
 }

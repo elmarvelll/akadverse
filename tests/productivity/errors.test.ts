@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { badRequest, forbidden, unauthorized } from "@/lib/service-error";
 import { ProductivityError, productivityErrorMessage } from "@/features/productivity/errors";
 import { publicProductivityError, OfficialTimetableError } from "@/services/productivity-layer/errors";
+import { databaseDiagnostic } from "@/services/productivity-layer/diagnostics";
 import { SlotConflictError } from "@/features/productivity/schedule/domain";
 import { loadAcademicRange } from "@/features/productivity/analytics/periods";
 import { validateTaskInput } from "@/features/productivity/tasks/domain";
@@ -32,6 +33,22 @@ it("classifies database failures without exposing credentials, query details or 
   assert.ok(!initialization.error.includes(sensitive));
   const otherRuntime = Object.assign(new Error(sensitive), { name: "PrismaClientKnownRequestError", code: "P2021" });
   assert.equal(publicProductivityError(otherRuntime).code, "DATABASE_SCHEMA_MISSING");
+});
+
+it("reports original database codes with allowlisted diagnostic text and read-specific timeout guidance", async () => {
+  const diagnostic = databaseDiagnostic(new OfficialTimetableError(known("P1001")));
+  assert.equal(diagnostic.prismaCode, "P1001");
+  assert.ok(!JSON.stringify(diagnostic).includes(sensitive));
+  const expired = new Prisma.PrismaClientKnownRequestError("Transaction already closed: " + sensitive, { code: "P2028", clientVersion: "test" });
+  assert.match(databaseDiagnostic(expired).message, /expired or was already closed/);
+  operationError = expired;
+  const spy = mock.method(console, "error", () => {});
+  try {
+    const response = await post(request(JSON.stringify({ operation: "context", args: [] })));
+    assert.equal(response.status, 503);
+    const body = await response.json(); assert.match(body.error, /reading your Akadverse account/); assert.match(body.error, /No account was created or changed/);
+    assert.ok(!JSON.stringify(body).includes(sensitive));
+  } finally { spy.mock.restore(); }
 });
 
 it("keeps intentional validation and slot-conflict details while sanitizing unexpected thrown values", () => {

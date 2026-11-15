@@ -1,0 +1,57 @@
+{
+  "label": "after",
+  "fixture": {
+    "completedTasks": 600,
+    "openTasks": 40,
+    "dailyHabits": 2
+  },
+  "latencyMs": 150,
+  "creates": [
+    {
+      "kind": "task",
+      "dialogCloseMs": 234,
+      "itemVisibleMs": 235,
+      "requestMs": 181,
+      "postResponseCloseMs": 49,
+      "requests": [
+        {
+          "operation": "tasks.create",
+          "ms": 181
+        }
+      ],
+      "sqlQueries": 9
+    },
+    {
+      "kind": "event",
+      "dialogCloseMs": 234,
+      "itemVisibleMs": 235,
+      "requestMs": 184,
+      "postResponseCloseMs": 48,
+      "requests": [
+        {
+          "operation": "schedule.save",
+          "ms": 184
+        }
+      ],
+      "sqlQueries": 12
+    },
+    {
+      "kind": "habit",
+      "dialogCloseMs": 191,
+      "itemVisibleMs": 192,
+      "requestMs": 162,
+      "postResponseCloseMs": 27,
+      "requests": [
+        {
+          "operation": "habits.save",
+          "ms": 162
+        },
+        {
+          "operation": "workspace.view",
+          "ms": 185
+        }
+      ],
+      "sqlQueries": 27
+    }
+  ]
+}
