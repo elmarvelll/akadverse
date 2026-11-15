@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma",
     "dev": "next dev",
     "build": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma && next build",
     "postinstall": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma",

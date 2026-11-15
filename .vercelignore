@@ -3,3 +3,8 @@
 .env
 .env.*
 checkpoints/
+
+.local/
+.elearning-reset/
+**/browser-profile/
+**/browser-profile-*/
