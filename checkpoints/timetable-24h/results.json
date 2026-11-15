@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "24 readable hours in weekly grid",
+    "existing AM/PM labels",
+    "today initially near local current time",
+    "date headers remain visible during vertical scrolling",
+    "refresh preserves free scrolling",
+    "daily grid retains all hours",
+    "other dates start at 6 a.m.",
+    "final 11 p.m. slot is fully accessible",
+    "mobile horizontal scrolling stays inside the timetable",
+    "mobile date headers stay pinned",
+    "summary cards remain removed"
+  ],
+  "errors": []
+}

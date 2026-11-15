@@ -1,0 +1,5 @@
+2026/11/07-22:41:58.658 5458 Creating DB C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-check-profile\Default\Local Storage\leveldb since it was missing.
+2026/11/07-22:41:58.669 5458 Reusing MANIFEST C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-check-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/11/07-23:31:13.050 e064 Level-0 table #5: started
+2026/11/07-23:31:13.054 e064 Level-0 table #5: 15129 bytes OK
+2026/11/07-23:31:13.056 e064 Delete type=0 #3

@@ -1,0 +1,74 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const pages = await (await fetch('http://localhost:9241/json/list')).json();
+const socket = new WebSocket(pages.find(page => page.url.startsWith('http://localhost:3011')).webSocketDebuggerUrl);
+await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
+let id = 0;
+const pending = new Map(), errors = [], checks = [];
+socket.onmessage = event => {
+  const data = JSON.parse(event.data);
+  if (data.id) { const request = pending.get(data.id); pending.delete(data.id); data.error ? request.reject(Error(JSON.stringify(data.error))) : request.resolve(data.result); }
+  else if (data.method === 'Runtime.exceptionThrown') errors.push(data.params.exceptionDetails.text);
+};
+const send = (method, params = {}) => new Promise((resolve, reject) => { pending.set(++id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })); });
+const run = async expression => { const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const until = async expression => { for (let n = 0; n < 80; n++) { if (await run(expression)) return; await delay(100); } throw Error('Timeout: ' + expression); };
+const click = label => run(`([...document.querySelectorAll('button')].find(b => b.textContent.trim() === ${JSON.stringify(label)})).click()`);
+const check = async (name, expression) => { assert.ok(await run(expression), name); checks.push(name); };
+const shot = async name => { await delay(300); const result = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }); fs.writeFileSync(new URL(name, import.meta.url), Buffer.from(result.data, 'base64')); };
+const closeDialog = async () => { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await until(`!document.querySelector('dialog')`); };
+try {
+  await send('Runtime.enable');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  await until(`!!document.querySelector('.prod-sidebar')`);
+  await run(`(()=>{const start='2026-11-01',at=start+'T00:00:00Z';const habits=['Read 20 pages','Morning jog','Evening reflection'].map((name,index)=>({id:'calendar-fixture-'+index,ownerId:'development-student',timezone:'Africa/Lagos',createdDate:start,createdAt:at,revisions:[{name,description:'Calendar design test fixture',type:index===1?'event':'task',priority:'medium',frequency:index===1?'weekdays':'daily',weekdays:index===1?[1,3,5]:[],time:index===1?'06:00':'',end:index===1?'07:00':'',startDate:start,effectiveDate:start,at,archived:false}]}));localStorage.setItem('productivity-layer.habits.v1',JSON.stringify({version:1,habits}));})()`);
+  await send('Page.reload');
+  await until(`!!document.querySelector('.timetable-day')`);
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  await click('Habit Tracker');
+  await until(`document.querySelectorAll('.habit-calendar-day').length===30`);
+  await check('selected habit uses a seven-column monthly calendar', `getComputedStyle(document.querySelector('.habit-calendar-grid')).gridTemplateColumns.split(' ').length===7 && document.querySelector('.habit-calendar-heading h2').textContent==='Read 20 pages Attendance Calendar'`);
+  await check('calendar and feedback sit side by side on desktop', `Math.abs(document.querySelector('.habit-calendar-panel').getBoundingClientRect().top-document.querySelector('.habit-consistency-panel').getBoundingClientRect().top)<2`);
+  for (const [index, action] of [[0,'Complete'],[1,'Mark missed'],[2,'Complete'],[3,'Complete'],[4,'Complete'],[6,'Complete'],[7,'Complete']]) {
+    await run(`document.querySelector('[data-day="${index}"]').click()`);
+    await until(`!!document.querySelector('dialog')`);
+    await click(action);
+    await until(`!document.querySelector('dialog button.primary') || document.querySelector('dialog').textContent.includes('Change to Completed')`);
+    await delay(100);
+    await closeDialog();
+  }
+  await check('real recorded outcomes appear as green and pink tiles', `document.querySelectorAll('.habit-calendar-completed.habit-calendar-day').length===6 && document.querySelectorAll('.habit-calendar-missed.habit-calendar-day').length===1`);
+  await run(`window.__calendarStorage=JSON.stringify({...localStorage});document.querySelector('[aria-label="Show calendar for Morning jog"]').click()`);
+  await check('card selects calendar without opening a dialog or writing records', `!document.querySelector('dialog') && document.querySelector('.habit-calendar-heading h2').textContent==='Morning jog Attendance Calendar' && JSON.stringify({...localStorage})===window.__calendarStorage`);
+  await check('weekday recurrence leaves unscheduled dates inactive', `document.querySelector('[data-day="0"]').getAttribute('aria-disabled')==='true' && document.querySelector('[data-day="1"]').getAttribute('aria-disabled')==='false'`);
+  await run(`document.querySelector('[data-day="0"]').click()`);
+  await check('unscheduled date does not open an occurrence', `!document.querySelector('dialog')`);
+  await run(`document.querySelector('[aria-label="Manage habit Morning jog"]').click()`);
+  await until(`!!document.querySelector('dialog')`);
+  await check('Rule opens the selected source habit', `document.querySelector('dialog h2').textContent==='Morning jog' && document.querySelector('dialog').textContent.includes('Edit habit')`);
+  await closeDialog();
+  await run(`document.querySelector('[aria-label="Show calendar for Read 20 pages"]').click();document.querySelector('[data-day="29"]').click()`);
+  await until(`!!document.querySelector('dialog')`);
+  await check('future occurrence opens details without outcome actions', `document.querySelector('dialog').textContent.includes('Future occurrence') && ![...document.querySelectorAll('dialog button')].some(b=>['Complete','Mark missed'].includes(b.textContent.trim()))`);
+  await closeDialog();
+  await run(`document.querySelector('[data-day="0"]').focus()`);
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
+  await check('ArrowDown moves by one calendar week', `document.activeElement.dataset.day==='7'`);
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
+  await click('›');
+  await until(`document.querySelectorAll('.habit-calendar-day').length===31`);
+  await check('month navigation uses real calendar lengths', `document.querySelector('.habit-month-nav').textContent.includes('December 2026') && !document.querySelector('.habit-today-list')`);
+  await click('Current month');
+  await until(`document.querySelectorAll('.habit-calendar-day').length===30`);
+  await shot('desktop.png');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await run(`document.querySelector('.habit-calendar-panel').scrollIntoView({block:'start'});window.scrollBy(0,-80)`);
+  await delay(150);
+  await check('mobile calendar keeps all seven columns inside the page', `document.documentElement.scrollWidth<=390 && getComputedStyle(document.querySelector('.habit-calendar-grid')).gridTemplateColumns.split(' ').length===7 && document.querySelector('[data-day="6"]').getBoundingClientRect().right<=390`);
+  await check('feedback stacks below the calendar on mobile', `document.querySelector('.habit-consistency-panel').getBoundingClientRect().top>document.querySelector('.habit-calendar-panel').getBoundingClientRect().bottom`);
+  await shot('mobile.png');
+  assert.deepEqual(errors, []);
+  fs.writeFileSync(new URL('results.json', import.meta.url), JSON.stringify({ checks, errors }, null, 2));
+  console.log(JSON.stringify({ passed: checks.length, checks, errors }, null, 2));
+} finally { socket.close(); }

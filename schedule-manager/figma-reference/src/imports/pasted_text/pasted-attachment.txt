@@ -1,0 +1,422 @@
+Edit and enhance the AI Studio section of AkadVerse to create a modern, highly interactive AI workspace for both students and faculty.
+
+The AI Studio should function as a central AI command center for learning, productivity, and operations.
+
+The system should contain two pages:
+
+AI Studio Dashboard (AI tool selection page)
+
+AI Tool Interface (universal AI interaction interface)
+
+Maintain visual consistency with the rest of the AkadVerse UI.
+
+Apply these UX principles:
+
+Von Restorff Effect (highlight primary actions)
+
+Miller’s Law (limit visible choices per section)
+
+Proximity Law (group related AI tools)
+
+Hick’s Law (avoid overwhelming the user)
+
+Jakob’s Law (follow familiar AI interface patterns)
+
+The experience should feel similar to modern AI tools like ChatGPT, Notion AI, and Perplexity AI.
+
+PAGE 1 — AI STUDIO DASHBOARD
+
+This page acts as the AI command center.
+
+Display all AI tools using grouped sections and interactive cards.
+
+Layout:
+
+Scrollable vertical page with sections.
+
+Each section contains AI cards arranged in a responsive grid.
+
+Card size:
+
+280–320px width
+
+Card contents:
+
+• icon
+• AI tool name
+• short description
+• hover animation
+• click interaction
+
+STUDENT AI STUDIO
+Section 1 — Virtual Assistant
+
+Two cards.
+
+Student Virtual Assistant
+
+Description:
+
+Your personal AkadVerse assistant that helps with navigation and platform tasks.
+
+Capabilities:
+
+manage schedule
+
+check attendance
+
+open workspace tools
+
+answer AkadVerse questions
+
+guide students through the platform
+
+Hover animation:
+
+• icon pulse
+• soft glow around card
+
+Click animation:
+
+• card compresses slightly
+• transition to AI interface
+
+Study Virtual Assistant
+
+Description:
+
+An AI dedicated to learning support.
+
+Capabilities:
+
+explain academic concepts
+
+summarize lecture notes
+
+generate quizzes
+
+generate practice questions
+
+help with exam preparation
+
+Hover animation:
+
+book-style icon flip animation.
+
+Section 2 — Productivity AI
+
+Two cards.
+
+Workspace Integration AI
+
+Description:
+
+Interact with workspace tools using AI.
+
+Capabilities:
+
+summarize Docs
+
+analyze Sheets
+
+organize Drive files
+
+extract information from documents
+
+Animation:
+
+document icons slide slightly when hovered.
+
+Schedule Manager AI
+
+Description:
+
+AI planner for managing study time and academic schedules.
+
+Capabilities:
+
+generate study plans
+
+detect schedule conflicts
+
+suggest productive study blocks
+
+Hover animation:
+
+calendar icon flips to next day.
+
+Section 3 — Learning AI Tools
+
+Grid layout containing specialized tools.
+
+Cards:
+
+Note Creator
+Slide Creator
+Concept Explainer
+External Resource Puller
+Note to Audio Converter
+Note to Animation Converter
+Quiz Generator
+Practice Question Generator
+
+Card behavior:
+
+Hover:
+
+• card lifts 6px
+• background glow
+• icon micro animation
+
+Examples:
+
+Note Creator
+paper-writing animation
+
+Slide Creator
+slide stack animation
+
+Concept Explainer
+lightbulb glow
+
+External Resource Puller
+network nodes connecting
+
+Note to Audio Converter
+soundwave animation
+
+Note to Animation Converter
+play icon pulse
+
+Quiz Generator
+question mark bounce
+
+Practice Question Generator
+pencil writing motion
+
+FACULTY AI STUDIO
+
+Faculty should see slightly different AI groups.
+
+Section 1 — Virtual Assistant
+Faculty Virtual Assistant
+
+Helps faculty manage academic workflows.
+
+Capabilities:
+
+manage classes
+
+view attendance
+
+upload resources
+
+respond to student questions
+
+Animation:
+
+assistant icon breathing glow.
+
+Teaching Virtual Assistant
+
+Helps prepare lecture materials.
+
+Capabilities:
+
+generate lecture notes
+
+prepare slide outlines
+
+explain topics
+
+suggest teaching resources
+
+Hover animation:
+
+chalkboard writing animation.
+
+Section 2 — Productivity AI
+
+Same as student side.
+
+Cards:
+
+Workspace Integration AI
+Schedule Manager AI
+
+Section 3 — Teaching AI Tools
+
+Cards:
+
+Note Creator
+Slide Creator
+External Resource Puller
+Assignment Generator
+Sample Question Generator
+
+Hover animations similar to student tools.
+
+Example:
+
+Assignment Generator
+paper stack generation animation.
+
+Sample Question Generator
+question icon bounce.
+
+Section 4 — Operational AI (Faculty Only)
+
+Cards:
+
+Attendance AI
+Test & Grading Upload AI
+
+Attendance AI:
+
+Helps automate attendance processing.
+
+Animation:
+
+checkmark ripple effect.
+
+Test & Grading Upload AI:
+
+Upload grade sheets and process test scores.
+
+Animation:
+
+spreadsheet rows scanning animation.
+
+PAGE 2 — UNIVERSAL AI TOOL INTERFACE
+
+When any AI card is clicked, open a unified AI interface.
+
+This interface must remain the same for all tools.
+
+Layout
+
+Top area:
+
+AI tool name
+short description
+
+Example:
+
+Note Creator
+Create structured notes from any content.
+
+Center area:
+
+conversation/chat panel.
+
+Messages appear in conversation bubbles.
+
+AI responses appear with smooth fade-in.
+
+Bottom area:
+
+input interaction panel.
+
+Users can interact with the AI in three ways.
+
+Input Methods
+Upload File
+
+Supported formats:
+
+PDF
+DOCX
+Slides
+Images
+Notes
+
+Upload animation:
+
+file card appears
+progress bar fills smoothly.
+
+Voice Input
+
+Users can record a voice note.
+
+Animation:
+
+pulsing microphone
+soundwave visualization.
+
+Text Prompt
+
+Typing field similar to modern AI chat tools.
+
+Placeholder example:
+
+"Upload notes or ask the AI to generate study material."
+
+Typing animation:
+
+cursor glow
+send button pulse.
+
+Smart Action Suggestions
+
+When files are uploaded, show quick AI actions.
+
+Example:
+
+Generate Quiz
+Summarize Notes
+Create Slides
+Explain Concepts
+
+Each action appears as clickable suggestion chips.
+
+Hover animation:
+
+chip lifts slightly.
+
+AI Thinking Animation
+
+While the AI processes input:
+
+Show animated typing dots.
+
+Optional:
+
+soft neural pulse animation.
+
+Result Display
+
+Results appear with smooth animations:
+
+text fades in
+generated content slides upward
+
+Example outputs:
+
+quiz questions
+slides
+summaries
+practice questions.
+
+Page Transitions
+
+Transitions between AI tools and interface:
+
+slide + fade.
+
+Duration:
+
+250–300ms.
+
+Design Goal
+
+AI Studio should feel like a powerful AI toolkit integrated inside AkadVerse.
+
+It should feel:
+
+intelligent
+interactive
+modern
+efficient
+
+Students should feel like they have an AI learning lab, and faculty should feel like they have an AI teaching assistant system.

@@ -1,0 +1,30 @@
+# Files changed in this refinement
+
+- src\app\globals.css
+- src\features\habits\domain.ts
+- src\features\habits\HabitForm.tsx
+- src\features\habits\HabitGrid.tsx
+- src\features\habits\HabitLabel.tsx
+- src\features\habits\HabitTracker.tsx
+- src\features\habits\service.ts
+- src\features\habits\storage.ts
+- src\features\schedule\domain.ts
+- src\features\schedule\ScheduleManager.tsx
+- src\features\schedule\storage.ts
+- src\features\tasks\domain.ts
+- src\features\tasks\service.ts
+- src\features\tasks\storage.ts
+- src\features\tasks\TaskManager.tsx
+- src\features\tasks\todo.ts
+- src\features\workspace\navigation.ts
+- src\features\workspace\Workspace.tsx
+- src\features\workspace\WorkspaceNavigation.tsx
+- tests\habits.test.ts
+- tests\tasks.test.ts
+- tests\todo-habits.test.ts
+- HABITS.md
+- TASKS.md
+- README.md
+- VERIFICATION.md
+- src\features\habits\outcomes.ts (new)
+- tests\habit-refinements.test.ts (new)

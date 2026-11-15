@@ -1,0 +1,165 @@
+diff --git "a/C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\features\\schedule\\ScheduleManager.tsx" "b/C:\\Productivity Layer\\schedule-manager\\src\\features\\schedule\\ScheduleManager.tsx"
+index 1ad3d04..4ea03c2 100644
+--- "a/C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\features\\schedule\\ScheduleManager.tsx"	
++++ "b/C:\\Productivity Layer\\schedule-manager\\src\\features\\schedule\\ScheduleManager.tsx"	
+@@ -18,7 +18,9 @@ import { BrowserScheduleRepository, STORAGE_KEY } from "./storage";
+ import { developmentIdentity, sampleAcademics } from "./adapters";
+ import { Dialog, EventForm, ScheduleForm, Stamp, formatDate } from "./Forms";
+ import { TaskDayOverview } from "../tasks/TaskDayOverview";
++import { AnalyticsPanel } from "../analytics/AnalyticsPanel";
+ export function ScheduleManager() {
++  const [analytics, setAnalytics] = useState(false);
+   const [service] = useState<Pick<ScheduleService, "getCurrentStudent" | "load" | "getOfficialClasses" | "saveSubSchedule" | "saveEvent" | "archiveEvent" | "recordMissedAttempt">>(
+     () =>
+       new ScheduleService(
+@@ -235,15 +237,15 @@ export function ScheduleManager() {
+           <div className="page-heading">
+             <div>
+               <p className="eyebrow">MAKE ROOM FOR WHAT MATTERS</p>
+-              <h1>{title}</h1>
++              <h1>{analytics ? "Schedule analytics" : title}</h1>
+               <p className="muted">
+-                {current?.description ||
++                {analytics ? "Planned time and recorded attempts across all life areas." : current?.description ||
+                   (view === "academic"
+                     ? "Read-only timetable sessions from sample course registration."
+                     : "Your classes, plans, and personal commitments in one place.")}
+               </p>
+             </div>
+-            <div className="heading-actions">
++            {!analytics && <div className="heading-actions">
+               {current && (
+                 <button
+                   onClick={() => setScheduleEditor({ schedule: current })}
+@@ -254,8 +256,10 @@ export function ScheduleManager() {
+               <button className="primary" onClick={createEvent}>
+                 ＋ Create event
+               </button>
+-            </div>
++            </div>}
+           </div>
++          <div className="analytics-view-switch" role="group" aria-label="Schedule view"><button type="button" aria-pressed={!analytics} onClick={() => setAnalytics(false)}>Schedule</button><button type="button" aria-pressed={analytics} onClick={() => setAnalytics(true)}>Analytics</button></div>
++          {analytics ? <AnalyticsPanel kind="schedule" student={student} data={data} academic={service} /> : <>
+           <div className="summary-grid">
+             {[
+               [
+@@ -536,6 +540,7 @@ export function ScheduleManager() {
+             </div>
+           </section>
+           <TaskDayOverview date={date} />
++          </>}
+           <footer className="page-footer">
+             <span>Sample academic data · Development identity</span>
+             <span>Stored in this browser · No account sync</span>
+diff --git "a/C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\features\\tasks\\TaskManager.tsx" "b/C:\\Productivity Layer\\schedule-manager\\src\\features\\tasks\\TaskManager.tsx"
+index 98be263..134b060 100644
+--- "a/C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\features\\tasks\\TaskManager.tsx"	
++++ "b/C:\\Productivity Layer\\schedule-manager\\src\\features\\tasks\\TaskManager.tsx"	
+@@ -10,6 +10,7 @@ import { TaskService } from "./service";
+ import { BrowserTaskRepository, TASK_STORAGE_KEY, TASKS_CHANGED } from "./storage";
+ import { queryTasks, taskStatusCounts, type TaskSort } from "./queries";
+ import { TaskForm } from "./TaskForm";
++import { AnalyticsPanel } from "../analytics/AnalyticsPanel";
+ import { TaskStatusTabs } from "./TaskStatusTabs";
+ import { TaskOutcomeActions } from "./TaskOutcomeActions";
+ 
+@@ -17,6 +18,7 @@ function Deadline({ task }: { task: Task }) {
+   return <>{task.dueDate ? <>{formatDate(task.dueDate, true)}{task.dueTime ? ` · ${task.dueTime}` : " · Date only"}</> : "No deadline"}</>;
+ }
+ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
++  const [analytics, setAnalytics] = useState(false);
+   const navigate = useWorkspaceNavigation();
+   const closeTask = () => navigate({ section: "tasks" });
+   const [service] = useState(() => new TaskService(new BrowserTaskRepository(), developmentIdentity));
+@@ -72,12 +74,13 @@ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
+     <div className="main-shell">
+       <header className="topbar"><span>Workspace / To-do List</span><span className="prototype">LOCAL PROTOTYPE</span></header>
+       <main className="content tasks-content">
+-        <div className="page-heading"><div><p className="eyebrow">ONE THING AT A TIME</p><h1>To-do List</h1><p className="muted">Your ordinary tasks and task-type habit occurrences. All dates use {student.timezone}.</p></div><button className="primary" onClick={() => { setSaveError(""); setEditor({}); }}>＋ New task</button></div>
++        <div className="page-heading"><div><p className="eyebrow">ONE THING AT A TIME</p><h1>{analytics ? "To-do analytics" : "To-do List"}</h1><p className="muted">Your ordinary tasks and task-type habit occurrences. All dates use {student.timezone}.</p></div>{!analytics && <button className="primary" onClick={() => { setSaveError(""); setEditor({}); }}>＋ New task</button>}</div>
++        <div className="analytics-view-switch" role="group" aria-label="To-do view"><button type="button" aria-pressed={!analytics} onClick={() => setAnalytics(false)}>Tasks</button><button type="button" aria-pressed={analytics} onClick={() => setAnalytics(true)}>Analytics</button></div>
+         {loadError && <p className="error" role="alert">{loadError} <button onClick={() => void refresh()}>Retry loading</button></p>}
+         {saveError && <p className="error" role="alert">{saveError} Retry the action when ready.</p>}
+         {notice && <p className="success banner" role="status">{notice}</p>}
+         {initialTaskId && !selected && <p className="notice" role="status">This task was not found for this student. <WorkspaceButton section="tasks">View your tasks</WorkspaceButton></p>}
+-        <section className="schedule-panel" aria-label="Tasks">
++        {analytics ? <AnalyticsPanel kind="tasks" student={student} tasks={tasks} /> : <section className="schedule-panel" aria-label="Tasks">
+           <div className="panel-toolbar"><TaskStatusTabs status={status} counts={counts} onSelect={setStatus} /></div>
+           <div className="task-filters">
+             <label>Sort by<select value={sort} onChange={event => setSort(event.target.value as TaskSort)}><option value="newest">Newest created</option><option value="oldest">Oldest created</option><option value="due-earliest">Earliest intended completion</option><option value="due-latest">Latest intended completion</option><option value="priority-high">Highest priority first</option><option value="priority-low">Lowest priority first</option></select></label>
+@@ -97,7 +100,7 @@ export function TaskManager({ initialTaskId }: { initialTaskId?: string }) {
+             </article>)}
+             {!visible.length && <div className="empty"><h2>{status === "pending" ? "No pending tasks" : status === "completed" ? "No completed tasks yet" : "No missed tasks"}</h2><p>{status === "pending" ? "New tasks appear here until you explicitly complete or mark them missed." : status === "completed" ? "Completed tasks and their actual completion times appear here." : "Tasks appear here only after an explicit missed outcome is recorded."}</p></div>}
+           </div>
+-        </section>
++        </section>}
+         <p className="notice">Habits are created in the Habit Tracker. That section is not implemented yet; no sample habit tasks are added to your data.</p>
+         <footer className="page-footer"><span>Development identity · Browser persistence</span><span>No account sync</span></footer>
+       </main>
+diff --git "a/C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\app\\globals.css" "b/C:\\Productivity Layer\\schedule-manager\\src\\app\\globals.css"
+index f97272c..7dde79f 100644
+--- "a/C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\app\\globals.css"	
++++ "b/C:\\Productivity Layer\\schedule-manager\\src\\app\\globals.css"	
+@@ -26,6 +26,49 @@ button.task-title { border: 0; padding: 0; background: transparent; text-align:
+ .badge.red { background: #fff0ed; color: #943d32; }
+ .event-card.missed { background: #fffaf8; border-left-color: #c7786b; }
+ .task-status-tabs { flex-wrap: wrap; gap: 18px; }
++.analytics-view-switch, .analytics-period-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
++.analytics-view-switch button[aria-pressed="true"], .analytics-period-buttons button[aria-pressed="true"] { background: var(--accent); color: white; border-color: var(--accent); }
++.analytics-controls, .analytics-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 18px; min-width: 0; }
++.analytics-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
++.analytics-card { margin: 0; overflow-wrap: anywhere; }
++.analytics-card p { font-size: 13px; color: #5b6c62; }
++.analytics-card figure { margin: 14px 0; }
++.analytics-card figcaption { font-size: 13px; margin-bottom: 12px; font-weight: 600; }
++.analytics-card details { margin-top: 16px; }
++.analytics-card summary { cursor: pointer; color: var(--accent); font-size: 13px; }
++.analytics-card summary:focus-visible { outline: 3px solid #759bd2; outline-offset: 3px; }
++.analytics-range-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 16px 0; }
++.analytics-range-form label { margin: 0; min-width: 140px; flex: 1; }
++.analytics-range-form button { align-self: end; }
++.analytics-total { font-size: 26px !important; font-weight: 600; color: var(--ink) !important; }
++.analytics-total span { font-size: 13px; font-weight: 400; }
++.analytics-loading { padding: 24px; background: white; border-radius: 12px; }
++.analytics-bar-row { display: grid; grid-template-columns: minmax(75px, 1fr) minmax(60px, 2fr) auto; align-items: center; gap: 10px; margin: 12px 0; font-size: 12px; }
++.analytics-bar-track { height: 18px; background: #edf2ef; border-radius: 4px; overflow: hidden; }
++.analytics-bar-track > span { display: block; height: 100%; background: #518566; border-radius: 4px; }
++.analytics-column-scroll { overflow-x: auto; margin: 16px 0; }
++.analytics-columns { display: flex; gap: 8px; align-items: end; }
++.analytics-column { flex: 1; min-width: 40px; text-align: center; font-size: 10px; }
++.analytics-column > strong { display: block; margin-bottom: 6px; font-size: 11px; }
++.analytics-column-track { height: 140px; display: flex; align-items: end; justify-content: center; background: #f7f9f8; }
++.analytics-column-track > span { width: 75%; background: #618b74; border-radius: 3px 3px 0 0; }
++.analytics-column > span { display: block; margin-top: 6px; }
++.analytics-stacked { display: flex; width: 100%; min-height: 28px; overflow: hidden; border-radius: 5px; background: #edf2ef; margin: 16px 0; }
++.analytics-segment { display: block; flex-basis: 0; min-width: 1px; }
++.segment-pending, .segment-overdue { background: #7c8b88; }
++.segment-completed, .segment-onTime { background: #518566; }
++.segment-missed { background: #b86960; }
++.segment-late { background: #b28d44; }
++.segment-unclassified { background: #8b78a0; }
++.analytics-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; }
++.analytics-table { overflow-x: auto; }
++.analytics-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
++.analytics-table th, .analytics-table td { padding: 9px 7px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
++.analytics-table thead th { font-size: 11px; color: var(--muted); }
++.analytics-metrics { display: flex; flex-wrap: wrap; gap: 18px; margin: 22px 0; }
++.analytics-metrics dt { font-size: 12px; color: var(--muted); }
++.analytics-metrics dd { font-size: 26px; margin: 0; }
++@media (max-width: 720px) { .analytics-controls, .analytics-card { padding: 16px; } .analytics-grid { grid-template-columns: 1fr; } }
+ button.brand { border: 0; padding: 0; background: transparent; text-align: left; }
+ .task-detail, .task-day-overview, .dialog-header h2 { overflow-wrap: anywhere; min-width: 0; }
+ .task-day-overview { margin-top: 20px; }
+diff --git "a/C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\README.md" "b/C:\\Productivity Layer\\schedule-manager\\README.md"
+index 286725e..a1f05f7 100644
+--- "a/C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\README.md"	
++++ "b/C:\\Productivity Layer\\schedule-manager\\README.md"	
+@@ -12,6 +12,8 @@ Task data retains the `productivity-layer.tasks.v1` key and now has a version-tw
+ 
+ ## Run and verify
+ 
++Schedule Manager and To-do List each provide a separate **Analytics** view, using the existing dashboard selection state. See [ANALYTICS.md](ANALYTICS.md) for all six chart definitions, period/timezone rules, missing-data limits, verification and the verified rollback checkpoint. Analytics derives from existing records without a storage migration or dependency changes. The To-do management view retains Pending, Completed, Missed and its Sort by input.
++
+ Use Node.js 24 or later.
+ 
+ ```powershell

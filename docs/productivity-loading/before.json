@@ -1,0 +1,124 @@
+{
+  "label": "lifecycle-before",
+  "latencyMs": 150,
+  "fixture": {
+    "completedTasks": 60,
+    "openTasks": 10,
+    "dailyHabits": 2
+  },
+  "views": [
+    {
+      "section": "To-do List",
+      "readyMs": 610,
+      "requests": 7,
+      "operations": [
+        "context",
+        "habits.synchronize",
+        "context",
+        "tasks.list",
+        "habits.list",
+        "habits.synchronize",
+        "tasks.list"
+      ],
+      "bytes": 242489,
+      "sqlQueries": 50
+    },
+    {
+      "section": "Schedule Manager",
+      "readyMs": 559,
+      "requests": 15,
+      "operations": [
+        "context",
+        "habits.synchronize",
+        "context",
+        "schedule.load",
+        "habits.synchronize",
+        "habits.list",
+        "schedule.load",
+        "official.classes",
+        "official.classes",
+        "official.classes",
+        "official.classes",
+        "official.classes",
+        "official.classes",
+        "official.classes",
+        "official.classes"
+      ],
+      "bytes": 31376,
+      "sqlQueries": 66
+    },
+    {
+      "section": "Habit Tracker",
+      "readyMs": 920,
+      "requests": 8,
+      "operations": [
+        "context",
+        "habits.synchronize",
+        "context",
+        "habits.synchronize",
+        "habits.list",
+        "context",
+        "habits.synchronize",
+        "habits.list"
+      ],
+      "bytes": 118930,
+      "sqlQueries": 244
+    },
+    {
+      "section": "Today",
+      "readyMs": 1125,
+      "requests": 8,
+      "operations": [
+        "context",
+        "habits.synchronize",
+        "context",
+        "habits.synchronize",
+        "tasks.list",
+        "schedule.load",
+        "habits.list",
+        "official.classes"
+      ],
+      "bytes": 183818,
+      "sqlQueries": 170
+    },
+    {
+      "section": "To-do List",
+      "readyMs": 611,
+      "requests": 7,
+      "operations": [
+        "context",
+        "habits.synchronize",
+        "context",
+        "tasks.list",
+        "habits.list",
+        "habits.synchronize",
+        "tasks.list"
+      ],
+      "bytes": 276133,
+      "sqlQueries": 166
+    }
+  ],
+  "shellMs": 909,
+  "initialContentMs": 1474,
+  "defaultTitle": "Main schedule",
+  "initialRequests": 15,
+  "initialOperations": [
+    "context",
+    "habits.synchronize",
+    "context",
+    "schedule.load",
+    "habits.synchronize",
+    "habits.list",
+    "schedule.load",
+    "official.classes",
+    "official.classes",
+    "official.classes",
+    "official.classes",
+    "official.classes",
+    "official.classes",
+    "official.classes",
+    "official.classes"
+  ],
+  "initialBytes": 21539,
+  "initialSqlQueries": 63
+}

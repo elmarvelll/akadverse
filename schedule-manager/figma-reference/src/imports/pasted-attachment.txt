@@ -1,0 +1,173 @@
+Edit the existing AkadVerse sign-in page to support a Dark Mode theme while keeping the current layout, structure, and components unchanged. The current design is already in Light Mode, so the task is to create a Dark Mode variant of the same page.
+
+Maintain the two-column layout:
+
+Left Panel: sign-in interface
+
+Right Panel: animated mesh gradient visual
+
+Ensure the dark theme feels modern, premium, and comfortable for night use, similar to Apple or modern AI platforms.
+
+Left Panel (Sign-In Interface – Dark Mode)
+
+Change the background of the left panel to a deep neutral black.
+
+Background color:
+
+#0B0B0F
+
+Keep the same layout and spacing but adjust the UI elements for dark mode.
+
+Text Colors
+
+Primary text:
+
+#F5F5F7
+
+Secondary text:
+
+#9CA3AF
+
+These colors maintain readability without harsh contrast.
+
+Input Fields
+
+Keep the same rounded input fields but convert them to dark mode.
+
+Input background:
+
+#1A1A22
+
+Input border:
+
+#2A2A34
+
+When the user focuses on an input field, the border should highlight softly.
+
+Focus border color:
+
+#4F7BFF
+
+Add a subtle glow on focus to improve usability.
+
+Sign-In Button
+
+Keep the same button but adjust it slightly for dark mode.
+
+Button gradient:
+
+#4F7BFF → #6AA8FF
+
+Text color:
+
+#FFFFFF
+
+Hover interaction:
+
+slight brightness increase
+
+scale to 1.02
+
+Click interaction:
+
+slight press effect scale 0.98
+
+Demo Credentials Section
+
+Keep the demo access information but adjust text color.
+
+Text color:
+
+#A1A1AA
+
+Example text:
+
+Demo Access
+
+Student — email: student | password: student
+Faculty — email: faculty | password: faculty
+Admin — email: admin | password: admin
+Right Panel (Animated Mesh Gradient – Dark Mode)
+
+Keep the 3D mesh gradient animation, but adjust the color palette to work better on a dark background.
+
+Use deeper glowing colors.
+
+Example mesh gradient palette:
+
+#4C3FFF
+#6C63FF
+#3F6CFF
+#9B7BFF
+
+The gradient should move slowly and smoothly to create a calm, futuristic atmosphere.
+
+Animation properties:
+
+duration: 15–20 seconds
+
+easing: ease-in-out
+
+infinite loop
+
+smooth morphing between gradient shapes
+
+The animation should feel soft and ambient, not distracting.
+
+Center Icon on the Right Panel
+
+Keep the floating AkadVerse icon centered on the mesh gradient.
+
+Style:
+
+white circular container
+
+soft shadow
+
+slight blur background effect
+
+Add a subtle pulse animation.
+
+Animation behavior:
+
+scale: 1 → 1.05
+opacity: 0.9 → 1
+duration: 3s
+loop
+Theme Toggle
+
+Add a theme toggle switch in the top-right corner of the page.
+
+Icons:
+
+🌙 Dark Mode
+
+☀️ Light Mode
+
+Switching themes should animate smoothly.
+
+Transition properties:
+
+animate background colors
+
+animate card colors
+
+animate text colors
+
+duration: 300ms
+
+easing: ease-in-out
+
+Overall Design Goals
+
+The dark mode should feel:
+
+clean and minimal
+
+premium like Apple UI
+
+comfortable for long usage
+
+modern and AI-focused
+
+Avoid overly bright colors or heavy effects. Maintain clarity and elegance while preserving the existing layout and interactions.

@@ -1,0 +1,19 @@
+{
+  "root": "C:\\Productivity Layer\\schedule-manager",
+  "files": [
+    "src/features/workspace/Workspace.tsx",
+    "src/features/tasks/TaskManager.tsx",
+    "src/features/tasks/todo.ts",
+    "src/features/habits/service.ts",
+    "src/features/schedule/ScheduleManager.tsx",
+    "src/features/analytics/calculations.ts",
+    "src/app/globals.css",
+    "HABITS.md",
+    "VERIFICATION.md"
+  ],
+  "newFiles": [
+    "src/features/habits/HabitLabel.tsx",
+    "src/features/habits/duplicates.ts",
+    "tests/habit-integrations.test.ts"
+  ]
+}

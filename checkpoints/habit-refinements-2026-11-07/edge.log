@@ -1,0 +1,27 @@
+[25836:28072:1107/224035.951:ERROR:components\os_crypt\async\browser\os_crypt_win.cc:63] Failed to encrypt: The system cannot find the file specified. (0x2)
+[25836:58812:1107/224035.998:ERROR:chrome\installer\util\google_update_settings_win.cc:544] Failed opening key Software\Microsoft\EdgeUpdate\ClientStateMedium\{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062} to set usagestats; result: 5
+[25836:58812:1107/224035.998:ERROR:chrome\installer\util\google_update_settings_win.cc:587] Failed opening key Software\Microsoft\EdgeUpdate\ClientStateMedium\{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062} to set urlstats; result: 5
+[25836:28072:1107/224036.037:WARNING:chrome\installer\util\install_util.cc:532] GetProfileType failed; assuming non-temporary non-mandatory profile.: The system cannot find the file specified. (0x2)
+[25836:58812:1107/224041.731:ERROR:components\password_manager\core\browser\password_store\login_database_async_helper.cc:230] Encryption is not available.
+[25836:14844:1107/224041.731:ERROR:components\password_manager\core\browser\password_store\login_database_async_helper.cc:230] Encryption is not available.
+[25836:15972:1107/224041.880:ERROR:chrome\installer\util\google_update_settings_win.cc:544] Failed opening key Software\Microsoft\EdgeUpdate\ClientStateMedium\{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062} to set usagestats; result: 5
+[25836:28072:1107/224041.881:ERROR:chrome\browser\ui\edge_window_tab_manager\api\wtm_interface_impl.cc:472] Failed to open registry key
+[25836:28072:1107/224041.881:ERROR:content\browser\gpu\gpu_process_host.cc:1097] GPU process exited unexpectedly: exit_code=-1073741790
+[25836:28072:1107/224041.881:WARNING:content\browser\gpu\gpu_process_host.cc:1566] The GPU process has crashed 1 time(s)
+[25836:15972:1107/224041.882:ERROR:components\viz\host\persistent_cache_sandboxed_file_factory.cc:153] Failed to open persistent cache files in directory "C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-profile\GPUPersistentCache\DawnGraphiteCache\OMXJKWSVDDS6L3YMYJJRNHVYDBSO7SEM", error: 0: The process cannot access the file because it is being used by another process. (0x20)
+[25836:28072:1107/224041.928:WARNING:chrome\browser\extensions\external_registry_loader_win.cc:294] Error observing HKCU: Access is denied. (0x5)
+[25836:28072:1107/224041.940:ERROR:content\browser\gpu\gpu_process_host.cc:1097] GPU process exited unexpectedly: exit_code=-1073741790
+[25836:28072:1107/224041.940:WARNING:content\browser\gpu\gpu_process_host.cc:1566] The GPU process has crashed 2 time(s)
+[25836:28072:1107/224041.966:ERROR:content\browser\gpu\gpu_process_host.cc:1097] GPU process exited unexpectedly: exit_code=-1073741790
+[25836:28072:1107/224041.967:WARNING:content\browser\gpu\gpu_process_host.cc:1566] The GPU process has crashed 3 time(s)
+[25836:15972:1107/224041.967:ERROR:components\viz\host\persistent_cache_sandboxed_file_factory.cc:153] Failed to open persistent cache files in directory "C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-profile\GPUPersistentCache\DawnGraphiteCache\OMXJKWSVDDS6L3YMYJJRNHVYDBSO7SEM", error: 0: The process cannot access the file because it is being used by another process. (0x20)
+[25836:28072:1107/224041.985:ERROR:content\browser\gpu\gpu_process_host.cc:1097] GPU process exited unexpectedly: exit_code=-1073741790
+[25836:28072:1107/224041.985:WARNING:content\browser\gpu\gpu_process_host.cc:1566] The GPU process has crashed 4 time(s)
+[25836:48648:1107/224041.990:ERROR:services\device\public\cpp\geolocation\system_geolocation_source_win.cc:124] Failed to create IAppCapability: Access is denied. (0x80070005)
+[25836:16472:1107/224041.997:ERROR:components\viz\host\persistent_cache_sandboxed_file_factory.cc:153] Failed to open persistent cache files in directory "C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-profile\GPUPersistentCache\DawnGraphiteCache\OMXJKWSVDDS6L3YMYJJRNHVYDBSO7SEM", error: 0: The process cannot access the file because it is being used by another process. (0x20)
+[25836:28072:1107/224042.001:ERROR:content\browser\gpu\gpu_process_host.cc:1097] GPU process exited unexpectedly: exit_code=-1073741790
+[25836:28072:1107/224042.001:WARNING:content\browser\gpu\gpu_process_host.cc:1566] The GPU process has crashed 5 time(s)
+[25836:15972:1107/224042.002:ERROR:components\viz\host\persistent_cache_sandboxed_file_factory.cc:153] Failed to open persistent cache files in directory "C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-profile\GPUPersistentCache\DawnGraphiteCache\OMXJKWSVDDS6L3YMYJJRNHVYDBSO7SEM", error: 0: The process cannot access the file because it is being used by another process. (0x20)
+[25836:28072:1107/224042.017:ERROR:content\browser\gpu\gpu_process_host.cc:1097] GPU process exited unexpectedly: exit_code=-1073741790
+[25836:28072:1107/224042.017:WARNING:content\browser\gpu\gpu_process_host.cc:1566] The GPU process has crashed 6 time(s)
+[25836:28072:1107/224042.017:FATAL:content\browser\gpu\gpu_data_manager_impl_private.cc:404] GPU process isn't usable. Goodbye.

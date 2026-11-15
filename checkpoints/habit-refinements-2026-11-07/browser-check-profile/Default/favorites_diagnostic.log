@@ -1,0 +1,21 @@
+2026-11-07 21:41:58.687: [INFO] CurrentProfilePath: C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-check-profile\Default
+2026-11-07 21:41:58.687: [INFO] Profiles total count: 1
+2026-11-07 21:41:58.687: [INFO] Profile: name=Profile 1 path=C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-check-profile\Default lastActive=null
+2026-11-07 21:41:58.687: [INFO] LastUsedProfileDir: C:\Productivity Layer\checkpoints\habit-refinements-2026-11-07\browser-check-profile\Default
+2026-11-07 21:41:58.687: [INFO] VisibilityChanged: 0
+2026-11-07 21:41:58.700: [INFO] BookmarkNodeAdded, ABU: 0
+2026-11-07 21:41:58.700: [INFO] BookmarkNodeAdded, ABU: 0
+2026-11-07 21:41:58.700: [INFO] BookmarkNodeAdded, ABU: 0
+2026-11-07 21:41:58.700: [INFO] BookmarkNodeAdded, ABU: 0
+2026-11-07 21:41:58.700: [INFO] OnDoneLoading sync enabled: 0
+2026-11-07 21:41:58.700: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-11-07 21:41:58.700: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-11-07 21:41:58.700: [INFO] BookmarksSnapshot Startup total=4 bar=4 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-11-07 21:41:58.737: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-11-07 21:42:27.240: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-11-07 21:42:27.242: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2026-11-07 21:42:27.244: [INFO] Primary account changed.
+2026-11-07 21:42:27.244: [INFO] OnPrimaryAccountChanged PrimaryAccountChangeEvent::Type::kSet
+2026-11-07 21:42:27.251: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2026-11-07 21:43:28.693: [INFO] Sync initialization duration: 61381ms
+2026-11-07 23:11:43.899: [INFO] BookmarksSnapshot Shutdown total=4 bar=4 other=0 mobile=0 showBar=0 showBarNTP=1

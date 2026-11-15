@@ -1,0 +1,17 @@
+{
+  "checks": [
+    "Task deadline starts empty",
+    "One daily habit card visible in Active",
+    "Task details provide Edit habit and no outcome controls",
+    "Card Complete saves without opening dialog",
+    "Completed tab exposes habit history filter",
+    "Tracker clearing updates the shared task record",
+    "Event times start empty and require explicit input",
+    "Event correction persists on its schedule occurrence",
+    "Event details omit timezone, show backup fallback and have no outcome controls",
+    "Navigation preserves full URL",
+    "Reload preserves counts without duplicates",
+    "Mobile grid supports horizontal scrolling"
+  ],
+  "errors": []
+}

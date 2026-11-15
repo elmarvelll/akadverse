@@ -1,0 +1,193 @@
+import "../helpers/env";
+import { signInAs } from "../helpers/session";
+import { before, beforeEach, describe, it, mock } from "node:test";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { memoryPrisma, resetDatabase, rows, failWrite } from "./memory-db";
+
+mock.module("@/lib/auth", { namedExports: { authOptions: {} } });
+mock.module("@/lib/prisma", { namedExports: { prisma: memoryPrisma } });
+let academicFailure: unknown;
+mock.module("@/services/productivity-layer/academics", { namedExports: { officialClasses: async () => { if (academicFailure) throw academicFailure; return []; } } });
+let execute: typeof import("@/services/productivity-layer/operations").executeProductivity;
+let ServiceError: typeof import("@/lib/service-error").ServiceError;
+let taskViewStatus: typeof import("@/features/productivity/tasks/domain").taskViewStatus;
+let placeTimetable: typeof import("@/features/productivity/schedule/timetable").placeTimetable;
+let scheduleDates: typeof import("@/features/productivity/schedule/timetable").scheduleDates;
+before(async () => {
+  ({ executeProductivity: execute } = await import("@/services/productivity-layer/operations"));
+  ({ ServiceError } = await import("@/lib/service-error"));
+  ({ taskViewStatus } = await import("@/features/productivity/tasks/domain"));
+  ({ placeTimetable, scheduleDates } = await import("@/features/productivity/schedule/timetable"));
+});
+const A = { id: "user-A", email: "a@example.test", firstName: "A", lastName: "Student", role: "student" };
+const B = { id: "user-B", email: "b@example.test", firstName: "B", lastName: "Student", role: "student" };
+const call = <T = unknown>(operation: string, args: unknown[] = [], requestId = randomUUID()) => execute({ operation, args, requestId }) as Promise<T>;
+type Task = import("@/features/productivity/tasks/domain").Task;
+type Habit = import("@/features/productivity/habits/domain").Habit;
+type Dataset = import("@/features/productivity/schedule/domain").Dataset;
+type Occurrence = import("@/features/productivity/habits/domain").Occurrence;
+const task = (extra = {}) => ({ title: "Read", priority: "medium", ...extra });
+const habit = (extra = {}) => ({ name: "Daily reading", description: "", type: "task", frequency: "daily", weekdays: [], priority: "medium", time: "13:00", startDate: "2030-01-14", ...extra });
+const denied = (error: unknown) => error instanceof ServiceError && [401, 403, 404].includes(error.status);
+beforeEach(() => {
+  academicFailure = undefined;
+  resetDatabase(); rows("user").push(A, B); signInAs(A);
+  mock.timers.reset(); mock.timers.enable({ apis: ["Date"], now: new Date("2030-01-15T12:00:00Z") });
+});
+
+describe("authenticated productivity operations", () => {
+  it("loads the existing account and pure reads without mutation transactions or initialization", async () => {
+    rows("productivityPreferences").push({ ownerId: A.id, timezone: "Europe/London" });
+    const countBefore = rows("user").length;
+    const transaction = mock.method(memoryPrisma, "$transaction", () => { throw new Error("Pure reads must not acquire the mutation lock"); });
+    try {
+      const context = await call<{ student: { id: string; timezone: string }; email: string }>("context");
+      assert.equal(context.student.id, A.id); assert.equal(context.student.timezone, "Europe/London"); assert.equal(context.email, A.email);
+      for (const operation of ["tasks.list", "tasks.history", "habits.list", "official.classes"]) await call(operation, operation === "official.classes" ? ["2030-01-15"] : []);
+      assert.equal((await call<Dataset>("schedule.load")).events.length, 0);
+      assert.equal(transaction.mock.callCount(), 0);
+      assert.equal(rows("user").length, countBefore); assert.equal(rows("productivityOccurrence").length, 0); assert.equal(rows("productivityTask").length, 0);
+      signInAs(B); const other = await call<{ student: { id: string; timezone: string } }>("context");
+      assert.equal(other.student.id, B.id); assert.equal(other.student.timezone, "Africa/Lagos");
+    } finally { transaction.mock.restore(); }
+  });
+  it("does not turn unexpected academic dependency errors into public validation messages", async () => {
+    const failure = new Error("private database connection details"); academicFailure = failure;
+    await assert.rejects(call("official.classes", ["2030-01-15"]), error => error === failure && !(error instanceof ServiceError));
+  });
+  it("requires the existing session on every operation and rejects account/role mismatch", async () => {
+    signInAs(null);
+    for (const operation of ["context", "workspace.initial", "workspace.view", "official.range", "tasks.list", "tasks.create", "habits.list", "schedule.load", "analytics.tasks", "import"]) await assert.rejects(call(operation), denied);
+    signInAs(A);
+    await assert.rejects(execute({ operation: "context", args: [] }, B.id), denied);
+    rows("user")[0] = { ...A, role: "faculty" };
+    await assert.rejects(call("tasks.list"), denied);
+  });
+  it("scopes reads, writes, history, analytics and category links to the authenticated owner", async () => {
+    signInAs(B); const privateTask = await call<Task>("tasks.create", [task({ title: "B private" })]);
+    const category = (await call<Dataset>("schedule.category", ["B category", "", null, false])).schedules[0];
+    const sourceHabit = await call<Habit>("habits.save", [habit()]);
+    const eventData = await call<Dataset>("schedule.save", [{ title: "B event", description: "Private", priority: "medium", mustComplete: false, subScheduleId: category.id, slot: { date: "2030-01-15", start: "15:00", end: "16:00", timezone: "Africa/Lagos" } }]);
+    signInAs(A);
+    assert.deepEqual(await call("tasks.list"), []); assert.deepEqual(await call("habits.list"), []);
+    assert.equal((await call<Dataset>("schedule.load")).events.length, 0);
+    for (const op of ["tasks.get", "tasks.update", "tasks.delete", "tasks.complete", "tasks.miss"]) await assert.rejects(call(op, [privateTask.id, task()]), denied);
+    await assert.rejects(call("habits.save", [habit(), sourceHabit.id]), denied);
+    await assert.rejects(call("habits.record", [sourceHabit.id, "2030-01-15", "completed"]), denied);
+    for (const op of ["schedule.history", "schedule.archive", "schedule.backup", "schedule.miss", "habits.replan"]) await assert.rejects(call(op, [eventData.events[0].id]), denied);
+    await assert.rejects(call("schedule.save", [eventData.events[0], eventData.events[0].id]), denied);
+    await assert.rejects(call("habits.archive", [sourceHabit.id, true]), denied);
+    await assert.rejects(call("schedule.save", [{ title: "Link attack", description: "Invalid category", priority: "medium", mustComplete: false, subScheduleId: category.id, slot: { date: "2030-01-15", start: "17:00", end: "18:00", timezone: "Africa/Lagos" } }]));
+    assert.equal((await call<{ createdTotal: number }>("analytics.tasks", [{ start: "2030-01-01", end: "2030-01-31" }])).createdTotal, 0);
+    assert.equal(rows("productivityTask").find(r => r.id === privateTask.id)?.ownerId, B.id);
+  });
+  it("edits and archives ordinary events, preserves clashes for explicit confirmation and rejects foreign sources", async () => {
+    const data = await call<Dataset>("schedule.category", ["Personal", "", null, false]);
+    const input = { title: "Night work", description: "Prepare reading notes", priority: "medium", mustComplete: false, subScheduleId: data.schedules[0].id, slot: { date: "2030-01-15", start: "23:00", end: "01:00", timezone: "Africa/Lagos" } };
+    const first = await call<Dataset>("schedule.save", [input]); const id = first.events[0].id;
+    await assert.rejects(call("schedule.save", [input]));
+    await call("schedule.save", [input, null, null, { mode: "manual", allowConflicts: true }]);
+    await assert.rejects(call("schedule.save", [input, null, { kind: "task", taskId: "another-users-task" }]));
+    const edited = await call<Dataset>("schedule.save", [{ ...input, title: "Updated night work" }, id, null, { mode: "manual", allowConflicts: true }]);
+    assert.equal(edited.events.find(e => e.id === id)?.title, "Updated night work");
+    const archived = await call<Dataset>("schedule.archive", [id]);
+    assert(archived.events.find(e => e.id === id)?.archivedAt);
+    assert(archived.events.find(e => e.id === id)?.history.some(h => h.kind === "edited"));
+  });
+  it("validates input, derives deadlines, retains audit/tombstones and retries creates without duplicates", async () => {
+    await assert.rejects(call("tasks.create", [task({ title: "", ownerId: B.id })]));
+    const key = randomUUID();
+    const created = await call<Task>("tasks.create", [task({ dueDate: "2030-01-15", dueTime: "13:01", ownerId: B.id })], key);
+    assert.equal(created.ownerId, A.id); assert.equal(taskViewStatus(created, "Africa/Lagos", new Date()), "active");
+    await assert.rejects(call("tasks.miss", [created.id]));
+    assert.equal((await call<Task>("tasks.create", [task({ dueDate: "2030-01-15", dueTime: "13:01", ownerId: B.id })], key)).id, created.id);
+    await assert.rejects(call("tasks.create", [task({ title: "Different" })], key));
+    mock.timers.setTime(new Date("2030-01-15T12:01:00Z").getTime());
+    assert.equal(taskViewStatus(created, "Africa/Lagos", new Date()), "pending");
+    const missed = await call<Task>("tasks.miss", [created.id]); assert.equal(missed.status, "missed");
+    assert.equal((await call<Task>("tasks.get", [created.id])).missedAt, missed.missedAt);
+    const removed = await call<Task>("tasks.delete", [created.id]); assert(removed.deletedAt); assert(removed.history.some(h => h.kind === "missed"));
+    const ordinary = await call<Task>("tasks.create", [task()]);
+    await call("tasks.update", [ordinary.id, task({ title: "Edited" })]);
+    assert.equal((await call<Task>("tasks.get", [ordinary.id])).title, "Edited");
+    assert.equal((await call<Task>("tasks.complete", [ordinary.id])).status, "completed");
+  });
+  it("shares habit outcomes across modules, preserves history and deduplicates concurrent generation", async () => {
+    const source = await call<Habit>("habits.save", [habit()]);
+    const range = { start: "2030-01-14", end: "2030-01-16" };
+    await Promise.all([call("habits.synchronize", [range]), call("habits.synchronize", [range])]);
+    assert.equal(rows("productivityOccurrence").length, 3);
+    assert.equal(rows("productivityTask").length, 3);
+    const tasks = await call<Task[]>("tasks.list"), today = tasks.find(t => t.source.kind === "habit" && t.source.scheduledDate === "2030-01-15")!;
+    await call("tasks.complete", [today.id]);
+    const recorded = await call<Occurrence[]>("habits.synchronize", [range]);
+    assert.equal(recorded.find(o => o.date === "2030-01-15")!.task?.status, "completed");
+    await call("habits.record", [source.id, "2030-01-15", "missed"]);
+    assert.equal((await call<Task>("tasks.get", [today.id])).status, "missed");
+    assert.equal((await call<Task>("tasks.get", [today.id])).outcomeChanges?.length, 1);
+    await call("habits.record", [source.id, "2030-01-14", "missed"]);
+    await assert.rejects(call("habits.record", [source.id, "2030-01-16", "completed"]));
+    await call("habits.save", [habit({ name: "New schedule", time: "15:00" }), source.id]);
+    await call("habits.archive", [source.id, true]);
+    assert.equal((await call<Task>("tasks.get", [today.id])).status, "missed");
+    assert.equal((await call<Task>("tasks.get", [today.id])).habitSettings?.time, "13:00");
+    assert(rows("productivityTask").some(r => (r.data as Task).habitWithdrawn));
+  });
+  it("enforces event start/end gates and splits overnight events at midnight", async () => {
+    const source = await call<Habit>("habits.save", [habit({ type: "event", time: "14:00", end: "15:00" })]);
+    await assert.rejects(call("habits.record", [source.id, "2030-01-15", "completed"]));
+    mock.timers.setTime(new Date("2030-01-15T13:00:00Z").getTime());
+    await call("habits.record", [source.id, "2030-01-15", "completed"]);
+    await assert.rejects(call("habits.record", [source.id, "2030-01-15", "missed"]));
+    mock.timers.setTime(new Date("2030-01-15T14:00:00Z").getTime());
+    await call("habits.record", [source.id, "2030-01-15", "missed"]);
+    const night = await call<Habit>("habits.save", [habit({ name: "Night", type: "event", time: "23:00", end: "01:00" })]);
+    const data = await call<Dataset>("schedule.load"), event = data.events.find(e => e.source.kind === "habit" && e.source.habitId === night.id)!;
+    assert.equal(placeTimetable([{ id: event.id, title: event.title, slot: event.slot, kind: "habit", category: "Habit" }]).length, 2);
+    assert.equal(scheduleDates("2030-01-15", "day").length, 1);
+    mock.timers.setTime(new Date("2030-01-15T23:30:00Z").getTime()); // Jan 16 00:30 Lagos
+    await assert.rejects(call("habits.record", [night.id, "2030-01-15", "missed"]));
+    mock.timers.setTime(new Date("2030-01-16T00:00:00Z").getTime());
+    await call("habits.record", [night.id, "2030-01-15", "missed"]);
+  });
+  it("rolls back a failed multi-record habit save and permits safe retry", async () => {
+    failWrite(); const key = randomUUID();
+    await assert.rejects(call("habits.save", [habit()], key));
+    assert.equal(rows("productivityHabit").length, 0); assert.equal(rows("productivityTask").length, 0); assert.equal(rows("productivityRequest").length, 0);
+    await call("habits.save", [habit()], key);
+    assert.equal(rows("productivityHabit").length, 1); assert.equal(rows("productivityTask").length, 1);
+  });
+  it("preserves recorded occurrence identity and gates outcomes correctly after a timezone change", async () => {
+    const source = await call<Habit>("habits.save", [habit({ type: "event", time: "14:00", end: "15:00" })]);
+    mock.timers.setTime(new Date("2030-01-15T13:00:00Z").getTime());
+    await call("habits.record", [source.id, "2030-01-15", "completed"]);
+    const before = (await call<Dataset>("schedule.load")).events[0];
+    await call("preferences.save", ["America/New_York"]);
+    const projected = (await call<Dataset>("schedule.load")).events[0];
+    assert.equal(projected.id, before.id); assert.equal(projected.originalSlot.date, before.originalSlot.date);
+    assert.equal(projected.completedAt, before.completedAt); assert.equal(projected.slot.start, "08:00");
+    await assert.rejects(call("habits.record", [source.id, "2030-01-15", "missed"]));
+    mock.timers.setTime(new Date("2030-01-15T14:00:00Z").getTime());
+    await call("habits.record", [source.id, "2030-01-15", "missed"]);
+    assert.equal((await call<Dataset>("schedule.load")).events[0].habitSettings?.time, "14:00");
+  });
+  it("requires explicit import consent and preserves relationships/outcomes with safe replay", async () => {
+    await call("habits.save", [habit()]);
+    const tasks = await call<Task[]>("tasks.list"); await call("tasks.complete", [tasks[0].id]);
+    const exported = { tasks: { version: 2, tasks: await call("tasks.list") }, habits: { version: 1, habits: await call("habits.list") }, schedule: await call("schedule.load") };
+    signInAs(B);
+    await assert.rejects(call("import", [exported, false]));
+    assert.equal(rows("productivityTask").filter(r => r.ownerId === B.id).length, 0);
+    await call("import", [exported, true]); await call("import", [exported, true]);
+    const imported = await call<Task[]>("tasks.list");
+    assert.equal(imported.length, 1); assert.equal(imported[0].status, "completed");
+    assert.equal(imported[0].ownerId, B.id);
+    const original = (exported.tasks.tasks as Task[])[0];
+    assert.equal(original.ownerId, A.id);
+    assert.equal(imported[0].completedAt, original.completedAt);
+    assert.deepEqual(imported[0].history, original.history);
+    assert(imported[0].source.kind === "habit"); assert(imported[0].source.habitId.startsWith("import:"));
+    assert.equal((await call<Habit[]>("habits.list"))[0].id, imported[0].source.habitId);
+  });
+});

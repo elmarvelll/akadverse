@@ -89,6 +89,13 @@ model User {
   skillReviews              SkillReview[]           @relation("BuyerReviews")
   suggestions               Suggestion[]
   tasks                     Task[]
+  productivityPreferences   ProductivityPreferences?
+  productivityHabits        ProductivityHabit[]
+  productivityCategories    ProductivityCategory[]
+  productivityOccurrences   ProductivityOccurrence[]
+  productivityTasks         ProductivityTask[]
+  productivityEvents        ProductivityEvent[]
+  productivityRequests      ProductivityRequest[]
   // A user's deliverer application/status, if they've ever applied — no row
   // means "not applied" (see the footer's "Become a Deliverer" state logic
   // in src/lib/deliverer.ts). Deliberately a relation, not a status column
@@ -1746,4 +1753,119 @@ model student_playlists {
   trigger_event   String? @db.VarChar(255)
 
   @@index([id])
+}
+
+// Productivity domain snapshots preserve the established audit/revision format.
+// Indexed columns are transactionally maintained projections of each snapshot.
+// Occurrences carry identity only; the eligible task/event is the outcome authority.
+enum ProductivityOutcome {
+  unrecorded
+  completed
+  missed
+}
+
+model ProductivityPreferences {
+  ownerId   String   @id
+  timezone  String   @default("Africa/Lagos")
+  updatedAt DateTime @updatedAt
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model ProductivityHabit {
+  id          String   @id
+  ownerId     String
+  createdDate String   @db.VarChar(10)
+  data        Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  occurrences ProductivityOccurrence[]
+
+  @@unique([id, ownerId])
+  @@index([ownerId, createdDate])
+}
+
+model ProductivityCategory {
+  id             String   @id
+  ownerId        String
+  normalizedName String
+  data           Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  owner          User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  events         ProductivityEvent[]
+
+  @@unique([id, ownerId])
+  @@unique([ownerId, normalizedName])
+}
+
+model ProductivityOccurrence {
+  id           String   @id @default(uuid())
+  ownerId      String
+  habitId      String
+  originalDate String   @db.VarChar(10)
+  createdAt    DateTime @default(now())
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  habit        ProductivityHabit @relation(fields: [habitId, ownerId], references: [id, ownerId], onDelete: NoAction)
+  task         ProductivityTask?
+  event        ProductivityEvent?
+
+  @@unique([habitId, originalDate])
+  @@unique([id, ownerId])
+  @@index([ownerId, originalDate])
+}
+
+model ProductivityTask {
+  id           String   @id
+  ownerId      String
+  occurrenceId String?  @unique
+  dueDate      String?  @db.VarChar(10)
+  outcome      ProductivityOutcome @default(unrecorded)
+  deletedAt    DateTime?
+  data         Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  occurrence   ProductivityOccurrence? @relation(fields: [occurrenceId, ownerId], references: [id, ownerId], onDelete: NoAction)
+  linkedEvents ProductivityEvent[]
+
+  @@unique([id, ownerId])
+  @@unique([occurrenceId, ownerId])
+  @@index([ownerId, dueDate, outcome])
+}
+
+model ProductivityEvent {
+  id           String   @id
+  ownerId      String
+  occurrenceId String?  @unique
+  categoryId   String?
+  linkedTaskId String?
+  scheduledDate String  @db.VarChar(10)
+  outcome      ProductivityOutcome @default(unrecorded)
+  archivedAt   DateTime?
+  data         Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  occurrence   ProductivityOccurrence? @relation(fields: [occurrenceId, ownerId], references: [id, ownerId], onDelete: NoAction)
+  category     ProductivityCategory? @relation(fields: [categoryId, ownerId], references: [id, ownerId], onDelete: NoAction)
+  linkedTask   ProductivityTask? @relation(fields: [linkedTaskId, ownerId], references: [id, ownerId], onDelete: NoAction)
+
+  @@unique([id, ownerId])
+  @@unique([occurrenceId, ownerId])
+  @@index([ownerId, scheduledDate, outcome])
+  @@index([ownerId, categoryId])
+}
+
+// Receipts make a retry after a lost response safe, including creates/imports.
+model ProductivityRequest {
+  ownerId     String
+  key         String
+  requestHash String
+  result      Json
+  createdAt   DateTime @default(now())
+  owner       User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, key])
+  @@index([createdAt])
 }

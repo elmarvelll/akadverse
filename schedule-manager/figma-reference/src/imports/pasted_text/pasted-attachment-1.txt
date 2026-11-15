@@ -1,0 +1,300 @@
+🏫 SCHOOL ADMIN PROFILE (UPDATED)
+🎯 DESIGN GOAL
+
+The admin profile should feel like:
+
+a command center
+
+focused on oversight, control, and insights
+
+clean, powerful, and not cluttered
+
+🔷 STRUCTURE
+1. PROFILE HEADER
+
+Contains:
+
+Admin Name
+
+Role (e.g. Academic Admin, Registrar, Dean)
+
+Department / Office
+
+Profile Image
+
+Optional:
+
+Admin badge (e.g. “School Admin”)
+
+2. LEFT PANEL (ADMIN SUMMARY CARD)
+
+This is the quick control snapshot.
+
+Include:
+
+Total Students
+
+Total Faculty
+
+Active Courses
+
+Pending Approvals 🔥 (highlight this — Von Restorff)
+
+Animation
+
+Numbers count up on load
+
+“Pending Approvals” has a subtle pulse/glow
+
+3. RIGHT PANEL (MAIN CONTENT)
+🔹 SECTION A — ACADEMIC OVERVIEW
+
+This is the core insight area.
+
+Include:
+
+Total courses running
+
+Department performance overview
+
+Average GPA across school
+
+Attendance trends
+
+Visuals:
+
+Bar charts (department performance)
+
+Line chart (attendance trend)
+
+Animation:
+
+Charts draw in smoothly
+
+Data fades in
+
+🔹 SECTION B — STUDENT MANAGEMENT
+
+Focus on student monitoring.
+
+Include:
+
+Students with low attendance
+
+Students with pending fees (optional)
+
+Students at academic risk
+
+Interaction:
+
+Each item is clickable → opens detailed list
+
+🔹 SECTION C — FACULTY MANAGEMENT
+
+Include:
+
+Faculty attendance compliance
+
+Classes without uploaded attendance
+
+Pending grading submissions
+
+🔹 SECTION D — APPROVALS & ACTIONS 🔥
+
+This is the most important section.
+
+Include:
+
+Course approvals
+
+Marketplace approvals (if needed later)
+
+Faculty submissions
+
+Requests
+
+Design:
+
+Use cards or list items with action buttons:
+
+[ New Course Request ]
+Approve | Reject
+Animation
+
+Cards slide in
+
+Buttons have ripple effect
+
+Pending items glow slightly
+
+🔹 SECTION E — REPORTS & INSIGHTS
+
+Include:
+
+Downloadable reports
+
+Academic summaries
+
+Attendance reports
+
+Performance analytics
+
+🔹 SECTION F — ANNOUNCEMENTS / CONTROL
+
+Admin can:
+
+Post announcements
+
+Send messages to students/faculty
+
+✨ ANIMATIONS (ADMIN SPECIFIC)
+
+Metrics → count-up animation
+
+Alerts → subtle pulse
+
+Charts → draw animation
+
+Cards → lift on hover
+
+Actions → ripple on click
+
+⚠️ IMPORTANT UX ADJUSTMENTS
+Use Hick’s Law
+
+Do NOT overload admin with everything at once.
+
+Group into sections:
+
+Overview
+Students
+Faculty
+Approvals
+Reports
+Use Von Restorff
+
+Highlight:
+
+👉 Pending Approvals
+👉 Students at Risk
+
+These should stand out visually.
+
+🎯 FINAL EDIT PROMPT (ADMIN ONLY)
+
+Use this:
+
+PROMPT
+
+Edit the Admin Profile page in AkadVerse to reflect a school-level administrative dashboard, not a technical system admin.
+
+The admin should oversee students, faculty, academic performance, and approvals.
+
+STRUCTURE
+
+Create a layout with:
+
+Profile Header
+
+Left Summary Panel
+
+Right Detailed Sections
+
+HEADER
+
+Include:
+
+Name
+
+Role (Admin, Registrar, Dean)
+
+Department
+
+Profile Image
+
+LEFT PANEL
+
+Display:
+
+Total Students
+
+Total Faculty
+
+Active Courses
+
+Pending Approvals (highlight this)
+
+Add count-up animation on load.
+
+RIGHT PANEL SECTIONS
+Academic Overview
+
+Course statistics
+
+Department performance
+
+Average GPA
+
+Attendance trends
+
+Use animated charts
+
+Student Management
+
+Low attendance students
+
+At-risk students
+
+Faculty Management
+
+Attendance compliance
+
+Missing attendance uploads
+
+Pending grading
+
+Approvals & Actions
+
+Course approvals
+
+Requests
+
+Submissions
+
+Each item should include:
+
+Approve / Reject buttons
+
+Reports & Insights
+
+Download reports
+
+Academic summaries
+
+Announcements
+
+Admin can post updates
+
+ANIMATIONS
+
+Page load fade + slide
+
+Metrics count up
+
+Charts animate
+
+Cards lift on hover
+
+Buttons ripple on click
+
+Alerts pulse subtly
+
+DESIGN GOAL
+
+The admin profile should feel like:
+
+a school control center
+
+focused on decision-making and monitoring
+
+clean, powerful, and structured

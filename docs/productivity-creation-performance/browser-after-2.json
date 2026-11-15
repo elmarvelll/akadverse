@@ -1,0 +1,81 @@
+{
+  "label": "after-verified",
+  "fixture": {
+    "completedTasks": 600,
+    "openTasks": 40,
+    "dailyHabits": 2
+  },
+  "latencyMs": 150,
+  "creates": [
+    {
+      "kind": "task",
+      "clientPreRequestMs": 3,
+      "dialogCloseMs": 191,
+      "itemVisibleMs": 192,
+      "requestMs": 175,
+      "postResponseCloseMs": 13,
+      "requests": [
+        {
+          "operation": "tasks.create",
+          "ms": 175
+        }
+      ],
+      "sqlQueries": 9
+    },
+    {
+      "kind": "event",
+      "clientPreRequestMs": 2,
+      "dialogCloseMs": 187,
+      "itemVisibleMs": 188,
+      "requestMs": 170,
+      "postResponseCloseMs": 15,
+      "requests": [
+        {
+          "operation": "schedule.save",
+          "ms": 170
+        }
+      ],
+      "sqlQueries": 12
+    },
+    {
+      "kind": "habit",
+      "clientPreRequestMs": 2,
+      "dialogCloseMs": 192,
+      "itemVisibleMs": 192,
+      "requestMs": 178,
+      "postResponseCloseMs": 12,
+      "requests": [
+        {
+          "operation": "habits.save",
+          "ms": 178
+        },
+        {
+          "operation": "workspace.view",
+          "ms": 194
+        }
+      ],
+      "sqlQueries": 27
+    }
+  ],
+  "survivesReload": true,
+  "failedSaveChecks": [
+    {
+      "kind": "task",
+      "preservesInput": true,
+      "errorReplacesLoading": true,
+      "rapidRetryCreatesOnce": true
+    },
+    {
+      "kind": "event",
+      "preservesInput": true,
+      "errorReplacesLoading": true,
+      "rapidRetryCreatesOnce": true
+    },
+    {
+      "kind": "habit",
+      "preservesInput": true,
+      "errorReplacesLoading": true,
+      "rapidRetryCreatesOnce": true
+    }
+  ]
+}

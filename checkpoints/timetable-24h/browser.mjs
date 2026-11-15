@@ -1,0 +1,57 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const pages = await (await fetch('http://localhost:9241/json/list')).json();
+const socket = new WebSocket(pages.find(page => page.url.startsWith('http://localhost:3011')).webSocketDebuggerUrl);
+await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
+let id = 0;
+const pending = new Map(), errors = [], checks = [];
+socket.onmessage = event => {
+  const data = JSON.parse(event.data);
+  if (data.id) { const request = pending.get(data.id); pending.delete(data.id); data.error ? request.reject(Error(JSON.stringify(data.error))) : request.resolve(data.result); }
+  else if (data.method === 'Runtime.exceptionThrown') errors.push(data.params.exceptionDetails.text);
+};
+const send = (method, params = {}) => new Promise((resolve, reject) => { pending.set(++id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })); });
+const run = async expression => { const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const until = async expression => { for (let n = 0; n < 50; n++) { if (await run(expression)) return; await delay(100); } throw Error('Timeout: ' + expression); };
+const click = label => run(`([...document.querySelectorAll('button')].find(b => b.textContent.trim() === ${JSON.stringify(label)})).click()`);
+const check = async (name, expression) => { assert.ok(await run(expression), name); checks.push(name); };
+try {
+  await send('Runtime.enable');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  await until(`!!document.querySelector('.prod-sidebar')`);
+  await click('Schedule Manager');
+  await until(`!!document.querySelector('.timetable-day') && !document.body.textContent.includes('Loading sample classes')`);
+  await check('24 readable hours in weekly grid', `document.querySelectorAll('.timetable-axis > span').length === 24 && document.querySelector('.timetable-axis').offsetHeight === 1728 && document.querySelectorAll('.timetable-day').length === 7`);
+  await check('existing AM/PM labels', `document.querySelector('.timetable-axis').textContent.startsWith('12:00 AM') && document.querySelector('.timetable-axis').textContent.endsWith('11:00 PM')`);
+  await check('today initially near local current time', `(()=>{const s=document.querySelector('.timetable-scroll');const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Lagos',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date()).split(':').map(Number);const desired=Math.max(0,(parts[0]+parts[1]/60-1)*72);return Math.abs(s.scrollTop-Math.min(desired,s.scrollHeight-s.clientHeight))<3;})()`);
+  await run(`document.querySelector('.timetable-scroll').scrollTop=900`);
+  await delay(150);
+  await check('date headers remain visible during vertical scrolling', `(()=>{const s=document.querySelector('.timetable-scroll').getBoundingClientRect();return [...document.querySelectorAll('.timetable-day-head')].every(h=>Math.abs(h.getBoundingClientRect().top-s.top)<2);})()`);
+  await run(`window.dispatchEvent(new Event('focus'))`);
+  await delay(500);
+  await check('refresh preserves free scrolling', `document.querySelector('.timetable-scroll').scrollTop===900`);
+  await click('Day');
+  await until(`document.querySelectorAll('.timetable-day').length===1`);
+  await check('daily grid retains all hours', `document.querySelector('.timetable-day').offsetHeight===1728`);
+  await run(`(()=>{const e=document.querySelector('#selected-date');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'2030-01-16');e.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+  await until(`document.querySelector('.timetable-day-head strong').textContent==='16'`);
+  await check('other dates start at 6 a.m.', `document.querySelector('.timetable-scroll').scrollTop===432`);
+  await run(`document.querySelector('.timetable-scroll').scrollTop=1e6`);
+  await delay(100);
+  await check('final 11 p.m. slot is fully accessible', `(()=>{const s=document.querySelector('.timetable-scroll'),d=document.querySelector('.timetable-day').getBoundingClientRect();return Math.abs(d.bottom-s.getBoundingClientRect().bottom)<2;})()`);
+  const screenshot = async name => { const result = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }); fs.writeFileSync(new URL(name, import.meta.url), Buffer.from(result.data, 'base64')); };
+  await screenshot('desktop.png');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await click('Week');
+  await until(`document.querySelectorAll('.timetable-day').length===7`);
+  await run(`document.querySelector('.timetable-scroll').scrollTop=1000;document.querySelector('.timetable-scroll').scrollLeft=300`);
+  await delay(200);
+  await check('mobile horizontal scrolling stays inside the timetable', `document.documentElement.scrollWidth<=390 && document.querySelector('.timetable-scroll').scrollWidth>document.querySelector('.timetable-scroll').clientWidth`);
+  await check('mobile date headers stay pinned', `Math.abs(document.querySelector('.timetable-day-head').getBoundingClientRect().top-document.querySelector('.timetable-scroll').getBoundingClientRect().top)<2`);
+  await check('summary cards remain removed', `!document.querySelector('.schedule-module .summary-grid')`);
+  await screenshot('mobile.png');
+  assert.deepEqual(errors, []);
+  fs.writeFileSync(new URL('results.json', import.meta.url), JSON.stringify({ checks, errors }, null, 2));
+  console.log(JSON.stringify({ passed: checks.length, checks, errors }, null, 2));
+} finally { socket.close(); }

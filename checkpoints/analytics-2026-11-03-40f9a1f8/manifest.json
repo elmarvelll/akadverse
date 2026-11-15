@@ -1,0 +1,72 @@
+{
+    "root":  "C:\\Productivity Layer\\schedule-manager",
+    "checkpoint":  "C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8",
+    "git":  "Installed, but directory is not a Git repository",
+    "commit":  null,
+    "existing":  [
+                     {
+                         "path":  "src/features/schedule/ScheduleManager.tsx",
+                         "beforeHash":  "2FDA37BCA1142A957254228C5470BC47DA842A6E55F873C3F2D73BB12487C3D6",
+                         "backup":  "C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\features\\schedule\\ScheduleManager.tsx",
+                         "afterHash":  "616C4C51813F3D397EA30ECB623F3E72C8AAED108E9F7F393AF941C4A123DE78"
+                     },
+                     {
+                         "path":  "src/features/tasks/TaskManager.tsx",
+                         "beforeHash":  "F2D34C184FDAAAC592782EC16A9DA6D45CC27B67D3D314CA256CD63DB1E4858E",
+                         "backup":  "C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\features\\tasks\\TaskManager.tsx",
+                         "afterHash":  "8A8636A1B78C408271DB744210DB71581B916923BC77A97AF50DC5A6E0AE3033"
+                     },
+                     {
+                         "path":  "src/app/globals.css",
+                         "beforeHash":  "34E1E6722DB3040D7FF73DEE25EAD7242023B8849D9A18650CC422CFBC40D80B",
+                         "backup":  "C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\src\\app\\globals.css",
+                         "afterHash":  "562720D92ABD1EA863C8726013ECBA7D46C130ED1F191CB901D61A5AB7794F4C"
+                     },
+                     {
+                         "path":  "README.md",
+                         "beforeHash":  "830E818AF8451680B11E07D20725BBE2CC277F2DC2A1F0A2B52A74C6B25D5FE9",
+                         "backup":  "C:\\Productivity Layer\\checkpoints\\analytics-2026-11-03-40f9a1f8\\before\\README.md",
+                         "afterHash":  "2A5BC9F8441842C66D71EA27C312C69F3E519E345797C9B4249A01F73AF38233"
+                     }
+                 ],
+    "created":  [
+                    {
+                        "path":  "src/features/analytics/periods.ts",
+                        "afterHash":  "9D0A24DB5DF8918BB3477FFC10092133B9E02C968A2B39A782897994F9B48753"
+                    },
+                    {
+                        "path":  "src/features/analytics/calculations.ts",
+                        "afterHash":  "F483EEDDC1D7EB4F55AE013DAABFEA266F27B4C94E60812288B28CDCD5BA697A"
+                    },
+                    {
+                        "path":  "src/features/analytics/Charts.tsx",
+                        "afterHash":  "6CB68E83CF8A7330E46EBFAEDFA85E5683C3D58C766AD4695C844ADD4AD852BA"
+                    },
+                    {
+                        "path":  "src/features/analytics/AnalyticsView.tsx",
+                        "afterHash":  "58D9B6E2683AA080721DD0B97B56320FECFF869A8EBC68A02CB2F8174EFA9097"
+                    },
+                    {
+                        "path":  "src/features/analytics/AnalyticsPanel.tsx",
+                        "afterHash":  "BBD9D00BDC978B5E337A69959236CBC8FE8CD2D3FCAB16E2249CA57053B1E15A"
+                    },
+                    {
+                        "path":  "tests/analytics.test.ts",
+                        "afterHash":  "F7BE8012A413400B02DB9C26228365E3A5C7CEA98022383D416135458EBCB926"
+                    },
+                    {
+                        "path":  "ANALYTICS.md",
+                        "afterHash":  "F96E27A5B8A7D566E4FD98B79E7960DB7BC41F570B24A634CAA0F9BD89E47D35"
+                    }
+                ],
+    "phase":  "verified-complete",
+    "dependenciesChanged":  false,
+    "dataMigration":  false,
+    "checks":  [
+                   "71 tests passed",
+                   "ESLint passed",
+                   "Production build passed",
+                   "TypeScript passed"
+               ],
+    "note":  "No Git repository: no feature branch or local commit. Existing source backups verified before edits and after verification; generated build artifacts excluded. No dependencies, lockfiles, schemas or stored records changed."
+}
