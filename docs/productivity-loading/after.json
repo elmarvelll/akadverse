@@ -1,0 +1,153 @@
+{
+  "label": "lifecycle-final",
+  "latencyMs": 150,
+  "fixture": {
+    "completedTasks": 60,
+    "openTasks": 10,
+    "dailyHabits": 2
+  },
+  "views": [
+    {
+      "section": "To-do List",
+      "readyMs": 18,
+      "requests": 0,
+      "codeRequests": 0,
+      "operations": [],
+      "bytes": 0,
+      "sqlQueries": 0
+    },
+    {
+      "section": "Schedule Manager",
+      "readyMs": 41,
+      "requests": 0,
+      "codeRequests": 0,
+      "operations": [],
+      "bytes": 0,
+      "sqlQueries": 0
+    },
+    {
+      "section": "Habit Tracker",
+      "readyMs": 26,
+      "requests": 0,
+      "codeRequests": 0,
+      "operations": [],
+      "bytes": 0,
+      "sqlQueries": 0
+    },
+    {
+      "section": "Today",
+      "readyMs": 23,
+      "requests": 0,
+      "codeRequests": 0,
+      "operations": [],
+      "bytes": 0,
+      "sqlQueries": 0
+    },
+    {
+      "section": "To-do List",
+      "readyMs": 19,
+      "requests": 0,
+      "codeRequests": 0,
+      "operations": [],
+      "bytes": 0,
+      "sqlQueries": 0
+    },
+    {
+      "section": "Schedule Manager",
+      "readyMs": 19,
+      "requests": 0,
+      "codeRequests": 0,
+      "operations": [],
+      "bytes": 0,
+      "sqlQueries": 0
+    },
+    {
+      "section": "Habit Tracker",
+      "readyMs": 16,
+      "requests": 0,
+      "codeRequests": 0,
+      "operations": [],
+      "bytes": 0,
+      "sqlQueries": 0
+    },
+    {
+      "section": "Today",
+      "readyMs": 21,
+      "requests": 0,
+      "codeRequests": 0,
+      "operations": [],
+      "bytes": 0,
+      "sqlQueries": 0
+    }
+  ],
+  "shellMs": 213,
+  "initialContentMs": 1157,
+  "defaultTitle": "Saturday, 14 November 2026",
+  "contentBeforePrefetch": {
+    "completedRequests": 1,
+    "bytes": 201827,
+    "sqlQueries": 19
+  },
+  "opensToday": true,
+  "initialPreparationMs": 1315,
+  "peakInitialRequests": 1,
+  "initialRequests": 2,
+  "initialOperations": [
+    "workspace.initial",
+    "official.range"
+  ],
+  "initialBytes": 202186,
+  "initialSqlQueries": 19,
+  "academicPrepared": true,
+  "taskTabs": [
+    {
+      "status": "active",
+      "readyMs": 2
+    },
+    {
+      "status": "pending",
+      "readyMs": 3
+    },
+    {
+      "status": "completed",
+      "readyMs": 4
+    },
+    {
+      "status": "missed",
+      "readyMs": 3
+    },
+    {
+      "status": "active",
+      "readyMs": 3
+    }
+  ],
+  "taskTabRequests": 0,
+  "journeyRequests": 2,
+  "additionalMonthRequests": 1,
+  "returnMonthRequests": 0,
+  "additionalHistoryPage": false,
+  "duplicateRequests": 0,
+  "requestDurations": [
+    {
+      "operation": "workspace.initial",
+      "durationMs": 191,
+      "bytes": 201827
+    },
+    {
+      "operation": "official.range",
+      "durationMs": 164,
+      "bytes": 359
+    },
+    {
+      "operation": "workspace.view",
+      "durationMs": 182,
+      "bytes": 168615
+    }
+  ],
+  "sqlDurationMs": 15,
+  "rapidSwitchRequests": 0,
+  "mutationUpdatesToday": true,
+  "earlySwitchWorks": true,
+  "partialFailureKeepsSectionsUsable": true,
+  "logoutProtectsWorkspace": true
+}

@@ -1,0 +1,28 @@
+{
+  "passed": 22,
+  "checks": [
+    "Edit opens the correct habit directly and does not select its calendar",
+    "Task settings, dates and repeat days are prefilled",
+    "Save explanation and actions are clear with no outcome controls",
+    "Cancel does not write any records",
+    "Closing without saving preserves all records",
+    "Invalid input is rejected before persistence",
+    "Saving updates eligible current tasks and visible recurrence text",
+    "Recorded today and past task records stay unchanged",
+    "Event form prefills its existing time range",
+    "Event edits preserve recorded today and past schedules, updating future slots",
+    "Summary still matches calendar height",
+    "Connected To-do uses saved settings",
+    "Desktop cards are compact rows with priority dots and source labels",
+    "Completion uses a small separate checkbox-style button",
+    "Card body opens exact details without completion",
+    "Checkbox completes without opening details",
+    "Completed rows are struck through with no outcome buttons",
+    "Mark missed stays separate and records an explicit miss",
+    "Task rows stay within the mobile viewport",
+    "Repeated navigation does not duplicate habit records",
+    "Mobile edit control has an identifying label and tooltip",
+    "Connected Schedule displays the updated future habit time"
+  ],
+  "errors": []
+}

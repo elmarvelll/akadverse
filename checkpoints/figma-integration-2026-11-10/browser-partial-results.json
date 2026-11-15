@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "Keyboard Enter opens the exact task",
+    "Task details contain no outcome controls",
+    "Ordinary completion saves without opening details",
+    "Overdue unresolved task remains Pending until explicitly missed",
+    "Ordinary deletion keeps the tombstone and history",
+    "Task habit deadline remains optional and empty",
+    "Event times are never invented",
+    "Only one actionable daily habit card appears despite stored monthly projections",
+    "Habit task exposes source-habit editing",
+    "To-do completion updates the matching tracker occurrence",
+    "Historical habit miss remains in the Missed tab",
+    "Habit-history filtering preserves ordinary task visibility",
+    "Week timetable displays seven real-date columns",
+    "Schedule Manager contains no outcome controls",
+    "Future week contains Monday/Wednesday/Friday habit slots",
+    "Habit event details show backup fallback and omit timezone"
+  ],
+  "errors": [],
+  "failure": "Error: Error: Label missing Summary\n    at <anonymous>:1:149\n    at <anonymous>:1:569"
+}

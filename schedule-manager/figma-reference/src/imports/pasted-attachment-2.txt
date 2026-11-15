@@ -1,0 +1,110 @@
+Redesign the Student Attendance section of the student portal for Covenant University.
+
+When a student clicks Attendance, the page should display two main cards at the top:
+
+[ Class Attendance ]   [ Student Affairs ]
+
+Class Attendance → Keep existing design (no changes).
+
+Student Affairs → Opens a Student Affairs Attendance Dashboard.
+
+Student Affairs Attendance Dashboard
+1. Top Attendance Categories
+
+Display two cards at the top of the dashboard:
+
+[ Chapel Service ]   [ Roll Call ]
+
+Each card should include:
+
+Icon
+
+Title
+
+Short description
+
+Example:
+
+Chapel Service – Track your weekly chapel attendance
+Roll Call – Track your daily roll call attendance
+
+Clicking a card updates the interactive calendar below.
+
+2. Interactive Calendar
+
+The calendar should be monthly view with the following color coding:
+
+Green → Event attended
+
+Red → Event missed
+
+Grey → No event scheduled
+
+White → Event scheduled but date not reached yet
+
+Calendar should allow:
+
+Switching months
+
+Hovering over dates to see attendance details
+
+Clicking a date for more info
+
+Example tooltip:
+
+May 6
+Chapel Service
+Status: Attended
+3. Chapel Service Logic
+
+Chapel services occur on specific days based on the student’s college:
+
+College of Engineering (CoE) → Tuesday
+
+CLDS → Tuesday
+
+CMSS → Thursday
+
+CST → Thursday
+
+Calendar behavior:
+
+White → upcoming chapel date
+
+Green → attended
+
+Red → missed
+
+Grey → day with no chapel service
+
+4. Roll Call Logic
+
+Roll call occurs every day.
+
+Calendar behavior:
+
+Green → completed
+
+Red → missed
+
+No grey days (since roll call happens daily)
+
+5. Optional Category: Youth Alive
+
+This attendance category can be randomized for now:
+
+Green → attended
+
+Red → missed
+
+Design Goal
+
+The Student Affairs Attendance Dashboard should feel:
+
+Clear and visually structured
+
+Easy to track attendance status at a glance
+
+Color-coded for instant comprehension
+
+Interactive with hover and click details

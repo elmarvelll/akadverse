@@ -1,0 +1,18 @@
+{
+  "configuration": {
+    "variable": "DATABASE_URL",
+    "endpointClass": "remote",
+    "port": "6543",
+    "transactionPooler": true
+  },
+  "checks": [
+    {
+      "ms": 3756,
+      "ok": true
+    },
+    {
+      "ms": 1320,
+      "ok": true
+    }
+  ]
+}

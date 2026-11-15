@@ -1,0 +1,8 @@
+2026/11/10-21:51:05.707 a5c8 Creating DB C:\Productivity Layer\checkpoints\figma-integration-2026-11-10\browser-profile\Default\Local Storage\leveldb since it was missing.
+2026/11/10-21:51:05.718 a5c8 Reusing MANIFEST C:\Productivity Layer\checkpoints\figma-integration-2026-11-10\browser-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/11/10-22:45:41.707 9570 Level-0 table #5: started
+2026/11/10-22:45:41.714 9570 Level-0 table #5: 13969 bytes OK
+2026/11/10-22:45:41.717 9570 Delete type=0 #3
+2026/11/10-23:26:03.122 9570 Level-0 table #7: started
+2026/11/10-23:26:03.157 9570 Level-0 table #7: 13917 bytes OK
+2026/11/10-23:26:03.162 9570 Delete type=0 #4

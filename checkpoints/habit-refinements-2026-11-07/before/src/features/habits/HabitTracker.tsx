@@ -1,0 +1,71 @@
+"use client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { WorkspaceSections } from "../workspace/WorkspaceSections";
+import { WorkspaceButton, useWorkspaceNavigation } from "../workspace/WorkspaceNavigation";
+import { developmentIdentity } from "../schedule/adapters";
+import { addDays, localNow, type Student } from "../schedule/domain";
+import { Dialog, Stamp } from "../schedule/Forms";
+import { taskViewStatus } from "../tasks/domain";
+import { rangeDays } from "../analytics/periods";
+import { browserHabits } from "./browser";
+import { feedback, monthRange, outcome, type Habit, type Occurrence } from "./domain";
+import { HabitGrid } from "./HabitGrid";
+import { HabitForm } from "./HabitForm";
+import { HabitReplan } from "./HabitReplan";
+
+export function HabitTracker({ initialHabitId, initialDate }: { initialHabitId?: string; initialDate?: string }) {
+  const navigate = useWorkspaceNavigation();
+  const [student, setStudent] = useState<Student>(), [clock, setClock] = useState<Date>();
+  const [month, setMonth] = useState(initialDate || ""), [habits, setHabits] = useState<Habit[]>(), [items, setItems] = useState<Occurrence[]>([]), [feedbackItems, setFeedbackItems] = useState<Occurrence[]>([]);
+  const [period, setPeriod] = useState<"week" | "month">("month"), [weekDate, setWeekDate] = useState("");
+  const [editor, setEditor] = useState<{ habit?: Habit }>(), [selected, setSelected] = useState<{ habitId: string; date: string }>(), [detail, setDetail] = useState<string>();
+  const [error, setError] = useState(""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [replanning, setReplanning] = useState(false);
+  const saving = useRef(false);
+  const load = useCallback(async () => {
+    const current = await developmentIdentity.getCurrentStudent(), now = new Date(), today = localNow(current.timezone, now).date;
+    const range = monthRange(month || today);
+    const records = await browserHabits.synchronize(range);
+    const feedbackRange = period === "week" ? (() => { const date = weekDate || today, weekday = new Date(date + "T12:00:00Z").getUTCDay(), start = addDays(date, -((weekday + 6) % 7)); return { start, end: addDays(start, 6) }; })() : range;
+    const feedbackRecords = period === "month" ? records : await browserHabits.synchronize(feedbackRange);
+    setStudent(current); setClock(now); setMonth(range.start); setWeekDate(previous => previous || today); setHabits(await browserHabits.list()); setItems(records); setFeedbackItems(feedbackRecords); setError(""); setLoading(false);
+  }, [month, period, weekDate]);
+  useEffect(() => {
+    const refresh = () => { void load().catch(error => { setError((error as Error).message); setLoading(false); }); };
+    refresh();
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener("focus", refresh); window.addEventListener("storage", refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); window.removeEventListener("storage", refresh); };
+  }, [load]);
+  async function mutate(operation: () => Promise<unknown>, message: string) {
+    if (saving.current) return; saving.current = true; setBusy(true); setError(""); setNotice("");
+    try { await operation(); setNotice(message); await load(); } catch (error) { setError((error as Error).message); } finally { saving.current = false; setBusy(false); }
+  }
+  const selectedKey = selected || (initialHabitId && initialDate ? { habitId: initialHabitId, date: initialDate } : undefined);
+  const occurrence = selectedKey && items.find(item => item.habitId === selectedKey.habitId && item.date === selectedKey.date);
+  const detailHabit = habits?.find(habit => habit.id === (detail || (!initialDate && initialHabitId)));
+  const close = () => { if (!saving.current) { setSelected(undefined); setDetail(undefined); setReplanning(false); navigate({ section: "habits" }); } };
+  if (!habits || !student || !clock) return <main className="loading"><h1>Habit Tracker</h1>{error ? <p role="alert" className="error">{error}</p> : <p role="status">Loading habits...</p>}<button onClick={() => void load().catch(e => setError(e.message))}>Retry loading</button><WorkspaceButton section="schedule">Schedule Manager</WorkspaceButton></main>;
+  const today = localNow(student.timezone, clock).date, range = monthRange(month || today), now = localNow(student.timezone, clock);
+  const currentOutcome = occurrence && outcome(occurrence);
+  const canMiss = occurrence && currentOutcome === "unrecorded" && (occurrence.task ? taskViewStatus(occurrence.task, student.timezone, clock) === "pending" : !!occurrence.event && occurrence.event.slot.date + occurrence.event.slot.end <= now.date + now.time);
+  const canComplete = occurrence && (currentOutcome === "unrecorded" || (currentOutcome === "missed" && occurrence.event?.history.some(entry => entry.kind === "rescheduled")));
+  return <div className="app-shell"><aside className="sidebar"><WorkspaceButton className="brand" section="schedule"><span className="brand-mark">P</span><span>Productivity<span className="brand-sub">LAYER</span></span></WorkspaceButton><p className="nav-label">YOUR WORKSPACE</p><WorkspaceSections active="habits" /><div className="sidebar-bottom"><span className="avatar">DS</span><div><strong>{student.name}</strong><small>Prototype identity</small></div></div></aside><div className="main-shell"><header className="topbar"><span>Workspace / Habit Tracker</span><span className="prototype">LOCAL PROTOTYPE</span></header><main className="content">
+    <div className="page-heading"><div><p className="eyebrow">BUILD YOUR RHYTHM</p><h1>Habit Tracker</h1><p className="muted">One occurrence, one shared outcome. Dates use {student.timezone}.</p></div><button className="primary" disabled={busy} onClick={() => setEditor({})}>Create habit</button></div>
+    {error && <p className="error" role="alert">{error} <button onClick={() => void load().catch(e => setError(e.message))}>Retry loading</button></p>}{notice && <p className="notice" role="status">{notice}</p>}{busy && <p role="status">Saving...</p>}
+    {initialHabitId && !habits.some(habit => habit.id === initialHabitId) && <p className="notice" role="status">The originating habit definition is unavailable for this student. Existing linked task or event records have been preserved; no repeating settings were inferred.</p>}
+    <section className="schedule-panel" aria-label="Habit calendar"><div className="panel-toolbar habit-toolbar"><button aria-label="Previous month" onClick={() => setMonth(monthRange(addDays(range.start, -1)).start)}>Previous month</button><h2>{new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(range.start + "T12:00:00Z"))}</h2><button aria-label="Next month" onClick={() => setMonth(addDays(range.end, 1))}>Next month</button><button onClick={() => setMonth(monthRange(today).start)}>Current month</button></div>
+    <p className="hint habit-legend">Green: completed · Red: explicitly missed · Black: not scheduled · Neutral: scheduled, no outcome · Amber: completion needs review</p>
+    {!habits.length ? <div className="empty"><h2>No habits yet</h2><p>Create a daily habit or choose the weekdays that work for you.</p></div> : <HabitGrid habits={habits} dates={rangeDays(range)} occurrences={items} today={today} onOpen={item => { setSelected({ habitId: item.habitId, date: item.date }); setError(""); }} onHabit={setDetail} />}
+    </section>
+    <section className="schedule-panel habit-feedback"><h2>Habit feedback</h2><label>Period<select value={period} onChange={e => setPeriod(e.target.value as "week" | "month")}><option value="month">Displayed month</option><option value="week">Selected week</option></select></label>{period === "week" && <label>Week containing<input type="date" required value={weekDate} onChange={e => { if (e.target.value) setWeekDate(e.target.value); }} /></label>}<p className="hint">Due at the intended task time or original event end. Future occurrences are excluded. A passed time never records a miss.</p>{habits.map(habit => { const counts = feedback(feedbackItems, habit.id, now); return <article className="habit-feedback-row" key={habit.id}><h3><button onClick={() => setDetail(habit.id)}>{habit.revisions.at(-1)!.name}</button></h3>{counts.due ? <><p>{counts.completed} completed, {counts.missed} missed, {counts.unrecorded} unrecorded out of {counts.due} due{counts.review ? `; ${counts.review} needing review` : ""}.</p><p className="muted">{counts.review ? "Review rescheduled completion credit before assessing this habit." : counts.completed === counts.due ? "Keeping up with the planned frequency." : "Needs attention: review missed or unrecorded occurrences."}</p></> : <p>No occurrences due</p>}{counts.review > 0 && <p className="notice">{counts.review} rescheduled completion(s) excluded from feedback counts pending credit review.</p>}</article>; })}</section>
+    <footer className="page-footer">Browser persistence · No account sync</footer>
+  </main></div>
+  {editor && <HabitForm habit={editor.habit} onClose={() => setEditor(undefined)} onSave={async input => { await browserHabits.save(input, editor.habit?.id); setNotice("Habit saved. Changes to existing habits apply from tomorrow."); await load().catch(error => setError(`Habit settings were saved, but generated occurrences could not be refreshed: ${error.message}. Retry loading; do not create the habit again.`)); }} />}
+  {detailHabit && !editor && <Dialog title={detailHabit.revisions.at(-1)!.name} onClose={close}><div className="detail"><p>{detailHabit.revisions.at(-1)!.description || "No description"}</p><dl><dt>Type</dt><dd>{detailHabit.revisions.at(-1)!.type}</dd><dt>Frequency</dt><dd>{detailHabit.revisions.at(-1)!.frequency === "daily" ? "Daily" : detailHabit.revisions.at(-1)!.weekdays.map(day => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day]).join(", ")}</dd><dt>Time</dt><dd>{detailHabit.revisions.at(-1)!.time}{detailHabit.revisions.at(-1)!.type === "event" ? `–${detailHabit.revisions.at(-1)!.end}` : ""}</dd><dt>Priority</dt><dd>{detailHabit.revisions.at(-1)!.priority}</dd><dt>First eligible date</dt><dd>{detailHabit.createdDate}</dd></dl><p>Latest settings take effect {detailHabit.revisions.at(-1)!.effectiveDate}. {detailHabit.revisions.at(-1)!.archived ? "Archived from that date; earlier history remains." : "Enabled from that date."}</p><div className="detail-actions"><button disabled={busy} onClick={() => { setEditor({ habit: detailHabit }); }}>Edit habit</button><button disabled={busy} onClick={() => void mutate(() => browserHabits.archive(detailHabit.id, !detailHabit.revisions.at(-1)!.archived), "Repeating settings updated from tomorrow. Past records preserved.")}>{detailHabit.revisions.at(-1)!.archived ? "Restore habit" : "Archive habit"}</button></div><details><summary>Settings history</summary>{detailHabit.revisions.map((revision, index) => <p key={index}>{revision.effectiveDate}: {revision.name}, {revision.type}, {revision.frequency}, {revision.time}{revision.end && revision.type === "event" ? `–${revision.end}` : ""}, {revision.archived ? "archived" : "enabled"} · <Stamp value={revision.at} timezone={student.timezone} /></p>)}</details></div></Dialog>}
+  {occurrence && !replanning && <Dialog title={occurrence.task?.title || occurrence.event?.title || occurrence.settings.name} onClose={close}><div className="detail"><p>{occurrence.task?.description || occurrence.event?.description || occurrence.settings.description || "No description"}</p><dl><dt>Original date</dt><dd>{occurrence.date}</dd><dt>Scheduled time</dt><dd>{occurrence.task?.dueTime || `${occurrence.event?.originalSlot.start}–${occurrence.event?.originalSlot.end}`}</dd><dt>Outcome</dt><dd>{currentOutcome === "unrecorded" ? "No outcome recorded" : currentOutcome}</dd>{occurrence.event && <><dt>Current event time</dt><dd>{occurrence.event.slot.date} · {occurrence.event.slot.start}–{occurrence.event.slot.end}</dd></>}</dl>{(occurrence.task?.completedAt || occurrence.event?.completedAt) && <p>Completed: <Stamp value={(occurrence.task?.completedAt || occurrence.event?.completedAt)!} timezone={student.timezone} /></p>}{(occurrence.task?.missedAt || occurrence.event?.history.find(entry => entry.kind === "missed")?.at) && <p>Missed outcome recorded: <Stamp value={(occurrence.task?.missedAt || occurrence.event?.history.find(entry => entry.kind === "missed")?.at)!} timezone={student.timezone} /></p>}
+    {currentOutcome === "review" && <p className="notice">This event was rescheduled and then completed. Its outcome and timestamps are retained; grid-date credit and feedback completion credit require review.</p>}
+    {error && <p className="error" role="alert">{error}</p>}<div className="detail-actions">{canComplete && <button className="primary" disabled={busy} onClick={() => void mutate(() => browserHabits.record(occurrence.habitId, occurrence.date, "completed"), "Completion saved to the shared occurrence.")}>Complete</button>}{canMiss && <button className="danger" disabled={busy} onClick={() => void mutate(() => browserHabits.record(occurrence.habitId, occurrence.date, "missed"), "Missed outcome saved. The occurrence has not moved.")}>Mark missed</button>}{occurrence.event?.status === "requires-replanning" && <button disabled={busy} onClick={() => setReplanning(true)}>Replan event</button>}{occurrence.task && <WorkspaceButton section="tasks" taskId={occurrence.task.id}>Open linked task</WorkspaceButton>}</div>{occurrence.task && <p className="hint">Complete before or after the deadline. Mark missed becomes available when the deadline arrives.</p>}{occurrence.event && <p className="hint">Mark missed becomes available at the scheduled event end. Replanning is a separate action after an explicit miss.</p>}</div></Dialog>}
+  {occurrence?.event && replanning && <HabitReplan event={occurrence.event} onClose={() => setReplanning(false)} onSave={async (slot, options) => { await browserHabits.replan(occurrence.event!, slot, options); await load(); setReplanning(false); setNotice("Event replanned. The original missed attempt remains in history."); }} />}
+  {loading && <span role="status">Loading...</span>}
+  </div>;
+}

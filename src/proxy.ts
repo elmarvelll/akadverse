@@ -35,6 +35,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { Role } from "@prisma/client";
+import { canUseDevSession } from "@/lib/dev-login-policy";
 
 // Page routes that must stay reachable without being signed in.
 const PUBLIC_PAGE_PATHS = ["/login", "/signup"];
@@ -120,10 +121,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // verification. Because src/lib/auth.ts's `jwt` callback already stashes
   // `role` on the token, we get it here for free — no extra database call
   // needed inside the proxy.
-  const token = await getToken({
+  let token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
+  if (token?.devLogin && !canUseDevSession()) token = null;
 
   // Signed in and hitting "/": dispatch to the role's dashboard instead of
   // rendering a generic homepage.

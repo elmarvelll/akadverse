@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The standalone app has its own ESLint config; checkpoints are historical copies.
+    "schedule-manager/**",
+    "checkpoints/**",
     // Prisma-generated clients (src/generated is git-ignored and rebuilt by `prisma generate`) — not our code.
     "src/generated/**",
   ]),

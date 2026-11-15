@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AkadVerse — Platform Visual Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&family=Mulish:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#07080f;--border:#1a2030;
+  --student:#3b82f6;--faculty:#10b981;--admin:#f59e0b;
+  --prod:#8b5cf6;--ai:#ec4899;--menu:#06b6d4;--elearn:#22c55e;
+  --nomvp-bdr:#ef4444;--nomvp-bg:#1f0a0a;--nomvp-txt:#f87171;
+  --muted:#475569;--head:#f8fafc;--text:#cbd5e1;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Mulish',sans-serif;
+  --disp:'Syne',sans-serif;
+}
+body{background:var(--bg);font-family:var(--sans);color:var(--text);min-height:100vh;}
+
+.topbar{
+  position:sticky;top:0;z-index:300;
+  background:rgba(7,8,15,.97);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  padding:9px 24px;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.logo{font-family:var(--disp);font-size:16px;font-weight:800;color:var(--head);}
+.logo span{color:var(--student);}
+.legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;}
+.leg{display:flex;align-items:center;gap:5px;font-size:9.5px;font-family:var(--mono);color:var(--muted);}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.ctrl-btn{background:#1a2030;border:1px solid #334155;color:#94a3b8;border-radius:4px;padding:2px 9px;cursor:pointer;font-size:13px;}
+.ctrl-btn:hover{background:#334155;}
+.zlbl{font-family:var(--mono);font-size:9px;color:var(--muted);}
+
+.outer{overflow-x:auto;overflow-y:auto;padding:36px 40px 80px;}
+.diagram{display:inline-block;min-width:max-content;}
+.scaled{transform-origin:top left;transition:transform .2s;}
+
+.node{
+  border-radius:6px;border:1px solid;
+  text-align:center;position:relative;
+  white-space:nowrap;display:inline-flex;
+  flex-direction:column;align-items:center;justify-content:center;
+  transition:transform .13s,box-shadow .13s;cursor:default;
+}
+.node:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.55);}
+.nsub{display:block;font-family:var(--mono);font-size:7.5px;opacity:.7;margin-top:2px;}
+
+.sz-root  {padding:13px 26px;font-size:18px;font-weight:800;font-family:var(--disp);}
+.sz-portal{padding:9px 18px;font-size:12px;font-weight:800;font-family:var(--disp);}
+.sz-domain{padding:7px 13px;font-size:11px;font-weight:700;}
+.sz-sub   {padding:6px 11px;font-size:10.5px;font-weight:600;}
+.sz-leaf  {padding:5px 9px;font-size:9.5px;font-weight:500;}
+.sz-entry {padding:6px 14px;font-size:10.5px;font-weight:600;}
+
+.c-root    {background:#111827;border-color:#6366f1;color:#e0e7ff;box-shadow:0 0 32px rgba(99,102,241,.2);}
+.c-entry   {background:#0f172a;border-color:#334155;color:#94a3b8;}
+.c-student {background:#1e3a5f;border-color:var(--student);color:#bfdbfe;}
+.c-faculty {background:#064e3b;border-color:var(--faculty);color:#a7f3d0;}
+.c-admin   {background:#451a03;border-color:var(--admin);color:#fde68a;}
+.c-prod    {background:#2e1065;border-color:var(--prod);color:#ddd6fe;}
+.c-ai      {background:#500724;border-color:var(--ai);color:#fbcfe8;}
+.c-menu    {background:#083344;border-color:var(--menu);color:#a5f3fc;}
+.c-elearn  {background:#052e16;border-color:var(--elearn);color:#bbf7d0;}
+.c-lf-menu {background:#041e28;border-color:rgba(6,182,212,.4);color:#67e8f9;}
+.c-lf-el   {background:#011a0e;border-color:rgba(34,197,94,.4);color:#86efac;}
+
+.nomvp{background:var(--nomvp-bg)!important;border-color:var(--nomvp-bdr)!important;color:var(--nomvp-txt)!important;box-shadow:0 0 8px rgba(239,68,68,.18)!important;}
+.nomvp::after{content:'✕ NOT MVP';position:absolute;top:-8px;right:4px;background:#ef4444;color:#fff;font-family:var(--mono);font-size:6.5px;font-weight:700;letter-spacing:.8px;padding:1px 4px;border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Akad<span>Verse</span>
+    <span style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:8px;font-weight:400;">/ Platform Visual Map v2.1</span>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#3b82f6"></div>Student</div>
+      <div class="leg"><div class="leg-dot" style="background:#10b981"></div>Faculty</div>
+      <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>Admin</div>
+      <div class="leg"><div class="leg-dot" style="background:#8b5cf6"></div>Productivity</div>
+      <div class="leg"><div class="leg-dot" style="background:#ec4899"></div>AI Studio</div>
+      <div class="leg"><div class="leg-dot" style="background:#06b6d4"></div>Main Menu</div>
+      <div class="leg"><div class="leg-dot" style="background:#22c55e"></div>E-Learning</div>
+      <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>Not MVP</div>
+    </div>
+    <button class="ctrl-btn" onclick="zoomBy(0.1)">+</button>
+    <button class="ctrl-btn" onclick="zoomBy(-0.1)">−</button>
+    <button class="ctrl-btn" onclick="resetZoom()">Reset</button>
+    <span class="zlbl" id="zlbl">100%</span>
+  </div>
+</div>
+
+<div class="outer">
+<div class="diagram">
+<div class="scaled" id="scaled">
+<div id="tree"></div>
+</div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA — Productivity & AI Studio: no children
+// ═══════════════════════════════════════════
+
+const PORTALS = [
+  {
+    label:'🎓 Student Portal', cls:'sz-portal c-student', color:'#3b82f6',
+    domains:[
+      // ── COLLAPSED: no subs
+      { label:'⚡ Productivity Layer', cls:'sz-domain c-prod', color:'#8b5cf6',
+        sub:'Gemini · YouTube · Docs · Sheets · Forms · Drive',
+        subs:[] },
+      // ── COLLAPSED: no subs
+      { label:'🤖 AI Studio', cls:'sz-domain c-ai', color:'#ec4899',
+        sub:'23-component AI architecture',
+        subs:[] },
+      {
+        label:'☰ Main Menu', cls:'sz-domain c-menu', color:'#06b6d4', subs:[
+          { label:'Student Dashboard',      cls:'sz-sub c-lf-menu' },
+          { label:'Communication Infra.',   cls:'sz-sub c-lf-menu nomvp', sub:'Peer messaging · Groups', nomvp:true },
+          { label:'Marketplace',            cls:'sz-sub c-lf-menu',
+            leaves:[
+              { label:'Business Market', cls:'sz-leaf c-lf-menu' },
+              { label:'Skills Market',   cls:'sz-leaf c-lf-menu' },
+            ]
+          },
+          { label:'Opportunity Hub',        cls:'sz-sub c-lf-menu nomvp', sub:'Scholarships · Internships', nomvp:true },
+          { label:'Student Essentials',     cls:'sz-sub c-lf-menu',
+            leaves:[
+              { label:'Schedule Manager',   cls:'sz-leaf c-lf-menu' },
+              { label:'Attendance',         cls:'sz-leaf c-lf-menu' },
+              { label:'Email Integration',  cls:'sz-leaf c-lf-menu' },
+              { label:'Suggestions',        cls:'sz-leaf c-lf-menu' },
+            ]
+          },
+        ]
+      },
+      {
+        label:'📚 E-Learning', cls:'sz-domain c-elearn', color:'#22c55e', subs:[
+          { label:'E-Learning Dashboard',   cls:'sz-sub c-lf-el' },
+          { label:'Communication Infra.',   cls:'sz-sub c-lf-el nomvp', sub:'Discussions · Peer chat', nomvp:true },
+          { label:'Learning Essentials',    cls:'sz-sub c-lf-el',
+            leaves:[
+              { label:'Course Control',     cls:'sz-leaf c-lf-el' },
+              { label:'My Learning',        cls:'sz-leaf c-lf-el' },
+              { label:'Academic Records',   cls:'sz-leaf c-lf-el' },
+              { label:'Suggestions',        cls:'sz-leaf c-lf-el' },
+            ]
+          },
+          { label:'Learning Resources',     cls:'sz-sub c-lf-el', sub:'Single page' },
+        ]
+      },
+    ]
+  },
+  {
+    label:'🏫 Faculty Portal', cls:'sz-portal c-faculty', color:'#10b981',
+    domains:[
+      { label:'⚡ Productivity Layer', cls:'sz-domain c-prod', color:'#8b5cf6',
+        sub:'Gemini · YouTube · Docs · Sheets · Forms · Drive',
+        subs:[] },
+      { label:'🤖 AI Studio', cls:'sz-domain c-ai', color:'#ec4899',
+        sub:'23-component AI architecture',
+        subs:[] },
+      {
+        label:'☰ Main Menu', cls:'sz-domain c-menu', color:'#06b6d4', subs:[
+          { label:'Faculty Dashboard',      cls:'sz-sub c-lf-menu' },
+          { label:'Communication Infra.',   cls:'sz-sub c-lf-menu nomvp', sub:'Peer messaging · Groups', nomvp:true },
+          { label:'Marketplace',            cls:'sz-sub c-lf-menu',
+            leaves:[
+              { label:'Business Market', cls:'sz-leaf c-lf-menu' },
+              { label:'Skills Market',   cls:'sz-leaf c-lf-menu' },
+            ]
+          },
+          { label:'Opportunity Hub',        cls:'sz-sub c-lf-menu nomvp', sub:'Scholarships · Internships', nomvp:true },
+          { label:'Faculty Essentials',     cls:'sz-sub c-lf-menu',
+            leaves:[
+              { label:'Schedule Manager',   cls:'sz-leaf c-lf-menu' },
+              { label:'Attendance',         cls:'sz-leaf c-lf-menu' },
+              { label:'Email Integration',  cls:'sz-leaf c-lf-menu' },
+              { label:'Suggestions',        cls:'sz-leaf c-lf-menu' },
+            ]
+          },
+        ]
+      },
+      {
+        label:'📚 E-Learning', cls:'sz-domain c-elearn', color:'#22c55e', subs:[
+          { label:'Faculty E-Learning Dashboard', cls:'sz-sub c-lf-el' },
+          { label:'Communication Infra.',   cls:'sz-sub c-lf-el nomvp', sub:'Discussions · Peer chat', nomvp:true },
+          { label:'Teaching Essentials',    cls:'sz-sub c-lf-el',
+            leaves:[
+              { label:'Schedule Manager',   cls:'sz-leaf c-lf-el' },
+              { label:'Attendance',         cls:'sz-leaf c-lf-el' },
+              { label:'Email Integration',  cls:'sz-leaf c-lf-el' },
+              { label:'Suggestions',        cls:'sz-leaf c-lf-el' },
+            ]
+          },
+          { label:'Faculty Resources',      cls:'sz-sub c-lf-el', sub:'Single page' },
+        ]
+      },
+    ]
+  },
+  {
+    label:'⚙ Admin Portal', cls:'sz-portal c-admin', color:'#f59e0b',
+    domains:[
+      { label:'⚡ Productivity Layer', cls:'sz-domain c-prod', color:'#8b5cf6',
+        sub:'Gemini · YouTube · Docs · Sheets · Forms · Drive',
+        subs:[] },
+      { label:'🤖 AI Studio', cls:'sz-domain c-ai', color:'#ec4899',
+        sub:'23-component AI architecture + Admin Agents',
+        subs:[] },
+      {
+        label:'☰ Main Menu', cls:'sz-domain c-menu', color:'#06b6d4', subs:[
+          { label:'Admin Dashboard',        cls:'sz-sub c-lf-menu' },
+          { label:'Communication Infra.',   cls:'sz-sub c-lf-menu nomvp', sub:'Peer messaging · Groups', nomvp:true },
+          { label:'Marketplace',            cls:'sz-sub c-lf-menu',
+            leaves:[
+              { label:'Business Market', cls:'sz-leaf c-lf-menu' },
+              { label:'Skills Market',   cls:'sz-leaf c-lf-menu' },
+            ]
+          },
+          { label:'Opportunity Hub',        cls:'sz-sub c-lf-menu nomvp', sub:'Scholarships · Internships', nomvp:true },
+          { label:'Smart Admin System',     cls:'sz-sub c-lf-menu nomvp', sub:'Institutional intelligence · KPIs', nomvp:true },
+        ]
+      },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════
+const STEM = 18;
+const TICK = 14;
+const GAP_PORTAL  = 32;
+const GAP_DOMAIN  = 12;
+const GAP_SUB     = 10;
+const GAP_LEAF    = 8;
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+
+function el(tag, css='', cls='') {
+  const d = document.createElement(tag);
+  if (css) d.style.cssText = css;
+  if (cls) d.className = cls;
+  return d;
+}
+
+function vl(h, color, op=0.5) {
+  return el('div', `width:2px;height:${h}px;background:${color};opacity:${op};margin:0 auto;flex-shrink:0;`);
+}
+
+function makeNode(label, cls, sub) {
+  const d = el('div', '', 'node ' + cls);
+  const s = el('span'); s.textContent = label;
+  d.appendChild(s);
+  if (sub) {
+    const sm = el('span', '', 'nsub');
+    sm.textContent = sub;
+    d.appendChild(sm);
+  }
+  return d;
+}
+
+// Wrap children in a row with h-bar + ticks drawn post-layout
+function branchRow(children, color, gap) {
+  const wrap = el('div', 'position:relative;display:flex;flex-direction:column;align-items:center;');
+  wrap.dataset.hbar = color;
+  wrap.dataset.hbarDone = '0';
+
+  const row = el('div', `display:flex;flex-direction:row;align-items:flex-start;gap:${gap}px;`);
+  children.forEach(child => {
+    const cell = el('div', 'display:flex;flex-direction:column;align-items:center;');
+    cell.appendChild(vl(TICK, color));
+    cell.appendChild(child);
+    row.appendChild(cell);
+  });
+  wrap.appendChild(row);
+  return wrap;
+}
+
+// Single-child straight connector
+function straightDown(child, color) {
+  const wrap = el('div', 'display:flex;flex-direction:column;align-items:center;');
+  wrap.appendChild(vl(TICK, color));
+  wrap.appendChild(child);
+  return wrap;
+}
+
+// ═══════════════════════════════════════════
+// BUILD FUNCTIONS
+// ═══════════════════════════════════════════
+
+function buildLeaves(leaves, color) {
+  if (!leaves || leaves.length === 0) return null;
+  const nodes = leaves.map(l => makeNode(l.label, l.cls, l.sub || null));
+  const wrap = el('div', 'display:flex;flex-direction:column;align-items:center;');
+  wrap.appendChild(vl(STEM, color, 0.4));
+  if (nodes.length === 1) {
+    wrap.appendChild(straightDown(nodes[0], color));
+  } else {
+    wrap.appendChild(branchRow(nodes, color, GAP_LEAF));
+  }
+  return wrap;
+}
+
+function buildSub(sub, domColor) {
+  const col = el('div', 'display:flex;flex-direction:column;align-items:center;');
+  const sNode = makeNode(sub.label, sub.cls, sub.sub || null);
+  sNode.style.minWidth = '100px';
+  col.appendChild(sNode);
+  if (sub.leaves && sub.leaves.length > 0) {
+    const leavesBlock = buildLeaves(sub.leaves, domColor);
+    if (leavesBlock) col.appendChild(leavesBlock);
+  }
+  return col;
+}
+
+function buildDomain(domain, portalColor) {
+  const col = el('div', 'display:flex;flex-direction:column;align-items:center;');
+
+  // tick from portal h-bar (added by caller)
+  const dNode = makeNode(domain.label, domain.cls, domain.sub || null);
+  dNode.style.minWidth = '130px';
+  col.appendChild(dNode);
+
+  // If no subs → terminal node (Productivity Layer, AI Studio)
+  if (!domain.subs || domain.subs.length === 0) return col;
+
+  col.appendChild(vl(STEM, domain.color, 0.5));
+
+  const subNodes = domain.subs.map(s => buildSub(s, domain.color));
+
+  if (subNodes.length === 1) {
+    col.appendChild(straightDown(subNodes[0], domain.color));
+  } else {
+    col.appendChild(branchRow(subNodes, domain.color, GAP_SUB));
+  }
+
+  return col;
+}
+
+function buildPortal(portal) {
+  const col = el('div', 'display:flex;flex-direction:column;align-items:center;');
+
+  // tick added by caller
+  const pNode = makeNode(portal.label, portal.cls);
+  pNode.style.minWidth = '155px';
+  col.appendChild(pNode);
+  col.appendChild(vl(STEM, portal.color, 0.6));
+
+  const domNodes = portal.domains.map(d => buildDomain(d, portal.color));
+
+  if (domNodes.length === 1) {
+    col.appendChild(straightDown(domNodes[0], portal.color));
+  } else {
+    col.appendChild(branchRow(domNodes, portal.color, GAP_DOMAIN));
+  }
+
+  return col;
+}
+
+function buildTree() {
+  const root = document.getElementById('tree');
+  root.style.cssText = 'display:flex;flex-direction:column;align-items:center;padding-bottom:40px;';
+
+  // ROOT
+  const rootNode = makeNode('AkadVerse', 'sz-root c-root', 'Unified AI-Powered Education Platform');
+  root.appendChild(rootNode);
+  root.appendChild(vl(STEM, '#6366f1', 0.7));
+
+  // LANDING
+  const landingNode = makeNode('Landing Page', 'sz-entry c-entry', 'Public · Marketing');
+  root.appendChild(landingNode);
+  root.appendChild(vl(STEM, '#334155', 0.5));
+
+  // SIGN IN + CREATE ACCOUNT
+  const entryNodes = [
+    makeNode('Sign In', 'sz-entry c-entry'),
+    makeNode('Create Account', 'sz-entry c-entry'),
+  ];
+  const entryBranch = branchRow(entryNodes, '#334155', GAP_LEAF);
+  root.appendChild(entryBranch);
+  root.appendChild(vl(STEM + 8, '#334155', 0.35));
+
+  // PORTALS
+  const portalNodes = PORTALS.map(p => buildPortal(p));
+  const portalsBranch = branchRow(portalNodes, '#6366f1', GAP_PORTAL);
+  root.appendChild(portalsBranch);
+
+  // Draw h-bars after layout
+  requestAnimationFrame(() => requestAnimationFrame(() => drawHBars(root)));
+}
+
+// ═══════════════════════════════════════════
+// H-BAR DRAWING (post-layout)
+// ═══════════════════════════════════════════
+function drawHBars(root) {
+  const wrappers = root.querySelectorAll('[data-hbar]');
+  wrappers.forEach(wrap => {
+    if (wrap.dataset.hbarDone === '1') return;
+    wrap.dataset.hbarDone = '1';
+
+    const color = wrap.dataset.hbar;
+    const row = wrap.querySelector(':scope > div');
+    if (!row) return;
+
+    const cols = Array.from(row.children);
+    if (cols.length < 2) return;
+
+    const wRect  = wrap.getBoundingClientRect();
+    const fRect  = cols[0].getBoundingClientRect();
+    const lRect  = cols[cols.length - 1].getBoundingClientRect();
+
+    const left  = fRect.left  + fRect.width / 2 - wRect.left;
+    const right = lRect.left  + lRect.width / 2  - wRect.left;
+    const width = right - left;
+    if (width <= 0) return;
+
+    const bar = el('div', `
+      position:absolute;
+      top:0;left:${left}px;
+      width:${width}px;height:2px;
+      background:${color};opacity:0.45;
+      pointer-events:none;
+    `);
+    wrap.insertBefore(bar, wrap.firstChild);
+  });
+}
+
+buildTree();
+
+// ═══════════════════════════════════════════
+// ZOOM
+// ═══════════════════════════════════════════
+let cz = 1;
+const scaled = document.getElementById('scaled');
+const zlbl   = document.getElementById('zlbl');
+function zoomBy(d) {
+  cz = Math.min(Math.max(cz + d, 0.25), 1.6);
+  scaled.style.transform = `scale(${cz})`;
+  zlbl.textContent = Math.round(cz * 100) + '%';
+}
+function resetZoom() {
+  cz = 1;
+  scaled.style.transform = 'scale(1)';
+  zlbl.textContent = '100%';
+}
+</script>
+</body>
+</html>

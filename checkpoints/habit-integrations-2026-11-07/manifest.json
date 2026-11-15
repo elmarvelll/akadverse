@@ -1,0 +1,60 @@
+{
+  "root": "C:\\Productivity Layer\\schedule-manager",
+  "entries": [
+    {
+      "file": "src/features/workspace/Workspace.tsx",
+      "before": "e17785c6ab1a3fd20b435d81829e089df5bd54f082aadf65a5a7411d9e1a79d0",
+      "after": "59dde4574c1b02a13e74bb172d9318976a25fc0770b4c601bebf8d07a48937de"
+    },
+    {
+      "file": "src/features/tasks/TaskManager.tsx",
+      "before": "f79af18a653e400eb0c9a0128e034cf3bdb4d5e555bcc259c18feb10b100a284",
+      "after": "0ab28de3fab166e0de12234e3f38c8bae8146ade0826f7c540aff2d6cc897973"
+    },
+    {
+      "file": "src/features/habits/service.ts",
+      "before": "c4d7074cd7702012f41f5583da5e3527aa6745c944e8c041eaa7cbf35f3d232f",
+      "after": "dfc1114c296181856bab677e3f352099dd7bbe4d9eea48dd8750e9fff83cf492"
+    },
+    {
+      "file": "src/features/schedule/ScheduleManager.tsx",
+      "before": "f6fab4a28ef764227490b9ee2f11a572984a2f2f73487720a41be49c2b921eb1",
+      "after": "a39e78d073c6eae4ab62d52c489129272180ee231c96e115db8588b8fa3df121"
+    },
+    {
+      "file": "src/features/analytics/calculations.ts",
+      "before": "70f396c7a2fdbf432f7f350c3950e08cd4db46e77db6b443029495c67c2d2bc1",
+      "after": "99e279b6029ce7b2db3425f476852cb811996c8b8dc70a9adaedc411f09aa318"
+    },
+    {
+      "file": "src/app/globals.css",
+      "before": "10802504db445c24229853419e293b334312a7fd8ff42ddf6640200baf5294fa",
+      "after": "52551f97fdafe70cc2dc66d4c6d3d65a97f4924e6dda7606c4efb4819960c8e9"
+    },
+    {
+      "file": "HABITS.md",
+      "before": "6aa547d4b1b4c8aeb7e19176d325b337d3156c7faa017e60fc0bc7ae41b7ab7d",
+      "after": "3c3dcca520f04bfa711b319377ed385dd28e5c1a726b6ed07ed4ffc25e58d255"
+    },
+    {
+      "file": "VERIFICATION.md",
+      "before": "9d75c5b4fc2efde13fdc5fb58d90ab61e49a7b8b92570e07c5f3134387f3c6af",
+      "after": "5abe021d1991bbb976fdc4e594c653ecd1d38bf6a8d6b9088c12f7211d41092c"
+    },
+    {
+      "file": "src/features/habits/HabitLabel.tsx",
+      "before": null,
+      "after": "f23190826ebb53dff7d88a03ffc2491232e36e50cc80a890bf0e578c5626e1c0"
+    },
+    {
+      "file": "src/features/habits/duplicates.ts",
+      "before": null,
+      "after": "54242b598b02b29eac5ef4839dd267c621246755c131e279757ad84fdf10a452"
+    },
+    {
+      "file": "tests/habit-integrations.test.ts",
+      "before": null,
+      "after": "7e63c1bc1ded1ecafe9073c6580a95b63461a2d86ee27378b4ff9c930c2889ff"
+    }
+  ]
+}

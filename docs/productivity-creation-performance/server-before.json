@@ -1,0 +1,194 @@
+{
+  "label": "before",
+  "fixture": {
+    "tasks": 640
+  },
+  "operations": [
+    {
+      "operation": "tasks.create",
+      "totalMs": 36,
+      "queryCount": 13,
+      "engineQueryMs": 10,
+      "timing": {
+        "referenceId": "4deeb964-4c70-49ac-8f07-90e789884a7d",
+        "operation": "tasks.create",
+        "ms": 36,
+        "environmentMatchesCachedClient": true,
+        "timings": [
+          {
+            "phase": "auth.session",
+            "ms": 0
+          },
+          {
+            "phase": "auth.user",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.acquire",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.user-lock",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.role",
+            "ms": 1
+          },
+          {
+            "phase": "context.preferences",
+            "ms": 0
+          },
+          {
+            "phase": "data.tasks",
+            "ms": 13
+          },
+          {
+            "phase": "data.habits",
+            "ms": 13
+          },
+          {
+            "phase": "data.categories",
+            "ms": 13
+          },
+          {
+            "phase": "data.events",
+            "ms": 13
+          },
+          {
+            "phase": "data.validate-save",
+            "ms": 5
+          },
+          {
+            "phase": "transaction.total",
+            "ms": 35
+          }
+        ]
+      }
+    },
+    {
+      "operation": "schedule.save",
+      "totalMs": 82,
+      "queryCount": 13,
+      "engineQueryMs": 4,
+      "timing": {
+        "referenceId": "0b0b3d44-6e0d-497c-9912-9fe18378f739",
+        "operation": "schedule.save",
+        "ms": 82,
+        "environmentMatchesCachedClient": true,
+        "timings": [
+          {
+            "phase": "auth.session",
+            "ms": 0
+          },
+          {
+            "phase": "auth.user",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.acquire",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.user-lock",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.role",
+            "ms": 0
+          },
+          {
+            "phase": "context.preferences",
+            "ms": 0
+          },
+          {
+            "phase": "data.tasks",
+            "ms": 13
+          },
+          {
+            "phase": "data.habits",
+            "ms": 13
+          },
+          {
+            "phase": "data.categories",
+            "ms": 13
+          },
+          {
+            "phase": "data.events",
+            "ms": 13
+          },
+          {
+            "phase": "data.validate-save",
+            "ms": 6
+          },
+          {
+            "phase": "transaction.total",
+            "ms": 81
+          }
+        ]
+      }
+    },
+    {
+      "operation": "habits.save",
+      "totalMs": 41,
+      "queryCount": 17,
+      "engineQueryMs": 7,
+      "timing": {
+        "referenceId": "79688331-abfc-4144-b93a-561185a84c45",
+        "operation": "habits.save",
+        "ms": 41,
+        "environmentMatchesCachedClient": true,
+        "timings": [
+          {
+            "phase": "auth.session",
+            "ms": 0
+          },
+          {
+            "phase": "auth.user",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.acquire",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.user-lock",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.role",
+            "ms": 0
+          },
+          {
+            "phase": "context.preferences",
+            "ms": 0
+          },
+          {
+            "phase": "data.tasks",
+            "ms": 12
+          },
+          {
+            "phase": "data.habits",
+            "ms": 12
+          },
+          {
+            "phase": "data.categories",
+            "ms": 12
+          },
+          {
+            "phase": "data.events",
+            "ms": 12
+          },
+          {
+            "phase": "data.validate-save",
+            "ms": 10
+          },
+          {
+            "phase": "transaction.total",
+            "ms": 40
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+{
+  "label": "after",
+  "fixture": {
+    "tasks": 640
+  },
+  "operations": [
+    {
+      "operation": "tasks.create",
+      "totalMs": 5,
+      "queryCount": 9,
+      "engineQueryMs": 0,
+      "timing": {
+        "referenceId": "700e61b7-b508-40fc-acfb-f6cae3635091",
+        "operation": "tasks.create",
+        "ms": 5,
+        "environmentMatchesCachedClient": true,
+        "timings": [
+          {
+            "phase": "auth.session",
+            "ms": 0
+          },
+          {
+            "phase": "auth.user",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.acquire",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.user-lock",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.role",
+            "ms": 1
+          },
+          {
+            "phase": "receipt.lookup",
+            "ms": 0
+          },
+          {
+            "phase": "context.preferences",
+            "ms": 0
+          },
+          {
+            "phase": "data.load",
+            "ms": 0
+          },
+          {
+            "phase": "domain.operation",
+            "ms": 0
+          },
+          {
+            "phase": "data.validate-save",
+            "ms": 1
+          },
+          {
+            "phase": "receipt.persist",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.total",
+            "ms": 5
+          }
+        ]
+      }
+    },
+    {
+      "operation": "schedule.save",
+      "totalMs": 62,
+      "queryCount": 11,
+      "engineQueryMs": 1,
+      "timing": {
+        "referenceId": "200889fd-9420-4bb4-ac5c-866107e5a980",
+        "operation": "schedule.save",
+        "ms": 62,
+        "environmentMatchesCachedClient": true,
+        "timings": [
+          {
+            "phase": "auth.session",
+            "ms": 0
+          },
+          {
+            "phase": "auth.user",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.acquire",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.user-lock",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.role",
+            "ms": 0
+          },
+          {
+            "phase": "receipt.lookup",
+            "ms": 0
+          },
+          {
+            "phase": "context.preferences",
+            "ms": 0
+          },
+          {
+            "phase": "data.events",
+            "ms": 1
+          },
+          {
+            "phase": "data.categories",
+            "ms": 1
+          },
+          {
+            "phase": "data.load",
+            "ms": 1
+          },
+          {
+            "phase": "domain.operation",
+            "ms": 53
+          },
+          {
+            "phase": "data.validate-save",
+            "ms": 2
+          },
+          {
+            "phase": "receipt.persist",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.total",
+            "ms": 61
+          }
+        ]
+      }
+    },
+    {
+      "operation": "habits.save",
+      "totalMs": 10,
+      "queryCount": 13,
+      "engineQueryMs": 1,
+      "timing": {
+        "referenceId": "c1040943-c6e0-4672-a27c-993e08d646b4",
+        "operation": "habits.save",
+        "ms": 10,
+        "environmentMatchesCachedClient": true,
+        "timings": [
+          {
+            "phase": "auth.session",
+            "ms": 0
+          },
+          {
+            "phase": "auth.user",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.acquire",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.user-lock",
+            "ms": 0
+          },
+          {
+            "phase": "transaction.role",
+            "ms": 0
+          },
+          {
+            "phase": "receipt.lookup",
+            "ms": 0
+          },
+          {
+            "phase": "context.preferences",
+            "ms": 0
+          },
+          {
+            "phase": "data.load",
+            "ms": 0
+          },
+          {
+            "phase": "recurrence.generate",
+            "ms": 1
+          },
+          {
+            "phase": "domain.operation",
+            "ms": 1
+          },
+          {
+            "phase": "data.validate-save",
+            "ms": 5
+          },
+          {
+            "phase": "receipt.persist",
+            "ms": 1
+          },
+          {
+            "phase": "transaction.total",
+            "ms": 10
+          }
+        ]
+      }
+    }
+  ]
+}

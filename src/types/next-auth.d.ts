@@ -30,6 +30,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    devLogin?: boolean;
     id: string;
     firstName: string;
     role: Role;

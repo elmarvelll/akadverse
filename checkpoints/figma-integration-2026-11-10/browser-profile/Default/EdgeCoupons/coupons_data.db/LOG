@@ -1,0 +1,5 @@
+2026/11/10-21:51:08.058 be04 Creating DB C:\Productivity Layer\checkpoints\figma-integration-2026-11-10\browser-profile\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/11/10-21:51:08.066 be04 Reusing MANIFEST C:\Productivity Layer\checkpoints\figma-integration-2026-11-10\browser-profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/11/10-21:51:16.616 a94c Level-0 table #5: started
+2026/11/10-21:51:16.622 a94c Level-0 table #5: 683273 bytes OK
+2026/11/10-21:51:16.624 a94c Delete type=0 #3

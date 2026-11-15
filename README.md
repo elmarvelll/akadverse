@@ -1,4 +1,18 @@
-<<<<<<< HEAD
+# AkadVerse
+
+AkadVerse is the host application at the repository root. See
+[the local development guide](for_Developers/README.md) for setup.
+
+The integrated Productivity Layer opens at `/studashboard/productivity-layer`
+using AkadVerse authentication and the Core Prisma database. See the
+[integration guide](docs/productivity-integration.md) for data mapping, migration,
+explicit local-data import, validation limits and rollback. Apply the prepared
+migration to a confirmed development database before using the feature.
+
+The original [schedule-manager](schedule-manager/README.md) remains available for
+exporting existing browser records. It retains its own npm scripts and checks;
+root checks exclude that standalone app and checkpoint copies.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -35,9 +49,6 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-=======
-# AkadVerse
->>>>>>> deltvolve/main
 
 ## Environment variables on Vercel
 
