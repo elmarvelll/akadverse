@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Ignore generated checkpoint artifacts"
+paths = [
+  '''^checkpoints/''',
+]
