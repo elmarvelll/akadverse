@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // The standalone app has its own ESLint config; checkpoints are historical copies.
     "schedule-manager/**",
     "checkpoints/**",
+    ".local/**",
+    ".local-development/**",
+    ".elearning-reset/**",
     // Prisma-generated clients (src/generated is git-ignored and rebuilt by `prisma generate`) — not our code.
     "src/generated/**",
   ]),

@@ -69,3 +69,11 @@ Thumbs.db
 # Environment templates contain only placeholders / local-only values and MUST be committed
 # (the `.env*` rules above would otherwise ignore them). See for_Developers/.env.example.
 !.env.example
+
+# Private branch archives, local diagnostics, and reset inventories
+.local/
+.elearning-reset/
+
+# Browser profiles contain cookies, login databases, and downloaded vendor bundles.
+**/browser-profile/
+**/browser-profile-*/

@@ -199,7 +199,10 @@ it("refuses a stale singleton after a database target change before touching any
 });
 it("omits the dev provider from freshly loaded production auth configuration even with ENABLE_DEV_LOGIN=true", () => {
   const result = spawnSync(process.execPath, ["--import", "tsx", "-e", "const {authOptions}=require('./src/lib/auth');console.log(JSON.stringify(authOptions.providers.map(p=>p.options?.id||p.id)))"], {
-    cwd: process.cwd(), env: { ...process.env, NODE_ENV: "production", ENABLE_DEV_LOGIN: "true" }, encoding: "utf8",
+    cwd: process.cwd(),
+    // Empty values prevent the fresh Prisma process from reloading real Google
+    // credentials from .env; this scenario explicitly tests Google disabled.
+    env: { ...process.env, NODE_ENV: "production", ENABLE_DEV_LOGIN: "true", GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_SECRET: "" }, encoding: "utf8",
   });
   assert.equal(result.status, 0, "Production provider inspection must run successfully");
   const providers = JSON.parse(result.stdout.trim()); assert(providers.includes("credentials")); assert(!providers.includes("dev-student")); assert(!providers.includes("google"));
