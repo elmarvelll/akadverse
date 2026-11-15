@@ -4,15 +4,15 @@ scripts/ccmas/extract_ccmas.py
 
 Step 1 of the CCMAS pipeline:  PDF  ->  JSON  ->  (validate + import) -> DB.
 
-Reads the NUC CCMAS PDF (default: src/lib/resources/Engineering-CCMAS.pdf)
+Reads the NUC CCMAS PDF (default: src/lib/resources/Engineering-Technology-CCMAS-2023-FINAL.pdf)
 and writes a structured JSON file (default:
-src/lib/resources/ccmas/Engineering-CCMAS.json). Nothing in the app reads
+src/lib/resources/ccmas/Engineering-CCMAS-2023.json). Nothing in the app reads
 that JSON at runtime — scripts/ccmas/import-ccmas.ts loads it into the
 CCMAS* tables and the database is the runtime source of truth.
 
 Only what the document actually says is extracted. In particular the
 course-structure tables list courses per LEVEL and do not state a semester,
-so `semester` is null everywhere rather than inferred.
+so `semester` is left null unless an explicit heading is printed.
 
 Usage:
   python3 scripts/ccmas/extract_ccmas.py [pdf] [out.json] [--pages-cache pages.json]
@@ -25,13 +25,27 @@ import sys
 import hashlib
 from datetime import datetime, timezone
 
-DEFAULT_PDF = "src/lib/resources/Engineering-CCMAS.pdf"
-DEFAULT_OUT = "src/lib/resources/ccmas/Engineering-CCMAS.json"
+DEFAULT_PDF = "src/lib/resources/Engineering-Technology-CCMAS-2023-FINAL.pdf"
+DEFAULT_OUT = "src/lib/resources/ccmas/Engineering-CCMAS-2023.json"
 
 # Glossary of Course Codes, Category C (PDF p.23): programme -> course prefix.
 # Read from the document; used only to label programmes with the code the
 # document itself assigns.
 PROGRAMME_CODES = {
+    # Additional/renamed headings in the supplied 2023 edition; codes are
+    # printed in its Category C glossary, PDF pages 23–24.
+    "Electronic Engineering": "ELE",
+    "Electrical and Electronic Engineering": "EEE",
+    "Food Engineering": "FDE",
+    "Marine and Offshore Engineering": "MAR",
+    "Materials Engineering": "MSE",
+    "Mechatronics Engineering": "MCE",
+    "Mineral Processing and Chemical Metallurgical Engineering": "MPE",
+    "Nuclear Engineering": "NUE",
+    "Railway Engineering": "RWE",
+    "Telecommunications Engineering": "TEE",
+    "Water Resources Engineering": "WRE",
+    "Wood Products Engineering": "WPE",
     "Aerospace Engineering": "AAE",
     "Agricultural and Biosystems Engineering": "ABE",
     "Automotive Engineering": "TAE",
@@ -67,7 +81,8 @@ DETAIL_HEAD = re.compile(
     r"^([A-Z]{3}) ?(\d{3}):\s*(.+?)\s*\((\d+)\s*Units?\s*([A-Z])?\s*:?\s*(.*?)\)\s*$"
 )
 DETAIL_START = re.compile(r"^[A-Z]{3} ?\d{3}:\s")
-LEVEL_HEAD = re.compile(r"^(\d{3}) Level$", re.I)
+# The ICE structure prints "200 Leve" in the supplied edition (PDF p.542).
+LEVEL_HEAD = re.compile(r"^(\d{3}) Level?$", re.I)
 SEM_HEAD = re.compile(r"^(First|Second|Alpha|Omega|1st|2nd)\s+Semester", re.I)
 TOC_LINE = re.compile(r"^(B\.?\s?(?:Eng|Sc|Tech)\.?)\s*(.+?)\s*\.{3,}\s*(\d+)\s*$", re.M)
 
@@ -107,6 +122,8 @@ def clean_lines(text, page_no):
     for ln in (text or "").translate(CYRILLIC_TO_LATIN).split("\n"):
         ln = ln.strip()
         if not ln or ln == str(page_no):  # drop running page-number footers
+            continue
+        if re.fullmatch(r"Engineering and Technology\s+\d+(?:\s+New)?", ln):
             continue
         out.append(ln)
     return out
@@ -240,7 +257,9 @@ def section(lines, start_pat, end_pats):
 
 
 def parse(pages, source_name):
-    toc_text = "\n".join(pages[12:19])
+    # Editions have different TOC lengths/locations. Only dotted programme
+    # entries match TOC_LINE; do not silently omit early or late programmes.
+    toc_text = "\n".join(pages[:40])
     starts = []
     for m in TOC_LINE.finditer(toc_text):
         starts.append((int(m.group(3)), m.group(1).replace(" ", "").replace("B.", "B."), m.group(2).strip()))
@@ -260,7 +279,9 @@ def parse(pages, source_name):
             s_idx = next(i for i, (_, l) in enumerate(lines) if l == "Global Course Structure" and i > 40)
         except StopIteration:
             s_idx = next((i for i, (_, l) in enumerate(lines) if l == "Global Course Structure"), None)
-        c_idx = next((i for i, (_, l) in enumerate(lines) if l.startswith("Course Contents and Learning Outco")), None)
+        c_idx = next((i for i, (_, l) in enumerate(lines) if re.match(
+            r"^(?:Course Contents? and Learning Outco[m]+es?|Learning Outcomes? and Course Contents?)$", l
+        )), None)
         if s_idx is None or c_idx is None:
             warnings.append(f"{name}: could not locate structure/contents sections (start={s_idx}, contents={c_idx})")
             continue
@@ -339,6 +360,10 @@ def parse(pages, source_name):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    version = "2023"
+    if "--version" in sys.argv:
+        version = sys.argv[sys.argv.index("--version") + 1]
+        args.remove(version)
     cache = None
     if "--pages-cache" in sys.argv:
         cache = sys.argv[sys.argv.index("--pages-cache") + 1]
@@ -361,7 +386,7 @@ def main():
             "name": "NUC/CCMAS",
             "title": "Core Curriculum and Minimum Academic Standards (CCMAS) for Nigerian Universities — Engineering and Technology",
             "document": pdf.split("/")[-1],
-            "version": "2021",
+            "version": version,
             "sha256": sha,
             "pageCount": len(pages),
             "extractedAt": datetime.now(timezone.utc).isoformat(),

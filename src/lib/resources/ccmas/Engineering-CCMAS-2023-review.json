@@ -1,0 +1,2420 @@
+{
+  "sourceSha256": "99030f5f3c5593246ec80178a2a84e562da384173ddc5be71e08d1bfb3e943fe",
+  "policy": "Course-structure tables take precedence over detailed-description credit units; discrepancies remain visible for DAPU review.",
+  "programmes": {
+    "Aerospace Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "AAE 101": [
+        "AAE 101 units differ (structure 2 vs detail 1)"
+      ],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "AAE 201": [],
+      "AAE 202": [],
+      "AAE 204": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "AAE 301": [],
+      "AAE 302": [],
+      "AAE 401": [],
+      "AAE 403": [],
+      "AAE 405": [],
+      "AAE 407": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.39) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.39) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "AAE 501": [
+        "AAE 501 units differ (structure 2 vs detail 3)"
+      ],
+      "AAE 503": [],
+      "AAE 504": [],
+      "AAE 505": [],
+      "AAE 506": []
+    },
+    "Agricultural and Biosystems Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "ABE 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "ENT 312": [],
+      "GST 312": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "ABE 301": [],
+      "ABE 302": [],
+      "ABE 303": [],
+      "ABE 304": [],
+      "ABE 305": [],
+      "ABE 306": [],
+      "ABE 307": [],
+      "ABE 308": [],
+      "ABE 401": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.80) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.80) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "ABE 501": [],
+      "ABE 502": [],
+      "ABE 503": [],
+      "ABE 504": [],
+      "ABE 505": [],
+      "ABE 599": [
+        "ABE 599 units differ (structure 4 vs detail 3)"
+      ]
+    },
+    "Automotive Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "MTH 103": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "TAE 102": [],
+      "ENT 211": [],
+      "GST 212": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "TAE 302": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "TAE 403": [],
+      "TAE 405": [],
+      "TAE 407": [],
+      "TAE 409": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.124) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.124) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "TAE 502": [],
+      "TAE 505": [
+        "TAE 505 units differ (structure 2 vs detail 3)"
+      ],
+      "TAE 555": [],
+      "TAE 506": [
+        "TAE 506 is described under '500 Level' (p.148) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Biomedical Engineering": {
+      "GST 112": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "CHM 101": [],
+      "CHM 107": [],
+      "BIO 101": [
+        "BIO 101 units differ (structure 2 vs detail 3)"
+      ],
+      "BIO 107": [],
+      "GET 101": [],
+      "GET 102": [],
+      "BME 102": [],
+      "ENT 211": [],
+      "GST 212": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 209": [],
+      "GET 211": [],
+      "BME 214": [],
+      "BME 215": [],
+      "BME 211": [],
+      "BME 213": [],
+      "ENT 312": [],
+      "GST 312": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "BME 334": [],
+      "BME 351": [],
+      "BME 332": [],
+      "BME 316": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "BME 401": [],
+      "BME 435": [],
+      "BME 453": [],
+      "BME 461": [],
+      "BME 481": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.160) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.160) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [
+        "GET 499 units differ (structure 4 vs detail 8)"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "BME 521": [],
+      "BME 526": [],
+      "BME 522": [],
+      "BME 523": [],
+      "BME 524": [],
+      "GST 111": [
+        "GST 111 is described under '100 Level' (p.161) but not listed in the level table; added from the course description"
+      ],
+      "MTH 103": [
+        "MTH 103 is described under '100 Level' (p.165) but not listed in the level table; added from the course description"
+      ],
+      "BME 321": [
+        "BME 321 is described under '300 Level' (p.181) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Chemical Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "TCH 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "TCH 201": [],
+      "TCH 202": [],
+      "TCH 206": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 304": [],
+      "GET 306": [],
+      "GET 307": [
+        "GET 307 units differ (structure 2 vs detail 3)"
+      ],
+      "TCH 301": [],
+      "TCH 302": [],
+      "TCH 303": [],
+      "TCH 304": [],
+      "TCH 305": [],
+      "TCH 307": [],
+      "TCH 308": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "TCH 401": [],
+      "TCH 402": [],
+      "TCH 404": [],
+      "TCH 405": [],
+      "TCH 406": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.203) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.203) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [
+        "GET 499 units differ (structure 4 vs detail 8)"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "TCH 501": [],
+      "TCH 555": [],
+      "MTH 103": [
+        "MTH 103 is described under '100 Level' (p.208) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Civil Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "CEE 101": [
+        "CEE 101 units differ (structure 2 vs detail 1)"
+      ],
+      "GST 212": [
+        "GST 212 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "ENT 211": [
+        "ENT 211 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 201": [
+        "GET 201 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 202": [
+        "GET 202 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 204": [
+        "GET 204 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 205": [
+        "GET 205 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 206": [
+        "GET 206 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 208": [
+        "GET 208 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 209": [
+        "GET 209 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 210": [
+        "GET 210 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 211": [
+        "GET 211 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "CEE 201": [
+        "CEE 201 sits under the '100 Level' heading (p.236) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "ENT 312": [],
+      "GST 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "CEE 301": [],
+      "CEE 303": [],
+      "CEE 304": [],
+      "CEE 308": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.237) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.237) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [
+        "GET 499 units differ (structure 4 vs detail 8)"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "CEE 506": [],
+      "CEE 599": [],
+      "CEE 302": [
+        "CEE 302 is described under '300 Level' (p.258) but not listed in the level table; added from the course description"
+      ],
+      "CEE 305": [
+        "CEE 305 is described under '300 Level' (p.259) but not listed in the level table; added from the course description"
+      ],
+      "CEE 306": [
+        "CEE 306 is described under '300 Level' (p.259) but not listed in the level table; added from the course description"
+      ],
+      "CEE 307": [
+        "CEE 307 is described under '300 Level' (p.259) but not listed in the level table; added from the course description"
+      ],
+      "CEE 406": [
+        "CEE 406 is described under '400 Level' (p.261) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Computer Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CPE 102": [],
+      "GST 211": [],
+      "GST 212": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 203": [],
+      "GET 204": [],
+      "GET 207": [],
+      "GET 209": [],
+      "GET 211": [],
+      "GET 210": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "CPE 301": [
+        "CPE 301 units differ (structure 2 vs detail 3)"
+      ],
+      "CPE 302": [],
+      "EEE 321": [
+        "EEE 321 units differ (structure 2 vs detail 3)"
+      ],
+      "EEE 322": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "CPE 401": [],
+      "CPE 403": [],
+      "CPE 405": [],
+      "CPE 411": [],
+      "CPE 413": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.275) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.275) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [
+        "GET 499 units differ (structure 4 vs detail 8)"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "CPE 501": [],
+      "CPE 502": [],
+      "CPE 505": [],
+      "CPE 511": [],
+      "CPE 514": [],
+      "CPE 599": [],
+      "CHM 101": [
+        "CHM 101 is described under '100 Level' (p.277) but not listed in the level table; added from the course description"
+      ],
+      "CHM 102": [
+        "CHM 102 is described under '100 Level' (p.277) but not listed in the level table; added from the course description"
+      ],
+      "CHM 107": [
+        "CHM 107 is described under '100 Level' (p.278) but not listed in the level table; added from the course description"
+      ],
+      "CHM 108": [
+        "CHM 108 is described under '100 Level' (p.278) but not listed in the level table; added from the course description"
+      ],
+      "CPE 112": [
+        "CPE 112 is described under '100 Level' (p.282) but not listed in the level table; added from the course description"
+      ],
+      "ENT 211": [
+        "ENT 211 is described under '200 Level' (p.282) but not listed in the level table; added from the course description"
+      ],
+      "CET 202": [
+        "CET 202 is described under '200 Level' (p.283) but not listed in the level table; added from the course description"
+      ],
+      "CPE 307": [
+        "CPE 307 is described under '300 Level' (p.294) but not listed in the level table; added from the course description"
+      ],
+      "CET 599": [
+        "CET 599 is described under '500 Level' (p.302) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Electrical Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 107": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "TEL 100": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 203": [
+        "GET 203 units differ (structure 2 vs detail 3)"
+      ],
+      "GET 204": [],
+      "GET 206": [],
+      "GET 207": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "TEL 202": [],
+      "EEE 208": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "EEE 321": [],
+      "TEL 303": [],
+      "TEL 304": [],
+      "TEL 305": [],
+      "TEL 324": [],
+      "TEL 322": [],
+      "TEL 421": [],
+      "TEL 423": [],
+      "TEL 401": [],
+      "TEL 402": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.314) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.314) but its number implies 300; heading kept, source likely omits a level heading",
+        "GET 399 units differ (structure 4 vs detail 3)"
+      ],
+      "GET 499": [
+        "GET 499 units differ (structure 4 vs detail 8)"
+      ],
+      "GET 404": [],
+      "GET 501": [],
+      "GET 502": [],
+      "TEL 502": [],
+      "TEL 507": [],
+      "TEL 503": [],
+      "TEL 102": [
+        "TEL 102 is described under '100 Level' (p.320) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Electronic Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 107": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "GET 101": [],
+      "GET 102": [],
+      "ELE 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 203": [
+        "GET 203 units differ (structure 2 vs detail 3)"
+      ],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "ENT 312": [],
+      "GST 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "ELE 313": [],
+      "ELE 318": [],
+      "ELE 324": [],
+      "ELE 305": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "ELE 403": [],
+      "ELE 405": [],
+      "ELE 407": [],
+      "ELE 411": [],
+      "TEL 423": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.354) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.354) but its number implies 300; heading kept, source likely omits a level heading",
+        "GET 399 units differ (structure 4 vs detail 3)"
+      ],
+      "GET 499": [
+        "GET 499 units differ (structure 4 vs detail 8)"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "ELE 507": [],
+      "ELE 512": [],
+      "ELE 513": [],
+      "ELE 519": [],
+      "ELE 529": [],
+      "ELE 505": [
+        "ELE 505 is described under '500 Level' (p.379) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Electrical and Electronic Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [
+        "CHM 101 units differ (structure 3 vs detail 2)"
+      ],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "EEE 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 203": [
+        "GET 203 units differ (structure 2 vs detail 3)"
+      ],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 207": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "EEE 202": [],
+      "EEE 204": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "EEE 311": [],
+      "EEE 321": [],
+      "EEE 322": [],
+      "EEE 324": [],
+      "EEE 326": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "GET 499": [
+        "duplicate structure row GET 499 @ level 400 (kept first)"
+      ],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.391) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.392) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "EEE 593": [],
+      "EEE 594": []
+    },
+    "Environmental Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "EVE 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 204": [],
+      "GET 206": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GET 207": [],
+      "EVE 202": [],
+      "EVE 203": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "CEE 301": [],
+      "CEE 303": [],
+      "CEE 304": [],
+      "CEE 305": [],
+      "EVE 301": [],
+      "EVE 302": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "EVE 401": [],
+      "GET 499": [
+        "duplicate structure row GET 499 @ level 400 (kept first)"
+      ],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.423) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.423) but its number implies 300; heading kept, source likely omits a level heading",
+        "GET 399 units differ (structure 4 vs detail 3)"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "EVE 501": [],
+      "EVE 502": [],
+      "GET 205": [
+        "GET 205 is described under '200 Level' (p.433) but not listed in the level table; added from the course description"
+      ],
+      "EVE 201": [
+        "EVE 201 is described under '200 Level' (p.436) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Food Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 102": [],
+      "FDE 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 204": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GET 205": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 305": [],
+      "GET 307": [],
+      "FDE 300": [],
+      "FDE 301": [],
+      "FDE 302": [],
+      "FDE 303": [],
+      "FDE 304": [],
+      "FDE 305": [],
+      "FDE 306": [],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.460) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "FDE 401": [],
+      "FDE 403": [],
+      "FDE 405": [],
+      "FDE 407": [],
+      "FDE 409": [
+        "FDE 409 units differ (structure 2 vs detail 3)"
+      ],
+      "FDE 423": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "GET 499": [
+        "duplicate structure row GET 499 @ level 400 (kept first)"
+      ],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.460) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "FDE 501": [
+        "FDE 501 units differ (structure 2 vs detail 3)"
+      ],
+      "FDE 502": [
+        "FDE 502 units differ (structure 2 vs detail 3)"
+      ],
+      "FDE 503": [],
+      "GET 206": [
+        "GET 206 is described under '200 Level' (p.471) but not listed in the level table; added from the course description"
+      ],
+      "FDE 201": [
+        "FDE 201 is described under '200 Level' (p.474) but not listed in the level table; added from the course description"
+      ],
+      "GET 304": [
+        "GET 304 is described under '300 Level' (p.476) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Food Science and Technology": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "FST 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 203": [
+        "GET 203 units differ (structure 2 vs detail 3)"
+      ],
+      "GET 204": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "HND 212": [],
+      "MCB 201": [],
+      "MME 202": [],
+      "FST 204": [],
+      "FST 222": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 304": [],
+      "GET 306": [],
+      "GET 307": [
+        "GET 307 units differ (structure 2 vs detail 3)"
+      ],
+      "FST 300": [],
+      "FST 304": [],
+      "FST 306": [],
+      "FST 308": [],
+      "FST 331": [],
+      "FST 332": [],
+      "FST 333": [],
+      "FST 334": [],
+      "FST 402": [],
+      "FST 403": [],
+      "FST 404": [],
+      "FST 405": [],
+      "FST 415": [],
+      "FST 425": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.504) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.504) but its number implies 300; heading kept, source likely omits a level heading",
+        "GET 399 units differ (structure 4 vs detail 3)"
+      ],
+      "GET 499": [],
+      "GET 404": [],
+      "GET 501": [],
+      "GET 502": [],
+      "FST 508": [],
+      "FST 511": [],
+      "FST 512": [],
+      "FST 513": [
+        "FST 513 units differ (structure 1 vs detail 3)"
+      ],
+      "FST 515": [],
+      "FST 427": [
+        "FST 427 is described under '400 Level' (p.528) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Information and Communication Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "ICE 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 203": [],
+      "GET 204": [],
+      "GET 207": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "ICE 221": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "ICE 311": [],
+      "ICE 312": [],
+      "ICE 321": [],
+      "ICE 322": [],
+      "ICE 324": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "ICE 411": [],
+      "ICE 412": [],
+      "ICE 413": [],
+      "ICE 416": [],
+      "ICE 417": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.543) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.543) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "ICE 512": [],
+      "ICE 513": [],
+      "ICE 515": [],
+      "ICE 519": [],
+      "ICE 530": [],
+      "ICE 313": [
+        "ICE 313 is described under '300 Level' (p.563) but not listed in the level table; added from the course description"
+      ],
+      "ICE 516": [
+        "ICE 516 is described under '500 Level' (p.571) but not listed in the level table; added from the course description"
+      ],
+      "ICE 529": [
+        "ICE 529 is described under '500 Level' (p.571) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Industrial and Production Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "IPE 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "IPE 301": [
+        "IPE 301 units differ (structure 2 vs detail 3)"
+      ],
+      "IPE 311": [],
+      "IPE 317": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "IPE 411": [],
+      "IPE 421": [],
+      "IPE 431": [],
+      "IPE 461": [],
+      "IPE 471": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.580) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.580) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "IPE 522": [],
+      "IPE 531": [],
+      "IPE 532": []
+    },
+    "Marine and Offshore Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [
+        "PHY 107 units differ (structure 2 vs detail 1)"
+      ],
+      "GET 101": [],
+      "GET 102": [],
+      "MAR 124": [],
+      "ENT 211": [],
+      "GST 212": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "MAR 201": [],
+      "MAR 203": [],
+      "ENT 312": [],
+      "GST 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "MAR 311": [],
+      "MAR 314": [],
+      "MAR 323": [],
+      "MAR 352": [],
+      "GET 299": [
+        "GET 299 sits under the '300 Level' heading (p.618) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [],
+      "GET 499": [
+        "GET 499 sits under the '300 Level' heading (p.618) but its number implies 400; heading kept, source likely omits a level heading"
+      ],
+      "GET 404": [
+        "GET 404 sits under the '300 Level' heading (p.618) but its number implies 400; heading kept, source likely omits a level heading",
+        "duplicate structure row GET 404 @ level 400 (kept first)",
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "GET 402": [
+        "duplicate structure row GET 402 @ level 400 (kept first)",
+        "duplicate structure row GET 402 @ level 400 (kept first)"
+      ],
+      "MAR 421": [
+        "duplicate structure row MAR 421 @ level 400 (kept first)"
+      ],
+      "MAR 431": [
+        "duplicate structure row MAR 431 @ level 400 (kept first)"
+      ],
+      "MAR 433": [],
+      "GET 501": [
+        "duplicate structure row GET 501 @ level 500 (kept first)",
+        "duplicate structure row GET 501 @ level 500 (kept first)"
+      ],
+      "GET 502": [
+        "duplicate structure row GET 502 @ level 500 (kept first)",
+        "duplicate structure row GET 502 @ level 500 (kept first)"
+      ],
+      "MAR 516": [],
+      "MAR 521": [
+        "duplicate structure row MAR 521 @ level 500 (kept first)"
+      ],
+      "MAR 531": [],
+      "MAR 532": [],
+      "MAR 534": [
+        "duplicate structure row MAR 534 @ level 500 (kept first)",
+        "duplicate structure row MAR 534 @ level 500 (kept first)"
+      ],
+      "MAR 417": [],
+      "MAR 423": [
+        "duplicate structure row MAR 423 @ level 400 (kept first)"
+      ],
+      "MAR 515": [],
+      "MAR 523": [
+        "MAR 523 units differ (structure 3 vs detail 2)"
+      ],
+      "MAR 525": [],
+      "MAR 465": [],
+      "MAR 561": [],
+      "MAR 563": [],
+      "MAR 564": [],
+      "MAR 565": [],
+      "PHY 108": [
+        "PHY 108 is described under '100 Level' (p.626) but not listed in the level table; added from the course description"
+      ],
+      "MAR 461": [
+        "MAR 461 is described under '400 Level' (p.643) but not listed in the level table; added from the course description"
+      ],
+      "MAR 513": [
+        "MAR 513 is described under '500 Level' (p.646) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Materials and Metallurgical Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "MME 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 203": [
+        "GET 203 units differ (structure 2 vs detail 3)"
+      ],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "MME 301": [],
+      "MME 304": [],
+      "MME 305": [],
+      "MME 312": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "MME 401": [],
+      "MME 405": [],
+      "MME 407": [],
+      "MME 413": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.661) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.661) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "MME 501": [],
+      "MME 504": [],
+      "MME 505": [],
+      "MME 507": [],
+      "MME 510": [],
+      "MME 509": [
+        "MME 509 is described under '500 Level' (p.687) but not listed in the level table; added from the course description"
+      ],
+      "MME 514": [
+        "MME 514 is described under '500 Level' (p.688) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Mineral Processing and Chemical Metallurgical Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GST 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 305": [],
+      "GET 306": [
+        "GET 306 units differ (structure 2 vs detail 3)"
+      ],
+      "GET 308": [],
+      "MPE 301": [
+        "MPE 301 units differ (structure 1 vs detail 2)"
+      ],
+      "MPE 302": [],
+      "MPE 303": [],
+      "GET 402": [],
+      "MPE 403": [],
+      "MPE 405": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.698) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.698) but its number implies 300; heading kept, source likely omits a level heading",
+        "GET 399 units differ (structure 4 vs detail 3)"
+      ],
+      "GET 499": [],
+      "GET 404": [],
+      "GET 501": [],
+      "GET 502": [],
+      "MPE 501": [],
+      "MPE 502": []
+    },
+    "Mechanical Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "MTH 103": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "MEE 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "MEE 306": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "MEE 401": [
+        "MEE 401 units differ (structure 2 vs detail 3)"
+      ],
+      "MEE 402": [],
+      "MEE 403": [],
+      "MEE 404": [],
+      "MEE 405": [],
+      "MEE 407": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.740) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.740) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "MEE 501": [],
+      "MEE 590": [],
+      "MEE 301": [
+        "MEE 301 is described under '300 Level' (p.760) but not listed in the level table; added from the course description"
+      ],
+      "MEE 406": [
+        "MEE 406 is described under '400 Level' (p.764) but not listed in the level table; added from the course description"
+      ],
+      "MEE 503": [
+        "MEE 503 is described under '500 Level' (p.766) but not listed in the level table; added from the course description"
+      ],
+      "MEE 509": [
+        "MEE 509 is described under '500 Level' (p.767) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Mechatronics Engineering": {
+      "GST 111": [],
+      "GST 113": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PYH 108": [],
+      "MCE 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 203": [
+        "GET 203 units differ (structure 3 vs detail 2)"
+      ],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "MEE 207": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "MCE 321": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "MCE 401": [],
+      "MCE 403": [],
+      "MCE 405": [],
+      "MCE 407": [],
+      "MCE 409": [],
+      "GET 499": [
+        "duplicate structure row GET 499 @ level 400 (kept first)"
+      ],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.778) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.778) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 501": [],
+      "GET 502": [],
+      "MCE 501": [],
+      "MCE 590": [],
+      "GST 112": [
+        "GST 112 is described under '100 Level' (p.779) but not listed in the level table; added from the course description"
+      ],
+      "PHY 108": [
+        "PHY 108 is described under '100 Level' (p.785) but not listed in the level table; added from the course description"
+      ],
+      "GET 207": [
+        "GET 207 is described under '200 Level' (p.790) but not listed in the level table; added from the course description"
+      ],
+      "MCE 599": [
+        "MCE 599 is described under '500 Level' (p.806) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Metallurgical Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "MTE 101": [],
+      "ENT 211": [],
+      "GST 212": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "MTE 302": [],
+      "MTE 303": [],
+      "MTE 305": [],
+      "MTE 307": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "MTE 401": [],
+      "MTE 403": [],
+      "MTE 405": [],
+      "MTE 407": [],
+      "MTE 409": [],
+      "MTE 411": [],
+      "MTE 415": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.816) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.816) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "MTE 501": [],
+      "MTE 507": [],
+      "ENT 312": [
+        "ENT 312 is described under '200 Level' (p.830) but not listed in the level table; added from the course description"
+      ],
+      "GET 302": [
+        "GET 302 is described under '200 Level' (p.831) but not listed in the level table; added from the course description"
+      ],
+      "MTE 304": [
+        "MTE 304 is described under '200 Level' (p.836) but not listed in the level table; added from the course description"
+      ],
+      "MTE 306": [
+        "MTE 306 is described under '200 Level' (p.837) but not listed in the level table; added from the course description"
+      ],
+      "MTE 308": [
+        "MTE 308 is described under '200 Level' (p.838) but not listed in the level table; added from the course description"
+      ],
+      "MTE 413": [
+        "MTE 413 is described under '400 Level' (p.842) but not listed in the level table; added from the course description"
+      ],
+      "MTE 502": [
+        "MTE 502 is described under '500 Level' (p.844) but not listed in the level table; added from the course description"
+      ],
+      "MTE 503": [
+        "MTE 503 is described under '500 Level' (p.844) but not listed in the level table; added from the course description"
+      ],
+      "MTE 504": [
+        "MTE 504 is described under '500 Level' (p.845) but not listed in the level table; added from the course description"
+      ],
+      "MTE 505": [
+        "MTE 505 is described under '500 Level' (p.845) but not listed in the level table; added from the course description"
+      ],
+      "MTE 506": [
+        "MTE 506 is described under '500 Level' (p.845) but not listed in the level table; added from the course description"
+      ],
+      "MTE 508": [
+        "MTE 508 is described under '500 Level' (p.846) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Materials Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "MSE 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 203": [],
+      "GET 204": [],
+      "GET 206": [],
+      "GET 207": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "MSE 301": [],
+      "MSE 303": [],
+      "MSE 305": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "MSE 401": [],
+      "MSE 403": [],
+      "MSE 405": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.861) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.861) but its number implies 300; heading kept, source likely omits a level heading",
+        "GET 399 units differ (structure 4 vs detail 3)"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "MSE 501": [],
+      "MSE 503": [],
+      "MSE 520": [],
+      "MAE 401": [
+        "MAE 401 is described under '400 Level' (p.882) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Mining Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [
+        "PHY 107 units differ (structure 2 vs detail 1)"
+      ],
+      "GET 101": [],
+      "GET 102": [],
+      "MNE 102": [],
+      "MNE 104": [
+        "MNE 104 units differ (structure 3 vs detail 2)"
+      ],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "MNE 301": [],
+      "MNE 302": [
+        "MNE 302 units differ (structure 3 vs detail 2)"
+      ],
+      "MNE 304": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "MNE 401": [],
+      "MNE 403": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.895) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.895) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "MNE 501": [],
+      "MNE 502": [],
+      "MNE 503": [],
+      "MNE 504": [],
+      "MNE 505": [],
+      "PHY 108": [
+        "PHY 108 is described under '100 Level' (p.902) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Natural Gas Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GNG 113": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GNG 203": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 306": [],
+      "GET 307": [],
+      "PNG 308": [],
+      "PNG 310": [],
+      "PNG 312": [],
+      "GNG 316": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "GNG 405": [],
+      "GNG 407": [],
+      "GNG 409": [],
+      "GNG 413": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.937) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.937) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "GNG 511": [],
+      "GNG 504": [],
+      "GNG 513": []
+    },
+    "Nuclear Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 102": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "NUE 102": [],
+      "GST 213": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "NUE 201": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.974) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "ENT 311": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 307": [],
+      "NUE 301": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "NUE 401": [],
+      "NUE 403": [],
+      "NUE 405": [
+        "NUE 405 units differ (structure 2 vs detail 1)"
+      ],
+      "NUE 407": [
+        "NUE 407 units differ (structure 1 vs detail 2)"
+      ],
+      "NUE 411": [],
+      "NUE 409": [],
+      "GET 499": [
+        "duplicate structure row GET 499 @ level 400 (kept first)"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.974) but its number implies 300; heading kept, source likely omits a level heading",
+        "GET 399 units differ (structure 4 vs detail 3)"
+      ],
+      "GET 501": [
+        "GET 501 units differ (structure 3 vs detail 2)"
+      ],
+      "GET 502": [],
+      "NUE 501": [],
+      "NUE 502": [],
+      "NUE 504": [],
+      "NUE 599": [
+        "NUE 599 units differ (structure 5 vs detail 4)"
+      ],
+      "PHY 103": [
+        "PHY 103 is described under '100 Level' (p.978) but not listed in the level table; added from the course description"
+      ],
+      "GST 212": [
+        "GST 212 is described under '200 Level' (p.981) but not listed in the level table; added from the course description"
+      ],
+      "ENT 211": [
+        "ENT 211 is described under '200 Level' (p.982) but not listed in the level table; added from the course description"
+      ],
+      "GST 312": [
+        "GST 312 is described under '300 Level' (p.987) but not listed in the level table; added from the course description"
+      ],
+      "ENT 312": [
+        "ENT 312 is described under '300 Level' (p.988) but not listed in the level table; added from the course description"
+      ],
+      "GET 304": [
+        "GET 304 is described under '300 Level' (p.989) but not listed in the level table; added from the course description"
+      ],
+      "GET 305": [
+        "GET 305 is described under '300 Level' (p.990) but not listed in the level table; added from the course description"
+      ],
+      "NUE 302": [
+        "NUE 302 is described under '300 Level' (p.992) but not listed in the level table; added from the course description"
+      ],
+      "NUE 303": [
+        "NUE 303 is described under '300 Level' (p.992) but not listed in the level table; added from the course description"
+      ],
+      "NUE 304": [
+        "NUE 304 is described under '300 Level' (p.993) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Petrochemical Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 204": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "PCE 201": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 306": [],
+      "GET 307": [],
+      "PCE 301": [],
+      "PCE 302": [],
+      "PCE 303": [],
+      "PCE 304": [],
+      "PCE 305": [],
+      "PCE 306": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "PCE 401": [],
+      "PCE 403": [],
+      "PCE 405": [],
+      "PCE 407": [],
+      "PCE 409": [],
+      "PCE 411": [],
+      "PCE 413": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1009) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1009) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "PCE 501": [
+        "PCE 501 units differ (structure 2 vs detail 3)"
+      ],
+      "PCE 502": [
+        "PCE 502 units differ (structure 3 vs detail 2)"
+      ],
+      "PCE 503": [],
+      "PCE 504": [],
+      "PCE 505": [],
+      "PCE 506": [],
+      "PCE 507": [],
+      "PCE 112": [
+        "PCE 112 is described under '100 Level' (p.1016) but not listed in the level table; added from the course description"
+      ],
+      "PCE 307": [
+        "PCE 307 is described under '300 Level' (p.1030) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Petroleum and Gas Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "MTH 103": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "PGE 101": [],
+      "ENT 211": [],
+      "GST 212": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "PGE 301": [],
+      "PGE 302": [
+        "PGE 302 units differ (structure 2 vs detail 3)"
+      ],
+      "PGE 303": [],
+      "PGE 304": [],
+      "PGE 305": [],
+      "PGE 306": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "PGE 401": [],
+      "PGE 403": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1049) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1049) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "PGE 501": [],
+      "PGE 502": [],
+      "PGE 504": [],
+      "PGE 510": [
+        "PGE 510 is described under '500 Level' (p.1077) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Petroleum Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "MTH 103": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "PEE 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GET 301": [
+        "GET 301 sits under the '200 Level' heading (p.1086) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "PEE 201": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "PEE 304": [],
+      "PEE 305": [],
+      "PEE 306": [],
+      "PEE 307": [],
+      "PEE 309": [],
+      "PEE 310": [],
+      "PEE 312": [],
+      "PEE 313": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "PEE 401": [],
+      "PEE 405": [],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1087) but its number implies 300; heading kept, source likely omits a level heading",
+        "duplicate structure row GET 399 @ level 400 (kept first)"
+      ],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1087) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [
+        "GET 501 sits under the '400 Level' heading (p.1087) but its number implies 500; heading kept, source likely omits a level heading"
+      ],
+      "GET 502": [
+        "GET 502 sits under the '400 Level' heading (p.1087) but its number implies 500; heading kept, source likely omits a level heading"
+      ],
+      "PEE 508": [
+        "PEE 508 sits under the '400 Level' heading (p.1087) but its number implies 500; heading kept, source likely omits a level heading"
+      ],
+      "PEE 314": [
+        "PEE 314 is described under '300 Level' (p.1109) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Railway Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 103": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "RAE 102": [],
+      "ENT 211": [],
+      "GST 212": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 203": [
+        "GET 203 units differ (structure 2 vs detail 3)"
+      ],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "RAE 201": [
+        "RAE 201 units differ (structure 2 vs detail 3)"
+      ],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "RAE 301": [],
+      "RAE 302": [],
+      "RAE 303": [],
+      "RAE 304": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "RAE 401": [],
+      "RAE 403": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1125) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1125) but its number implies 300; heading kept, source likely omits a level heading",
+        "GET 399 units differ (structure 4 vs detail 3)"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "RAE 501": [],
+      "RAE 502": [],
+      "RAE 503": [],
+      "RAE 599": [],
+      "MTH 102": [
+        "MTH 102 is described under '100 Level' (p.1128) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Structural Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "STE 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 203": [
+        "GET 203 units differ (structure 2 vs detail 3)"
+      ],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "ENT 312": [],
+      "GST 312": [],
+      "GET 301": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "STE 303": [],
+      "STE 304": [],
+      "STE 306": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "STE 405": [
+        "STE 405 units differ (structure 3 vs detail 2)"
+      ],
+      "STE 407": [
+        "STE 407 units differ (structure 3 vs detail 2)"
+      ],
+      "STE 409": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1164) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1164) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "STE 501": [],
+      "STE 502": []
+    },
+    "Systems Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "SSG 102": [],
+      "ENT 211": [],
+      "GST 212": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 205": [],
+      "GET 206": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "SSG 203": [],
+      "ENT 312": [],
+      "GST 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "SSG 321": [],
+      "SSG 322": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "SSG 415": [],
+      "SSG 431": [],
+      "SSG 433": [],
+      "SSG 435": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1199) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1199) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "SSG 518": [],
+      "SSG 532": [],
+      "SSG 560": [],
+      "SSG 531": [
+        "SSG 531 is described under '400 Level' (p.1225) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Telecommunications Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "MTH 103": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "GET 101": [],
+      "GET 102": [],
+      "TEE 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 206": [],
+      "GET 207": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 301": [],
+      "GET 302": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "TEE 301": [],
+      "EEE 311": [],
+      "EEE 321": [],
+      "EEE 322": [],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "TEE 401": [],
+      "TEE 403": [],
+      "EEE 403": [],
+      "TEE 405": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1234) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1234) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "TEE 501": [],
+      "TEE 502": [],
+      "TEE 503": []
+    },
+    "Water Resources Engineering": {
+      "GST 111": [],
+      "GST 211": [
+        "GST 211 sits under the '100 Level' heading (p.1269) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [],
+      "PHY 108": [],
+      "WRE 101": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "ENT 312": [
+        "ENT 312 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GST 321": [
+        "GST 321 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 304": [
+        "GET 304 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 305": [
+        "GET 305 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 306": [
+        "GET 306 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 307": [
+        "GET 307 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "CEE 304": [
+        "CEE 304 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading",
+        "CEE 304 units differ (structure 2 vs detail 3)"
+      ],
+      "WRE 301": [
+        "WRE 301 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "WRE 303": [
+        "WRE 303 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading",
+        "WRE 303 units differ (structure 2 vs detail 3)"
+      ],
+      "WRE 308": [
+        "WRE 308 sits under the '200 Level' heading (p.1270) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "WRE 401": [],
+      "WRE 403": [],
+      "WRE 405": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1271) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1271) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "WRE 501": [],
+      "WRE 503": [],
+      "WRE 504": [],
+      "WRE 505": [],
+      "WRE 506": [],
+      "WRE 507": [],
+      "GST 112": [
+        "GST 112 is described under '100 Level' (p.1272) but not listed in the level table; added from the course description"
+      ],
+      "GST 312": [
+        "GST 312 is described under '300 Level' (p.1283) but not listed in the level table; added from the course description"
+      ]
+    },
+    "Wood Products Engineering": {
+      "GST 111": [],
+      "GST 112": [],
+      "GET 101": [],
+      "GET 102": [],
+      "CHM 101": [],
+      "CHM 102": [],
+      "CHM 107": [],
+      "CHM 108": [],
+      "MTH 101": [],
+      "MTH 102": [],
+      "PHY 101": [],
+      "PHY 103": [],
+      "PHY 107": [
+        "PHY 107 units differ (structure 2 vs detail 1)"
+      ],
+      "BIO 101": [],
+      "WPE 102": [],
+      "GST 212": [],
+      "ENT 211": [],
+      "GET 201": [],
+      "GET 202": [],
+      "GET 204": [],
+      "GET 205": [],
+      "GET 207": [],
+      "GET 208": [],
+      "GET 209": [],
+      "GET 210": [],
+      "GET 211": [],
+      "GST 312": [],
+      "ENT 312": [],
+      "GET 304": [],
+      "GET 305": [],
+      "GET 306": [],
+      "GET 307": [],
+      "WPE 305": [],
+      "WPE 306": [],
+      "WPE 307": [],
+      "WPE 311": [
+        "WPE 311 units differ (structure 1 vs detail 2)"
+      ],
+      "GET 402": [],
+      "GET 404": [
+        "duplicate structure row GET 404 @ level 400 (kept first)"
+      ],
+      "WPE 401": [],
+      "WPE 403": [],
+      "WPE 405": [],
+      "WPE 407": [],
+      "WPE 409": [],
+      "WPE 411": [],
+      "GET 299": [
+        "GET 299 sits under the '400 Level' heading (p.1303) but its number implies 200; heading kept, source likely omits a level heading"
+      ],
+      "GET 399": [
+        "GET 399 sits under the '400 Level' heading (p.1303) but its number implies 300; heading kept, source likely omits a level heading"
+      ],
+      "GET 499": [],
+      "GET 501": [],
+      "GET 502": [],
+      "WPE 511": [],
+      "PHY 108": [
+        "PHY 108 is described under '100 Level' (p.1310) but not listed in the level table; added from the course description"
+      ]
+    }
+  }
+}

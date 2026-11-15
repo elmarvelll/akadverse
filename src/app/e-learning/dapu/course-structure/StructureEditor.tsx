@@ -12,6 +12,7 @@ export interface CcmasCourse {
   id: string; code: string; title: string; creditUnits: number; level: number; statusLetter: string; courseType: string;
   lectureHours: number | null; practicalHours: number | null; duration: string | null; prerequisites: string | null;
   description: string | null; sourcePage: number; alreadySelected: boolean; elsewhere: string[];
+  sourceWarnings?: string[];
 }
 export interface ElectiveCandidate { id: string; code: string; title: string; creditUnits: number }
 
@@ -73,6 +74,13 @@ export default function StructureEditor({
                     <td className="px-3 py-2.5 font-semibold text-gray-900 whitespace-nowrap align-top">{c.code}</td>
                     <td className="px-3 py-2.5 align-top text-gray-900">
                       {c.title}
+                      {!!c.sourceWarnings?.length && (
+                        <details className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-950">
+                          <summary className="cursor-pointer font-semibold">Source review ({c.sourceWarnings.length})</summary>
+                          <p className="mt-1">Course-table credit units take precedence. Review the source before saving your course structure.</p>
+                          <ul className="mt-1 list-disc space-y-1 pl-4">{c.sourceWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
+                        </details>
+                      )}
                       {(c.prerequisites || c.description) && (
                         <details className="mt-1 text-xs text-gray-800"><summary className="cursor-pointer text-blue-800 font-medium">Details</summary>
                           {c.prerequisites && <p className="mt-1"><strong>Prerequisites:</strong> {c.prerequisites}</p>}

@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireElearningRole, requireHodProfile } from "@/services/e-learning/shared/auth";
 import { ServiceError } from "@/lib/service-error";
-import { assignOrChangeLevelAdvisor } from "@/services/e-learning/hod/level-advisors";
+import { assignOrChangeLevelAdvisor, unassignLevelAdvisor } from "@/services/e-learning/hod/level-advisors";
 
 const PAGE = "/e-learning/hod/assignments/level-advisers";
 const field = (fd: FormData, k: string) => String(fd.get(k) ?? "");
@@ -32,6 +32,24 @@ export async function assignLevelAdvisorAction(fd: FormData) {
   revalidatePath(PAGE);
   // Keep the HOD's filters so the page doesn't reset after assigning.
   const q = new URLSearchParams({ session: sessionId });
+  if (field(fd, "fProgramme")) q.set("programme", field(fd, "fProgramme"));
+  if (field(fd, "fLevel")) q.set("level", field(fd, "fLevel"));
+  redirect(`${PAGE}?${q.toString()}&${outcome}`);
+}
+
+export async function unassignLevelAdvisorAction(fd: FormData) {
+  const hod = await requireElearningRole(["hod"]).then(requireHodProfile);
+  let outcome: string;
+  try {
+    await unassignLevelAdvisor(hod, field(fd, "assignmentId"), field(fd, "expectedFacultyUserId"));
+    outcome = `ok=${encodeURIComponent("Level Advisor unassigned. The lecturer account and course assignments are unchanged.")}`;
+  } catch (e) {
+    if (!(e instanceof ServiceError)) throw e;
+    outcome = `error=${encodeURIComponent(e.message)}`;
+  }
+  revalidatePath(PAGE);
+  revalidatePath("/e-learning/faculty");
+  const q = new URLSearchParams({ session: field(fd, "session") });
   if (field(fd, "fProgramme")) q.set("programme", field(fd, "fProgramme"));
   if (field(fd, "fLevel")) q.set("level", field(fd, "fLevel"));
   redirect(`${PAGE}?${q.toString()}&${outcome}`);

@@ -134,3 +134,17 @@ export async function listAdvisorContexts(hod: HodProfile, sessionId?: string, f
     totalContexts: rows.length,
   };
 }
+
+// Remove only this department-scoped adviser relationship. Lecturer identity/course roles stay intact.
+export async function unassignLevelAdvisor(hod: HodProfile, assignmentId: string, expectedFacultyUserId: string) {
+  return elearningDb.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "LevelAdvisorAssignment" WHERE "id" = ${assignmentId} FOR UPDATE`;
+    const assignment = await tx.levelAdvisorAssignment.findUnique({ where: { id: assignmentId }, include: { programme: true } });
+    if (!assignment || assignment.programme.departmentId !== hod.departmentId) throw forbidden("That adviser assignment isn't in your department.");
+    if (assignment.facultyUserId !== expectedFacultyUserId) throw conflict("This adviser changed since you opened the page. Refresh before unassigning.");
+    await tx.facultyProfile.updateMany({ where: { levelAdvisorId: assignment.id }, data: { levelAdvisorId: null, isLevelAdviser: false, levelAdviserOf: null } });
+    await tx.levelAdvisorAssignment.delete({ where: { id: assignment.id } });
+    await syncFacultyAdvisorState(tx, assignment.facultyUserId);
+    return { unassigned: true };
+  });
+}

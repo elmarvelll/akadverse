@@ -7,11 +7,11 @@
 }
 .portal ::selection { background: #185cff26; color: #185cff; }
 .portal > header { height: 56px; background: #fffffff2; backdrop-filter: blur(12px); border-color: #e2e8f099; }
-.portal > div { padding-top: 56px; max-width: none; }
+.portal > div:last-child { padding-top: 56px; max-width: none; }
 .portal aside { top: 56px; background: #f8fafc; border-right: 1px solid #e2e8f080; transition-duration: 400ms; transition-timing-function: cubic-bezier(.4,0,.2,1); }
 .portal main { padding: 32px; }
 .portal main > div { animation: portal-enter 350ms cubic-bezier(.22,1,.36,1) both; }
-.portal main h1 { font-size: 28px; letter-spacing: -.025em; color: #0f172a; }
+.portal main > div > h1, .portal main > div > div:first-child > h1 { font-size: 28px; letter-spacing: -.025em; color: #0f172a; }
 .portal main :global(.bg-white):global(.rounded-2xl) { box-shadow: 0 4px 20px #00000014; border-color: #e2e8f0bf; }
 .portal :global(.text-gray-900) { color: #0f172a; }
 .portal :global(.text-gray-800) { color: #334155; }
@@ -42,4 +42,20 @@
 @media (prefers-reduced-motion: reduce) {
   .portal *, .portal main > div, .study li { animation: none !important; transition: none !important; }
   .portal .studyCard:hover { transform: none; }
+}
+
+/* Shared academic presentation; role permissions and actions stay in their routes. */
+.portal { --portal-surface: #fff; --portal-muted: #64748b; --portal-border: #e2e8f0; --portal-ease: cubic-bezier(.22,1,.36,1); }
+.portal main button, .portal main input, .portal main select, .portal main textarea { transition: border-color 200ms var(--portal-ease), box-shadow 200ms var(--portal-ease), background-color 200ms var(--portal-ease); }
+.portal main :is(input, select, textarea):focus-visible { outline: 2px solid #185cff; outline-offset: 2px; }
+.portal main button:focus-visible, .portal main a:focus-visible { outline: 2px solid #185cff; outline-offset: 3px; }
+.portal main button:disabled { cursor: not-allowed; }
+.portal main :is(th, td) { vertical-align: top; }
+.portal main th { color: #475569; background: #f8fafc; font-weight: 600; }
+.portal main tbody tr { transition: background-color 200ms var(--portal-ease); }
+.portal main tbody tr:not(:global(.bg-green-50)):not(:global(.bg-red-50)):hover { background-color: #f8fafc; }
+.portal main :global(.overflow-x-auto) { overscroll-behavior-x: contain; }
+@media (prefers-reduced-motion: reduce) {
+  .portal main :is(button, input, select, textarea), .portal main tbody tr { transition: none; }
+  .portal button:active { transform: none; }
 }

@@ -77,3 +77,6 @@ Thumbs.db
 # Browser profiles contain cookies, login databases, and downloaded vendor bundles.
 **/browser-profile/
 **/browser-profile-*/
+# Private curriculum/reset inventories and database backups
+.local/ccmas/
+.elearning-reset/

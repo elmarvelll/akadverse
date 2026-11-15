@@ -22,14 +22,17 @@ export async function getAcademicTree() {
 
 export async function listCcmasProgrammes() {
   return elearningDb.cCMASProgramme.findMany({
+    // A completed import batch is the reference's publication checkpoint.
+    // Keep partially staged editions out of DAPU's linking options.
+    where: { discipline: { document: { batches: { some: {} } } } },
     orderBy: { name: "asc" },
     select: { id: true, name: true, code: true, discipline: { select: { document: { select: { version: true } } } } },
   });
 }
 
 export async function linkCcmasProgramme(programmeId: string, ccmasProgrammeId: string | null) {
-  if (ccmasProgrammeId && !(await elearningDb.cCMASProgramme.findUnique({ where: { id: ccmasProgrammeId } }))) {
-    throw badRequest("That CCMAS programme doesn't exist.");
+  if (ccmasProgrammeId && !(await elearningDb.cCMASProgramme.findFirst({ where: { id: ccmasProgrammeId, discipline: { document: { batches: { some: {} } } } } }))) {
+    throw badRequest("That CCMAS programme doesn't exist or its import hasn't completed.");
   }
   if (!(await elearningDb.programme.findUnique({ where: { id: programmeId } }))) throw notFound("Programme not found.");
   return elearningDb.programme.update({ where: { id: programmeId }, data: { ccmasProgrammeId } });
