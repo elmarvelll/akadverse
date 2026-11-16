@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { badRequest, forbidden, unauthorized } from "@/lib/service-error";
 import { ProductivityError, productivityErrorMessage } from "@/features/productivity/errors";
 import { publicProductivityError, OfficialTimetableError } from "@/services/productivity-layer/errors";
-import { databaseDiagnostic } from "@/services/productivity-layer/diagnostics";
+import { databaseDiagnostic, timed } from "@/services/productivity-layer/diagnostics";
 import { SlotConflictError } from "@/features/productivity/schedule/domain";
 import { loadAcademicRange } from "@/features/productivity/analytics/periods";
 import { validateTaskInput } from "@/features/productivity/tasks/domain";
@@ -14,7 +14,7 @@ import { eventInput, timezone } from "@/services/productivity-layer/validation";
 
 const sensitive = "postgresql://private:password@private-host/private-database?token=secret";
 let operationError: unknown;
-mock.module("@/services/productivity-layer/operations", { namedExports: { executeProductivity: async () => { if (operationError) throw operationError; return []; } } });
+mock.module("@/services/productivity-layer/operations", { namedExports: { executeProductivity: async () => { if (operationError) return timed("transaction.total", () => timed("transaction.user-lock", async () => { throw operationError; })); return []; } } });
 let post: typeof import("@/app/api/productivity/route").POST;
 before(async () => { ({ POST: post } = await import("@/app/api/productivity/route")); });
 beforeEach(() => { operationError = undefined; });
@@ -111,4 +111,38 @@ it("identifies the specific invalid field instead of reporting generic settings 
   assert.throws(() => validateHabit({ name: "Read", description: "x".repeat(10001) } as never, "Africa/Lagos"), /description.*10,000/);
   assert.throws(() => eventInput({ title: "", description: "Notes" }), /Event title/);
   assert.throws(() => timezone("invalid-zone"), /Timezone.*Africa\/Lagos/);
+});
+
+
+it("keeps production timeout phases in server logs with the response reference and no raw details", async () => {
+  const environment = process.env as Record<string, string | undefined>;
+  const previous = environment.NODE_ENV;
+  const logs: unknown[][] = [];
+  const errors = mock.method(console, "error", (...args: unknown[]) => { logs.push(args); });
+  const info = mock.method(console, "info", () => {});
+  try {
+    environment.NODE_ENV = "production";
+    operationError = known("P2028");
+    const response = await post(request(JSON.stringify({ operation: "schedule.save", args: [] })));
+    const body = await response.json();
+    assert.equal(response.status, 503);
+    assert.equal(body.code, "DATABASE_TIMEOUT");
+    const details = logs[0][1] as { referenceId: string; prismaCode: string; operation: string; failedPhase: string; timings: { phase: string; ms: number }[] };
+    assert.equal(details.referenceId, body.referenceId);
+    assert.equal(details.prismaCode, "P2028");
+    assert.equal(details.operation, "schedule.save");
+    assert.equal(details.failedPhase, "transaction.user-lock");
+    assert.deepEqual(details.timings.map(row => row.phase), ["transaction.user-lock", "transaction.total"]);
+    assert.ok(details.timings.every(row => row.ms >= 0));
+    assert.ok(!JSON.stringify(logs).includes(sensitive));
+    assert.equal(body.prismaCode, undefined);
+    assert.equal(body.timings, undefined);
+    operationError = undefined;
+    assert.equal((await post(request())).status, 200);
+    assert.equal(info.mock.callCount(), 0);
+    assert.equal(logs.length, 1);
+  } finally {
+    if (previous === undefined) delete environment.NODE_ENV; else environment.NODE_ENV = previous;
+    errors.mock.restore(); info.mock.restore();
+  }
 });
