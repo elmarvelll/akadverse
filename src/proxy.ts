@@ -111,6 +111,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // Let public pages and public API routes through untouched, regardless of
   // auth state.
   const isPublicPage = PUBLIC_PAGE_PATHS.includes(pathname);
+  // Exact service callback only. Its route independently requires service credentials
+  // and an expiring, conversation-bound RS256 delegation (never a browser user ID).
+  if (pathname === "/api/productivity/assistant/service") return NextResponse.next();
   const isPublicApi = PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   if (isPublicPage || isPublicApi) {
     return NextResponse.next();

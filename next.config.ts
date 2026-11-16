@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   // Prisma-generated E-Learning client traced the WHOLE project (measured: .env* files, the 9 MB CCMAS PDF, scripts); that
   // client is now loaded natively (see src/lib/db/elearning.ts), so this is a guard rather than the fix. None are read at runtime.
   outputFileTracingExcludes: {
-    "*": ["./.env*", "./.cleanup-backups/**", "./.vercel/**", "./docs/**", "./scripts/**", "./prisma/migrations/**", "./src/lib/resources/**"],
+    "/*": ["./.env*", "./akadverse-productivity-ai/.env*", "./akadverse-productivity-ai/.venv/**", "./akadverse-productivity-ai/**/__pycache__/**", "./.cleanup-backups/**", "./.vercel/**", "./docs/**", "./scripts/**", "./prisma/migrations/**", "./src/lib/resources/**"],
   },
   // src/lib/db/elearning.ts loads the E-Learning Prisma client with a native require that Turbopack deliberately doesn't
   // follow, so the files that client needs at runtime (its entry, runtime, schema and the platform's query engine

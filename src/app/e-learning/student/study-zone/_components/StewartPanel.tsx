@@ -1,5 +1,6 @@
 "use client";
 
+import RevisionPracticePanel from "./RevisionPracticePanel";
 import StewartResponse from "./LectureBoard";
 import FilePreview from "./AttachmentPreview";
 import { useEffect, useRef, useState } from "react";
@@ -301,6 +302,7 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
           </span>
         </p>
       </header>
+      <RevisionPracticePanel key={`${context.courseId}:${context.weekNumber}:${context.documentId || ""}`} context={context} />
 
       <div className="border-b border-gray-100 px-3 py-2">
         <div className="flex items-center justify-between gap-2"><button type="button" onClick={newChat} className="rounded-lg border px-3 py-1.5 text-xs font-semibold hover:bg-gray-50">New chat</button>

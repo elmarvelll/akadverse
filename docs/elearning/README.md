@@ -32,6 +32,8 @@ A role-based academic portal at `/e-learning/<role>/...` for six roles — Stude
 | Stewart learning-oriented Markdown/math responses and grouped references | [`systems/stewart-learning-responses.md`](systems/stewart-learning-responses.md) |
 | Stewart attachments, screenshot capture, expiry and microservice contracts | [`systems/stewart-attachments.md`](systems/stewart-attachments.md) |
 | Stewart AI assistant (student workflow, architecture, APIs, configuration, limitations) | [`systems/stewart.md`](systems/stewart.md) |
+| Revision practice, signed question webhook, shared question bank, FSRS, testing and rollout | [`../../REVISION-QUESTIONS-WEBHOOK-INTEGRATION.md`](../../REVISION-QUESTIONS-WEBHOOK-INTEGRATION.md) |
+| Standalone Revisions: Course/Random modes, eligibility, sessions, evidence and rollout | [`revisions-workspace.md`](revisions-workspace.md) |
 | Course Control (registration/add-drop/status) | [`systems/course-control-system.md`](systems/course-control-system.md) |
 | Course documents (upload to Supabase Storage, secure access) | [`systems/course-materials-system.md`](systems/course-materials-system.md) |
 | **Classroom** (live class: LiveKit stream, questions, "Do you understand?" poll) | [`systems/classroom-system.md`](systems/classroom-system.md) |

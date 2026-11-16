@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { badRequest, conflict, forbidden, notFound, ServiceError } from "@/lib/service-error";
@@ -7,7 +8,7 @@ import { ScheduleService, localNow, type Student, type PersonalEvent } from "@/f
 import { taskAnalytics, scheduleAnalytics } from "@/features/productivity/analytics/calculations";
 import { rangeDays } from "@/features/productivity/analytics/periods";
 import { inTimezone } from "@/features/productivity/schedule/time";
-import { requireProductivityUser } from "./auth";
+import { requireProductivityUser, requireProductivityActor } from "./auth";
 import { officialClasses } from "./academics";
 import { loadData, saveData, json } from "./repository";
 import { importLocalData } from "./import";
@@ -26,6 +27,20 @@ const mutations = new Set(["tasks.create", "tasks.update", "tasks.delete", "task
 export async function executeProductivity(input: ProductivityCommand, expectedUserId?: string | null) {
   // Resolve identity on EVERY operation, including reads, analytics and imports.
   const user = await requireProductivityUser(expectedUserId);
+  return executeForUser(user, input);
+}
+
+export interface ProductivityExecutionHooks {
+  authorize(tx: Prisma.TransactionClient, replay: boolean): Promise<void>;
+  commit(tx: Prisma.TransactionClient, result: unknown): Promise<void>;
+}
+
+/** Only authenticated server adapters may call this. Never accepts an actor from model arguments. */
+export async function executeProductivityAs(ownerId: string, input: ProductivityCommand, hooks?: ProductivityExecutionHooks) {
+  return executeForUser(await requireProductivityActor(ownerId), input, hooks);
+}
+
+async function executeForUser(user: Awaited<ReturnType<typeof requireProductivityActor>>, input: ProductivityCommand, hooks?: ProductivityExecutionHooks) {
   if (input.operation === "workspace.initial") return workspaceInitial(user);
   if (input.operation === "workspace.view") return workspaceView(user, input.args[0]);
   if (input.operation === "official.range") return officialRange(user, input.args[0]);
@@ -79,9 +94,13 @@ export async function executeProductivity(input: ProductivityCommand, expectedUs
         const saved = await timed("receipt.lookup", () => tx.productivityRequest.findUnique({ where: { ownerId_key: { ownerId: user.id, key: input.requestId! } } }));
         if (saved) {
           if (saved.requestHash !== requestHash) throw conflict("This request identifier was used for different input.");
-          return (saved.result as { value: unknown }).value;
+          const result = (saved.result as { value: unknown }).value;
+          await hooks?.authorize(tx, true);
+          await hooks?.commit(tx, result);
+          return result;
         }
       }
+      await hooks?.authorize(tx, false);
       const preference = await timed("context.preferences", () => tx.productivityPreferences.findUnique({ where: { ownerId: user.id } }));
       const student: Student = { id: user.id, name: `${user.firstName} ${user.lastName}`.trim(), timezone: preference?.timezone || "Africa/Lagos", development: false };
       const create = input.operation === "tasks.create" ? "task" : input.operation === "habits.save" && !input.args[1] ? "habit" : input.operation === "schedule.save" && !input.args[1] ? "event" : undefined;
@@ -190,6 +209,7 @@ export async function executeProductivity(input: ProductivityCommand, expectedUs
       await timed("data.validate-save", () => saveData(tx, user.id, before, data));
       if (result && typeof result === "object" && "events" in result && "schedules" in result) result = { ...result, events: (result.events as PersonalEvent[]).map(displayEvent) };
       if (receipt) await timed("receipt.persist", () => tx.productivityRequest.create({ data: { ownerId: user.id, key: input.requestId!, requestHash, result: json({ value: result ?? null }) } }));
+      await hooks?.commit(tx, result ?? null);
       return result ?? null;
     }, { maxWait: 10000, timeout: 30000 }));
 }
