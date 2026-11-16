@@ -8,7 +8,12 @@ export async function requireProductivityUser(expectedUserId?: string | null) {
   const session = await timed("auth.session", () => getServerSession(authOptions));
   if (!session?.user?.id) throw unauthorized("Your session is missing or expired. Sign in again to open your workspace.");
   if (expectedUserId && expectedUserId !== session.user.id) throw unauthorized("Your account changed. Reload your workspace.");
-  const user = await timed("auth.user", () => prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, firstName: true, lastName: true, email: true, role: true } }));
+  return requireProductivityActor(session.user.id);
+}
+
+/** Server-only: callers must establish signed delegation before using this entry point. */
+export async function requireProductivityActor(ownerId: string) {
+  const user = await timed("auth.user", () => prisma.user.findUnique({ where: { id: ownerId }, select: { id: true, firstName: true, lastName: true, email: true, role: true } }));
   if (!user) throw unauthorized("The account linked to this session no longer exists. Sign in again with an existing student account.");
   // This feature is mounted in the existing student workspace. It has no
   // institution-wide/admin sharing scope, nor access to other students' data.

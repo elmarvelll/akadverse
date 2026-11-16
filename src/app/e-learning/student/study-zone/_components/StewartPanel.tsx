@@ -1,8 +1,11 @@
 "use client";
 
+import RevisionPracticePanel from "./RevisionPracticePanel";
 import StewartResponse from "./LectureBoard";
 import FilePreview from "./AttachmentPreview";
 import { useEffect, useRef, useState } from "react";
+import { useSpeechToText } from "@/app/components/voice/useSpeechToText";
+import { VoiceInputControls, VoiceInputStatus } from "@/app/components/voice/VoiceInputControls";
 import { AlertCircle, BookOpen, Loader2, Paperclip, SendHorizontal, Sparkles, X } from "lucide-react";
 import { checkStewartAttachment, STEWART_MAX_ATTACHMENTS, STEWART_ATTACHMENT_ACCEPT, STEWART_MAX_ATTACHMENT_MB, STEWART_MAX_MESSAGE_CHARS } from "@/lib/stewart/config";
 import { StewartRequestError, askStewart, attachDocument, discardAttachment, startThread, createChat, deleteChat, listChats, readChat, storedMessage, type ChatConversation, type StewartAttachment, type StewartContext, type StewartMessage } from "./stewart";
@@ -40,6 +43,7 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
   const setDraft = (value: string) => setDrafts((all) => ({ ...all, [key]: value }));
   const [uploadingKeys, setUploadingKeys] = useState(new Set<string>());
   const uploading = uploadingKeys.has(key);
+  const speech = useSpeechToText({ value: draft, onChange: setDraft, contextKey: JSON.stringify([context.courseId, context.weekNumber, context.documentId ?? null, threadKey, key]), disabled: !!pendingKey || uploading || !!loadingConversation, maxChars: STEWART_MAX_MESSAGE_CHARS });
   const [submitted, setSubmitted] = useState<Record<string, StewartAttachment[]>>({});
   const storedRef = useRef<StewartAttachment[]>([]);
   const [previewFiles, setPreviewFiles] = useState(new Map<string, File>());
@@ -180,7 +184,7 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
 
   async function send(text: string, retryId?: string, retryGrounded?: boolean) {
     const question = text.trim() || (files.length ? "Explain the relevant content in these attachments." : "");
-    if (!question || sending.current.has(key) || loadingConversation || question.length > STEWART_MAX_MESSAGE_CHARS) return;
+    if (!question || speech.active || sending.current.has(key) || loadingConversation || question.length > STEWART_MAX_MESSAGE_CHARS) return;
     const view = key;
     const mode = retryGrounded ?? grounded;
     const previousRequest = requests.current.get(view);
@@ -301,6 +305,7 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
           </span>
         </p>
       </header>
+      <RevisionPracticePanel key={`${context.courseId}:${context.weekNumber}:${context.documentId || ""}`} context={context} />
 
       <div className="border-b border-gray-100 px-3 py-2">
         <div className="flex items-center justify-between gap-2"><button type="button" onClick={newChat} className="rounded-lg border px-3 py-1.5 text-xs font-semibold hover:bg-gray-50">New chat</button>
@@ -405,7 +410,7 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
             rows={1}
             disabled={!!pendingKey || uploading || !!loadingConversation}
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => speech.edit(e.target.value)}
             onKeyDown={(e) => {
               // Enter sends; Shift+Enter adds a new line.
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -415,18 +420,20 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
             }}
             placeholder={ready ? "Ask about the attached document…" : "Ask Stewart…"}
             aria-invalid={tooLong}
-            aria-describedby="stewart-hint"
+            aria-describedby="stewart-hint stewart-voice-status"
             className="max-h-32 min-h-[2.5rem] min-w-0 flex-1 resize-none rounded-xl border px-3 py-2 text-sm"
           />
+          <VoiceInputControls speech={speech} disabled={!!pendingKey || uploading || !!loadingConversation} />
           <button
             type="submit"
-            disabled={(!draft.trim() && !files.length) || !!pendingKey || uploading || tooLong || !!loadingConversation}
+            disabled={(!draft.trim() && !files.length) || speech.active || !!pendingKey || uploading || tooLong || !!loadingConversation}
             aria-label="Send message to Stewart"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
             <SendHorizontal size={16} aria-hidden />
           </button>
         </form>
+        <div id="stewart-voice-status"><VoiceInputStatus speech={speech} recipient="Stewart" /></div>
         <p id="stewart-hint" className={`mt-2 text-[11px] ${tooLong ? "text-red-800" : "text-gray-600"}`}>
           {tooLong
             ? `That message is too long (${draft.length.toLocaleString("en")} of ${STEWART_MAX_MESSAGE_CHARS.toLocaleString("en")} characters).`

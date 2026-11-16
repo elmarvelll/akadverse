@@ -966,6 +966,8 @@ model CourseMaterial {
   storageBucket            String
   storagePath              String             @unique
   // AI ingestion (see AiIngestStatus). aiIngestUpdatedAt = when the status last changed (sent / callback received).
+  revisionConcepts         RevisionConcept[]
+  revisionAnalysisJob      RevisionConceptAnalysisJob?
   aiTask                   AiIngestTask?
   aiIngestStatus           AiIngestStatus?
   aiIngestError            String?
@@ -1172,4 +1174,304 @@ model ChatMessage {
 
   @@unique([conversationId, requestId, role])
   @@index([conversationId, createdAt, id])
+}
+
+// Exact-byte revision delivery receipts. Keep in the same DB as canonical learning writes.
+model RevisionWebhookIdempotency {
+  id               String   @id @default(uuid())
+  idempotencyKey   String   @unique
+  teachingEventId  String
+  eventId          String
+  bodyHash         String   @db.VarChar(64)
+  requestBody      Bytes?
+  status           String   @default("PROCESSING")
+  claimToken       String?
+  leaseExpiresAt   DateTime?
+  attempts         Int      @default(1)
+  responsePayload  String?
+  lastFailureCode  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  completedAt      DateTime?
+
+  @@index([status, leaseExpiresAt])
+  @@index([teachingEventId])
+}
+
+
+model RevisionConcept {
+  id                String @id @default(uuid())
+  materialId        String
+  externalId        String
+  title             String
+  description       String
+  learningObjective String
+  conceptKey        String
+  subject           String
+  curriculum        String
+  level             String
+  topic             String
+  language          String @default("en")
+  active            Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  material          CourseMaterial @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  attempts          RevisionPracticeAttempt[]
+  teachingEvents    RevisionTeachingEvent[]
+  questions         RevisionQuestion[]
+  @@unique([materialId, externalId])
+  @@index([conceptKey])
+}
+
+model RevisionConceptAnalysisJob {
+  id            String @id @default(uuid())
+  materialId    String @unique
+  status        String @default("PENDING")
+  attempts      Int @default(0)
+  claimToken    String?
+  leaseUntil    DateTime?
+  nextAttemptAt DateTime @default(now())
+  lastErrorCode String?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  material      CourseMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  @@index([status, nextAttemptAt])
+}
+
+model RevisionPracticeAttempt {
+  id                 String @id @default(uuid())
+  studentId          String
+  conceptId          String
+  requestKey         String
+  requestHash        String
+  question           Json
+  evaluation         Json?
+  answerHash         String?
+  evaluationToken    String?
+  evaluationLease    DateTime?
+  createdAt          DateTime @default(now())
+  evaluatedAt        DateTime?
+  concept            RevisionConcept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  teachingEvent      RevisionTeachingEvent?
+  @@unique([studentId, requestKey])
+  @@index([studentId, createdAt])
+}
+
+model RevisionTeachingEvent {
+  id                String @id @default(uuid())
+  studentId         String
+  conceptId         String
+  practiceAttemptId String @unique
+  context           Json
+  taughtSummary     String
+  passedAt          DateTime @default(now())
+  concept           RevisionConcept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  practiceAttempt   RevisionPracticeAttempt @relation(fields: [practiceAttemptId], references: [id], onDelete: Restrict)
+  generation        RevisionGenerationJob?
+  provenance        RevisionQuestionProvenance[]
+  sessionItems      RevisionSessionItem[]
+  @@index([studentId, passedAt])
+}
+
+model RevisionGenerationJob {
+  id                String @id @default(uuid())
+  teachingEventId   String @unique
+  status            String @default("PENDING")
+  attempts          Int @default(0)
+  claimToken        String?
+  leaseUntil        DateTime?
+  nextAttemptAt     DateTime @default(now())
+  submittedAt       DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  lastAttemptAt     DateTime?
+  generatedCount    Int @default(0)
+  acceptedCount     Int @default(0)
+  rejectedCount     Int @default(0)
+  createdCount      Int @default(0)
+  reusedCount       Int @default(0)
+  cardsCreated      Int @default(0)
+  webhookStatus     String?
+  needsReview       Boolean @default(false)
+  errorCode         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  teachingEvent     RevisionTeachingEvent @relation(fields: [teachingEventId], references: [id], onDelete: Restrict)
+  @@index([status, nextAttemptAt])
+}
+
+model RevisionQuestion {
+  id                String @id @default(uuid())
+  conceptId         String
+  scopeKey          String
+  canonicalHash     String
+  canonicalText     String
+  type              String
+  stem              String
+  options           Json
+  correctAnswer     Json
+  explanation       String
+  difficulty        Float
+  bloomLevel        String
+  tags              String[]
+  subject           String
+  curriculum        String
+  level             String
+  topic             String
+  language          String
+  conceptTitle      String
+  learningObjective String
+  variantOfId       String?
+  createdAt         DateTime @default(now())
+  concept           RevisionConcept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  variantOf         RevisionQuestion? @relation("RevisionVariants", fields: [variantOfId], references: [id], onDelete: Restrict)
+  variants          RevisionQuestion[] @relation("RevisionVariants")
+  embedding         RevisionQuestionEmbedding?
+  cards             RevisionStudentCard[]
+  provenance        RevisionQuestionProvenance[]
+  governance        RevisionQuestionGovernance?
+  sessionItems      RevisionSessionItem[]
+  @@unique([scopeKey, canonicalHash])
+  @@index([scopeKey])
+}
+
+model RevisionQuestionEmbedding {
+  questionId        String @id
+  model             String
+  version           String
+  dimensions        Int
+  vector            Unsupported("vector(1536)")
+  question          RevisionQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model RevisionStudentCard {
+  id                String @id @default(uuid())
+  studentId         String
+  questionId        String
+  schedulerVersion  String
+  state             Json
+  dueAt             DateTime
+  version           Int @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  question          RevisionQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  reviews           RevisionReviewLog[]
+  sessionItems      RevisionSessionItem[]
+  @@unique([studentId, questionId])
+  @@index([studentId, dueAt])
+}
+
+model RevisionReviewLog {
+  id                String @id @default(uuid())
+  studentCardId     String
+  studentId         String
+  requestKey        String
+  requestHash       String
+  rating            Int
+  previousState     Json
+  nextState         Json
+  schedulerLog      Json
+  reviewedAt        DateTime @default(now())
+  card              RevisionStudentCard @relation(fields: [studentCardId], references: [id], onDelete: Restrict)
+  sessionItem       RevisionSessionItem?
+  @@unique([studentId, requestKey])
+  @@index([studentCardId, reviewedAt])
+}
+
+model RevisionQuestionProvenance {
+  id                String @id @default(uuid())
+  teachingEventId   String
+  questionId        String
+  clientRef         String
+  outcome           String
+  dedupMetadata     Json?
+  createdAt         DateTime @default(now())
+  teachingEvent     RevisionTeachingEvent @relation(fields: [teachingEventId], references: [id], onDelete: Restrict)
+  question          RevisionQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  @@unique([teachingEventId, clientRef])
+}
+
+model RevisionAdminAlert {
+  id                String @id @default(uuid())
+  dedupeKey         String @unique
+  category          String
+  correlationId     String
+  status            String @default("PENDING")
+  attempts          Int @default(0)
+  nextAttemptAt     DateTime @default(now())
+  createdAt         DateTime @default(now())
+  deliveredAt       DateTime?
+  @@index([status, nextAttemptAt])
+}
+
+// Standalone Revisions extends the existing bank and shared memory; no second scheduler.
+model RevisionQuestionGovernance {
+  questionId        String @id
+  publicationStatus String @default("UNVERIFIED")
+  sourceFingerprint String
+  sourceSnapshot    Json
+  note              String?
+  updatedAt         DateTime @updatedAt
+  question          RevisionQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  @@index([publicationStatus])
+}
+
+model RevisionSession {
+  id          String @id @default(uuid())
+  studentId   String
+  requestKey  String
+  requestHash String
+  mode        String
+  offeringId  String?
+  status      String @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  completedAt DateTime?
+  items       RevisionSessionItem[]
+  @@unique([studentId, requestKey])
+  @@index([studentId, status, updatedAt])
+}
+
+model RevisionSessionItem {
+  id                 String @id @default(uuid())
+  sessionId          String
+  position           Int
+  questionId         String
+  coverageEventId    String
+  cardId             String
+  cardVersion        Int
+  introduction       Boolean
+  status             String @default("PENDING")
+  answer             String?
+  reasoning          String?
+  answerHash         String?
+  evaluation         Json?
+  evaluationToken    String?
+  evaluationLease    DateTime?
+  evaluatedAt        DateTime?
+  reviewLogId        String? @unique
+  session            RevisionSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  question           RevisionQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  coverageEvent      RevisionTeachingEvent @relation(fields: [coverageEventId], references: [id], onDelete: Restrict)
+  card               RevisionStudentCard @relation(fields: [cardId], references: [id], onDelete: Restrict)
+  review             RevisionReviewLog? @relation(fields: [reviewLogId], references: [id], onDelete: Restrict)
+  @@unique([sessionId, position])
+  @@unique([sessionId, questionId])
+  @@index([sessionId, status, position])
+}
+
+model RevisionLearningContext {
+  studentId      String @id
+  version        Int @default(1)
+  preparedVersion Int @default(0)
+  preparedAt      DateTime?
+  snapshot       Json?
+  dirty          Boolean @default(true)
+  claimToken     String?
+  leaseUntil     DateTime?
+  attempts       Int @default(0)
+  nextAttemptAt  DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@index([dirty, nextAttemptAt])
 }

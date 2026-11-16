@@ -8,3 +8,9 @@ checkpoints/
 .elearning-reset/
 **/browser-profile/
 **/browser-profile-*/
+
+# Python deploys separately. Keep its shared tool definitions available to Next.js.
+akadverse-productivity-ai/.venv/
+akadverse-productivity-ai/.env*
+akadverse-productivity-ai/.pytest_cache/
+**/__pycache__/

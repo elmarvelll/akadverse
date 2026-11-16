@@ -28,10 +28,15 @@ if (command === "reset") {
   console.log("\n▶ Resetting the LOCAL Core database (all data is deleted)…");
   prisma(["migrate", "reset", "--force", "--skip-seed", "--skip-generate"]);
   console.log("\n▶ Resetting the LOCAL E-Learning database (all data is deleted)…");
-  prisma(["db", "push", "--force-reset", "--skip-generate", `--schema=${ELEARNING_SCHEMA}`]);
+  // Prisma force-reset removes pgvector before trying to create vector columns.
+  // Reset first, reinstall extensions, then push; assertLocalDatabases above is mandatory.
+  prisma(["db", "execute", `--schema=${ELEARNING_SCHEMA}`, "--stdin"], "DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
+  prisma(["db", "execute", `--schema=${ELEARNING_SCHEMA}`, "--file", "prisma/elearning/extensions.sql"]);
+  prisma(["db", "push", "--skip-generate", `--schema=${ELEARNING_SCHEMA}`]);
 } else {
   console.log("\n▶ Applying Core database migrations (prisma/migrations)…");
   prisma(["migrate", "deploy"]);
+  prisma(["db", "execute", `--schema=${ELEARNING_SCHEMA}`, "--file", "prisma/elearning/extensions.sql"]);
   console.log("\n▶ Creating/updating the E-Learning database schema…");
   prisma(["db", "push", "--skip-generate", `--schema=${ELEARNING_SCHEMA}`]);
 }
@@ -41,8 +46,8 @@ prisma(["db", "execute", `--schema=${ELEARNING_SCHEMA}`, "--file", "prisma/elear
 
 console.log(`\n✔ Local databases ready. Next: npm run db:local:seed\n`);
 
-function prisma(args) {
-  const result = spawnSync("npx", ["prisma", ...args], { stdio: "inherit", shell: process.platform === "win32" });
+function prisma(args, input) {
+  const result = spawnSync("npx", ["prisma", ...args], { stdio: input ? ["pipe", "inherit", "inherit"] : "inherit", input, shell: process.platform === "win32" });
   if (result.status !== 0) {
     console.error(`\n✖ \`prisma ${args.join(" ")}\` failed — see the output above and for_Developers/TROUBLESHOOTING.md.\n`);
     process.exit(result.status ?? 1);
