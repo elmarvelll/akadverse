@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/vendor-dashboard/[id]/sides/page.tsx
+// src/app/vendor-dashboard/[id]/sides/page.tsx
 //
 // The vendor dashboard's Sides tab (spec §9: sides are universal,
 // vendor-level add-ons, never tied to one product, so they get their own
@@ -136,7 +136,7 @@ export default function VendorSidesPage({ params }: { params: Promise<{ id: stri
               onChange={(e) => setName(e.target.value)}
               disabled={creating}
               placeholder="e.g. Fries"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-60"
+              className="w-full px-3 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-60"
             />
           </div>
           <div>
@@ -151,12 +151,12 @@ export default function VendorSidesPage({ params }: { params: Promise<{ id: stri
               onChange={(e) => setPrice(e.target.value)}
               disabled={creating}
               placeholder="500"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-60"
+              className="w-full px-3 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-60"
             />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5" htmlFor="sideStock">
-              Stock <span className="text-gray-400 font-normal">(optional — blank = unlimited)</span>
+              Stock <span className="text-gray-500 font-normal">(optional — blank = unlimited)</span>
             </label>
             <input
               id="sideStock"
@@ -166,7 +166,7 @@ export default function VendorSidesPage({ params }: { params: Promise<{ id: stri
               onChange={(e) => setStock(e.target.value)}
               disabled={creating}
               placeholder="Unlimited"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-60"
+              className="w-full px-3 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-60"
             />
           </div>
         </div>
@@ -185,19 +185,19 @@ export default function VendorSidesPage({ params }: { params: Promise<{ id: stri
 
       {loadState === "loading" && (
         <div className="flex justify-center py-16">
-          <Loader2 size={24} className="animate-spin text-gray-400" />
+          <Loader2 size={24} className="animate-spin text-gray-500" />
         </div>
       )}
 
       {loadState === "error" && (
         <div className="flex flex-col items-center text-center py-16">
-          <AlertCircle size={24} className="text-gray-400 mb-3" />
+          <AlertCircle size={24} className="text-gray-500 mb-3" />
           <p className="text-gray-500">Couldn&apos;t load your sides.</p>
         </div>
       )}
 
       {loadState === "loaded" && sides.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-8">No sides yet — add one above.</p>
+        <p className="text-sm text-gray-500 text-center py-8">No sides yet — add one above.</p>
       )}
 
       {loadState === "loaded" && sides.length > 0 && (
@@ -226,7 +226,7 @@ export default function VendorSidesPage({ params }: { params: Promise<{ id: stri
                   disabled={busyId === side.id}
                   onClick={() => handleDelete(side.id)}
                   aria-label={`Delete ${side.name}`}
-                  className="text-gray-300 hover:text-red-500 transition disabled:opacity-50"
+                  className="text-gray-500 hover:text-red-500 transition disabled:opacity-50"
                 >
                   <Trash2 size={16} />
                 </button>

@@ -1,0 +1,43 @@
+{
+  "approvedBusinesses": [
+    {
+      "id": "157ac645-7662-4c5b-82b8-4df97ddfec6e",
+      "name": "Roberts Business"
+    },
+    {
+      "id": "10bfcc33-1d96-4ee1-a155-a89d6e6d2950",
+      "name": "Munchbox"
+    },
+    {
+      "id": "f4af585c-2553-4c55-92e0-04b13de44826",
+      "name": "Plug"
+    },
+    {
+      "id": "215446cb-8969-4337-b860-fc9392e7d5e9",
+      "name": "Ricopoppi chips"
+    }
+  ],
+  "ranges": [
+    {
+      "label": "4-5",
+      "windowStart": "16:00",
+      "windowEnd": "17:00",
+      "feeKobo": 50000
+    },
+    {
+      "label": "5-6 pm",
+      "windowStart": "17:00",
+      "windowEnd": "18:00",
+      "feeKobo": 65000
+    },
+    {
+      "label": "6-7",
+      "windowStart": "18:00",
+      "windowEnd": "19:00",
+      "feeKobo": 80000
+    }
+  ],
+  "changedPriceRecords": 12,
+  "activePriceRecords": 12,
+  "serviceFeeKobo": 15000
+}

@@ -4,9 +4,9 @@
 // services/marketplace/deliverer/suspend-deliverer.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { suspendDeliverer as suspendDelivererAction } from "@/services/marketplace/deliverer/suspend-deliverer";
 
 export async function suspendDeliverer(delivererId: string, request: NextRequest): Promise<NextResponse> {

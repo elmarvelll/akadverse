@@ -4,8 +4,8 @@
 // services/marketplace/deliverer/list-deliverer-applications.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { listDelivererApplications } from "@/services/marketplace/deliverer/list-deliverer-applications";
 
 export async function listDeliverers(): Promise<NextResponse> {

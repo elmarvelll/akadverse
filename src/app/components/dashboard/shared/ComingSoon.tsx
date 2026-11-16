@@ -12,7 +12,7 @@
 // lands on the normal student home route like everyone else. See
 // docs/admin/decisions/admin-flag-replaces-role-check.md.
 //
-// Also reused for unbuilt workspaces inside a hub (Main Menu, AI Studio).
+// Shared presentation for workspaces that are not yet available.
 // Those pass `backHref` pointing at their hub, which swaps the Sign out
 // button for a "Back to dashboard" link — signing out from a sub-page was
 // the only way off it before.

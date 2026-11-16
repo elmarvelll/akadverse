@@ -37,6 +37,7 @@ export async function listAssignedDeliveryItems(delivererId: string) {
     },
   });
 
+  const plans = await prisma.scheduledDelivery.findMany({ where: { orderId: { in: items.map((i) => i.orderItem.order.id) } } });
   return items.map((item) => {
     const order = item.orderItem.order;
     const estimate =
@@ -49,6 +50,8 @@ export async function listAssignedDeliveryItems(delivererId: string) {
         : null;
 
     return {
+      isOverflow: plans.find((p) => p.orderId === order.id)?.isOverflow ?? false,
+      windowStartAt: order.deliveryWindowStart?.toISOString() ?? null,
       deliveryItemId: item.id,
       status: item.status,
       quantity: item.quantity,

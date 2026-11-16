@@ -1,30 +1,30 @@
-# Stewart — AkadVerse’s Study Assistant Interface
+# Stuwart — AkadVerse’s Study Assistant Interface
 
 > **11 November 2026:** Saved conversations, messages, independent sessions, retry safety, history selection and the simple welcome state are now implemented. See [persistent conversation contracts and rollout](stewart-conversations.md). Unsent drafts and unuploaded files still live only in the current browser visit.
 
 > **10 November 2026 implementation update:** Documents and screenshots now share the Concept Explainer attachment/explain workflow, with persisted ownership and server-scoped sessions. See [the current attachment contract and rollout guide](stewart-attachments.md). Earlier direct-provider and unsupported-attachment descriptions below are historical.
 
-> Architecture clarification, 5 November 2026: this document describes Stewart’s intended role and integration with an external AI microservice. The question-answering endpoint is still being developed, and its contract has not been supplied. The repository’s current direct Anthropic integration is an implementation mismatch to be replaced; it is not the architecture specified here.
+> Architecture clarification, 5 November 2026: this document describes Stuwart’s intended role and integration with an external AI microservice. The question-answering endpoint is still being developed, and its contract has not been supplied. The repository’s current direct Anthropic integration is an implementation mismatch to be replaced; it is not the architecture specified here.
 
-## 1. What Stewart is
+## 1. What Stuwart is
 
-**Stewart is the student-facing study assistant inside AkadVerse’s E-Learning Study Zone.** It provides the interface through which students ask questions about course topics, attach supporting documents, capture screenshots, and read answers returned by an AI microservice.
+**Stuwart is the student-facing study assistant inside AkadVerse’s E-Learning Study Zone.** It provides the interface through which students ask questions about course topics, attach supporting documents, capture screenshots, and read answers returned by an AI microservice.
 
-Stewart and the AkadVerse backend collect and prepare the information needed for a study request. The external AI microservice processes the question and supporting materials and generates the answer. Stewart processes the returned response for presentation in the conversation.
+Stuwart and the AkadVerse backend collect and prepare the information needed for a study request. The external AI microservice processes the question and supporting materials and generates the answer. Stuwart processes the returned response for presentation in the conversation.
 
 The responsibilities are:
 
 | Component | Responsibility |
 | --- | --- |
-| Stewart interface | Collect questions, manage conversation state, accept documents and screenshots, show progress, and display responses or errors. |
+| Stuwart interface | Collect questions, manage conversation state, accept documents and screenshots, show progress, and display responses or errors. |
 | AkadVerse backend | Authenticate students, verify course access, validate inputs, prepare structured requests, communicate with the microservice, and adapt responses for the interface. |
 | AI microservice | Handle questions and their supporting documents/screenshots, perform the AI processing, and return structured answers. |
 
-The AI provider, model, document-processing strategy, and answer-generation logic belong to the microservice. Stewart’s intended integration does not require AkadVerse to call Anthropic directly.
+The AI provider, model, document-processing strategy, and answer-generation logic belong to the microservice. Stuwart’s intended integration does not require AkadVerse to call Anthropic directly.
 
 ## 2. Purpose and student experience
 
-Stewart keeps studying and asking questions in the same workspace. Students can read a course document and ask for help without leaving Study Zone.
+Stuwart keeps studying and asking questions in the same workspace. Students can read a course document and ask for help without leaving Study Zone.
 
 The intended experience supports requests such as:
 
@@ -38,16 +38,16 @@ The intended experience supports requests such as:
 | Connect sources | “Use the attached notes to explain this chart.” |
 | Practise a topic | “Ask me practice questions about this topic.” |
 
-Stewart provides the interaction and presentation for these requests. The quality and supported scope of the answers depend on the microservice’s implementation. Conversational practice questions do not create official assessments or assessment records.
+Stuwart provides the interaction and presentation for these requests. The quality and supported scope of the answers depend on the microservice’s implementation. Conversational practice questions do not create official assessments or assessment records.
 
-## 3. Where Stewart lives
+## 3. Where Stuwart lives
 
-Students access Stewart through:
+Students access Stuwart through:
 
 - `/e-learning/student/study-zone` — course selection.
 - `/e-learning/student/study-zone/[courseId]` — a course’s study workspace.
 
-The workspace combines course/week selection, the selected document’s viewer, and the Stewart conversation panel. Its layout accommodates both desktop and smaller screens.
+The workspace combines course/week selection, the selected document’s viewer, and the Stuwart conversation panel. Its layout accommodates both desktop and smaller screens.
 
 The existing access rules require a signed-in student with an E-Learning profile. Course workspace and chat access are checked against the student’s approved registration for the current academic session and semester. These checks should remain in the AkadVerse backend when answer generation moves to the microservice.
 
@@ -56,7 +56,7 @@ The existing access rules require a signed-in student with an E-Learning profile
 ```mermaid
 sequenceDiagram
     actor Student
-    participant UI as Stewart interface
+    participant UI as Stuwart interface
     participant Backend as AkadVerse backend
     participant AI as AI microservice
 
@@ -77,7 +77,7 @@ This is the logical flow. It does not prescribe whether files travel in the same
 
 ### Collect the student’s input
 
-Stewart gathers the question and any files the student has chosen. The workspace supplies the selected course, week, and document identifiers. Recent conversation turns can provide context for follow-up questions.
+Stuwart gathers the question and any files the student has chosen. The workspace supplies the selected course, week, and document identifiers. Recent conversation turns can provide context for follow-up questions.
 
 Students should be able to review and remove pending files before submission. Selecting a file or taking a screenshot does not by itself send a question to the microservice.
 
@@ -102,13 +102,13 @@ This document does not select an AI provider or assume that the service uses a p
 
 ### Process and display the response
 
-The AkadVerse backend receives the microservice’s structured response, validates it against the eventual contract, and maps it into a response the Stewart interface can use.
+The AkadVerse backend receives the microservice’s structured response, validates it against the eventual contract, and maps it into a response the Stuwart interface can use.
 
-Stewart displays the answer and any supported supplementary information. Whether that response contains citations, warnings, formatted blocks, attachment metadata, or other fields remains to be agreed. The response format and rendering behavior must be implemented together once the contract is available.
+Stuwart displays the answer and any supported supplementary information. Whether that response contains citations, warnings, formatted blocks, attachment metadata, or other fields remains to be agreed. The response format and rendering behavior must be implemented together once the contract is available.
 
 ## 5. Documents and screenshots
 
-Documents and screenshots are inputs to the microservice’s question-answering process. Stewart provides the controls for selecting and reviewing those inputs.
+Documents and screenshots are inputs to the microservice’s question-answering process. Stuwart provides the controls for selecting and reviewing those inputs.
 
 ### Documents
 
@@ -132,7 +132,7 @@ Students currently need to attach the file or capture the relevant region for co
 
 ## 6. Existing interface behavior to retain
 
-The current Stewart interface already provides useful interaction behavior:
+The current Stuwart interface already provides useful interaction behavior:
 
 - Separate conversations for the selected week/document during the page visit.
 - Question drafts and pending files associated with their conversation.
@@ -183,7 +183,7 @@ The intended integration should:
 
 Authentication between AkadVerse and the question-answering endpoint, file ownership, attachment retention, cleanup, and any asynchronous callback verification remain contract decisions. Existing ingestion authentication does not automatically define the question-answering endpoint’s authentication.
 
-Stewart’s study-assistant role does not grant access to grades, other students’ records, or account-management actions.
+Stuwart’s study-assistant role does not grant access to grades, other students’ records, or account-management actions.
 
 ## 9. Relationship to the existing ingestion microservice
 
@@ -201,13 +201,13 @@ An ingestion callback updates the material’s processing status and related tas
 
 The lecturer-facing material badge can show “AI: ready” or “AI: failed” after the page is refreshed or revisited. The callback currently does not send lecturer notifications or trigger a live UI update.
 
-The existing ingestion endpoint does not establish a question-answering endpoint. How Stewart uses already-ingested material alongside newly attached documents/screenshots remains to be specified by the AI service engineer.
+The existing ingestion endpoint does not establish a question-answering endpoint. How Stuwart uses already-ingested material alongside newly attached documents/screenshots remains to be specified by the AI service engineer.
 
 See [AI ingestion contract](ai-ingestion-contract.md) for the existing ingestion integration.
 
 ## 10. Current implementation mismatch
 
-The current repository’s Stewart chat backend directly uses the Anthropic SDK. It builds model prompts, uploads prepared attachments to Anthropic’s Files API, and calls Claude to generate responses.
+The current repository’s Stuwart chat backend directly uses the Anthropic SDK. It builds model prompts, uploads prepared attachments to Anthropic’s Files API, and calls Claude to generate responses.
 
 That code explains the current runtime behavior, but it does not match the architecture clarified in this document.
 
@@ -244,7 +244,7 @@ Paths below are relative to the repository root.
 
 | Area | Relevant source | Integration work |
 | --- | --- | --- |
-| Chat UI | `src/app/e-learning/student/study-zone/_components/StewartPanel.tsx` | Retain interaction behavior and adapt response/attachment handling as needed. |
+| Chat UI | `src/app/e-learning/student/study-zone/_components/StuwartPanel.tsx` | Retain interaction behavior and adapt response/attachment handling as needed. |
 | Browser API client | `src/app/e-learning/student/study-zone/_components/stewart.ts` | Align browser-facing data with the backend’s revised contract. |
 | Workspace and capture | `StudyWorkspace.tsx`, `DocumentViewer.tsx`, `capture-region.ts`, and `viewers/PdfViewer.tsx` in the same components directory | Preserve study context and document/screenshot collection. |
 | Application chat endpoint | `src/app/api/e-learning/stewart/chat/route.ts` | Preserve authorization and forward validated study requests through the service layer. |
@@ -261,7 +261,7 @@ Existing direct-provider tests do not establish compatibility with the unfinishe
 ## 13. Related documentation
 
 - [AI ingestion contract](ai-ingestion-contract.md) — the existing document-ingestion and callback integration.
-- [Stewart screenshots and supporting files](stewart-attachments.md) — current capture/attachment implementation; provider-specific details describe the pre-migration code.
+- [Stuwart screenshots and supporting files](stewart-attachments.md) — current capture/attachment implementation; provider-specific details describe the pre-migration code.
 - [Study Zone system](study-zone-system.md) — workspace layout and historical design.
 - [Course materials system](course-materials-system.md) — course-document storage and access.
 - [Implementation changelog](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md) — historical changes, including the direct-provider implementation.

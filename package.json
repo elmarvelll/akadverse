@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma",
+    "predev": "node scripts/generate-core-prisma.mjs && prisma generate --schema=prisma/elearning/schema.prisma",
     "dev": "next dev",
     "dev:ai": "node scripts/run-productivity-ai.mjs",
-    "build": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma && next build",
-    "postinstall": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma",
+    "build": "node scripts/generate-core-prisma.mjs && prisma generate --schema=prisma/elearning/schema.prisma && next build",
+    "postinstall": "node scripts/generate-core-prisma.mjs && prisma generate --schema=prisma/elearning/schema.prisma",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
@@ -52,7 +52,14 @@
     "test:revision:live": "node --import tsx scripts/verify-revision-live.ts",
     "test:revision:browser": "node scripts/verify-revision-panel.cjs",
     "test:revisions": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/revision-questions/learning.db.test.ts",
-    "test:revisions:browser": "node scripts/verify-revisions-workspace.cjs"
+    "test:revisions:browser": "node scripts/verify-revisions-workspace.cjs",
+    "test:marketplace": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 \"tests/marketplace/*.test.ts\" \"tests/marketplace/*.test.tsx\"",
+    "test:marketplace:setup": "node scripts/setup-marketplace-test-db.mjs",
+    "db:core:generate": "node scripts/generate-core-prisma.mjs",
+    "test:marketplace:browser": "node scripts/verify-marketplace-integration.cjs",
+    "test:platform": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/elearning/platform-navigation.test.tsx tests/elearning/classroom-stuwart-route.test.ts tests/productivity/task-eligibility.test.ts tests/marketplace/storefront-ui.test.tsx tests/speech/*.test.ts tests/elearning/stewart-learning-response.test.ts",
+    "test:platform:db": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/elearning/classroom-stuwart.test.ts tests/elearning/stewart-conversations.test.ts tests/elearning/student-dashboard-load.test.tsx",
+    "test:platform:browser": "node scripts/verify-platform-changes.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

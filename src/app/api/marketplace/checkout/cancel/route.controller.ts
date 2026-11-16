@@ -14,7 +14,7 @@
 //     the reconciler settles it when the reservation expires.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
 import { loadOwnedCheckoutPayment } from "@/services/marketplace/checkout/load-owned-checkout-payment";
 import { reconcileLoadedPayment } from "@/services/marketplace/checkout/reconcile-checkout-payment";

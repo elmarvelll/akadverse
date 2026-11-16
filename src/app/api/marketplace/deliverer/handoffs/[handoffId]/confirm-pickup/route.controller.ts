@@ -4,7 +4,7 @@
 // services/marketplace/delivery/confirm-pickup.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
 import { requireDelivererId } from "../../../shared/require-deliverer";
 import { confirmPickup as confirmPickupAction } from "@/services/marketplace/delivery/confirm-pickup";

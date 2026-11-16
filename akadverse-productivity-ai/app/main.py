@@ -41,9 +41,10 @@ async def chat(payload: ChatRequest, claims: Annotated[dict, Depends(authenticat
     try:
         async with asyncio.timeout(settings.turn_timeout_seconds):
             return await orchestrate(backend, GeminiClient(settings), settings.max_tool_calls)
-    except BackendError:
-        logger.warning('Assistant request failed: category=backend')
-        return {'message': 'AkadVerse could not confirm this operation. Review saved results before repeating a change.', 'status': 'failed'}
+    except BackendError as error:
+        logger.warning('Assistant request failed: category=backend action=%s status=%s code=%s reference_id=%s',
+                       error.action, error.status, error.code, error.reference_id)
+        return {'message': error.public_message, 'status': 'failed'}
     except APIError as error:
         # Log only a numeric category: provider exception text can contain credentials.
         code = error.code

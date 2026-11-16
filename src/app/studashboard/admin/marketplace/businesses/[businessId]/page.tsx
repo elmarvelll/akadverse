@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/businesses/[businessId]/page.tsx
+// src/app/admin/businesses/[businessId]/page.tsx
 //
 // Admin "View Profile" — the full submitted registration info for one
 // business (every BusinessFormValues field, plus admin-only status), and
@@ -17,6 +17,7 @@ import api from "@/lib/axios";
 import type { ProductSummary } from "@/types/product";
 
 interface AdminBusinessDetail {
+  type: "BUSINESS" | "SCHOOL_VENDOR";
   id: string;
   name: string;
   industry: string;
@@ -93,7 +94,7 @@ export default function AdminBusinessProfilePage({ params }: { params: Promise<{
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -101,7 +102,7 @@ export default function AdminBusinessProfilePage({ params }: { params: Promise<{
   if (loadState !== "loaded" || !business) {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">
           {loadState === "forbidden"
             ? "Admin access required."
@@ -133,7 +134,8 @@ export default function AdminBusinessProfilePage({ params }: { params: Promise<{
           )}
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{business.name}</h1>
+          {business.type === "BUSINESS" && <Link href={`/studashboard/admin/marketplace/businesses/${businessId}/pricing`} className="text-blue-600 font-semibold">Delivery &amp; Pricing</Link>}
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{business.name}</h1>
           <p className="text-sm text-gray-500">{business.industry}</p>
           <div className="flex flex-wrap gap-2 mt-2">
             <span
@@ -167,15 +169,15 @@ export default function AdminBusinessProfilePage({ params }: { params: Promise<{
 
       <div className="grid sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Products</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Products</p>
           <p className="text-xl font-bold text-gray-900">{business.productCount}</p>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Orders</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Orders</p>
           <p className="text-xl font-bold text-gray-900">{business.orderCount}</p>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Reports</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Reports</p>
           <p className="text-xl font-bold text-gray-900">{business.reportCount}</p>
         </div>
       </div>
@@ -211,11 +213,11 @@ export default function AdminBusinessProfilePage({ params }: { params: Promise<{
 
       <section className="bg-white rounded-2xl border border-gray-100 p-6">
         <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Package size={16} className="text-gray-400" />
+          <Package size={16} className="text-gray-500" />
           Products ({business.products.length})
         </h2>
         {business.products.length === 0 ? (
-          <p className="text-sm text-gray-400">This business hasn&apos;t listed any products yet.</p>
+          <p className="text-sm text-gray-500">This business hasn&apos;t listed any products yet.</p>
         ) : (
           <div className="space-y-2">
             {business.products.map((product) => (

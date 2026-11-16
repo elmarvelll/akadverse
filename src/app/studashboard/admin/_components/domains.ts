@@ -7,7 +7,7 @@
 // today; the rest are honestly "Coming Soon," same convention as the
 // Overview stat cards' Skill Owners tile — not stubbed as if they worked.
 
-import { ShoppingBag, BookOpen, Zap, Compass, Bot, type LucideIcon } from "lucide-react";
+import { ShoppingBag, BookOpen, Zap, Compass, type LucideIcon } from "lucide-react";
 
 export interface AdminDomain {
   id: string;
@@ -59,16 +59,6 @@ export const ADMIN_DOMAINS: AdminDomain[] = [
     icon: Compass,
     color: "text-teal-500",
     bgColor: "bg-teal-50",
-    implemented: false,
-  },
-  {
-    id: "ai-studio",
-    label: "AI Studio",
-    description: "Oversight of the platform's AI-assisted tools.",
-    href: "/studashboard/admin/ai-studio",
-    icon: Bot,
-    color: "text-pink-500",
-    bgColor: "bg-pink-50",
     implemented: false,
   },
 ];

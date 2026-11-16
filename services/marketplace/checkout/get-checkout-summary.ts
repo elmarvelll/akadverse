@@ -1,73 +1,9 @@
-// services/marketplace/checkout/get-checkout-summary.ts
-//
-// The checkout page's order preview: current cart lines, the buyer's saved
-// location, subtotal, and the service fee. Read-only — doesn't create any
-// Order rows. Called by
-// src/app/api/marketplace/checkout/summary/route.controller.ts.
-
 import { prisma } from "@/lib/prisma";
-import { getCartForUser } from "@/services/marketplace/cart/get-cart-for-user";
-import { getEstimatedDeliveryForBusiness, formatEstimatedDelivery } from "@/services/marketplace/delivery/estimated-delivery.service";
-import { SERVICE_FEE_RATE } from "./shared/service-fee";
-
-export interface CheckoutSummaryItem {
-  id: string;
-  productName: string;
-  sellerName: string;
-  price: number;
-  quantity: number;
-  image: string | null;
-  selectedVariants: Record<string, string> | null;
-  variantName: string | null;
-  estimatedDeliveryDate: string;
-  deliveryWindow: string;
+import { calculateBusinessQuote, type DeliverySelections } from "@/services/marketplace/pricing/business-pricing";
+export async function getCheckoutSummary(userId: string, selections: DeliverySelections = {}) {
+    const q = await calculateBusinessQuote(userId, selections);
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { location: true } });
+    return { items: q.items.map(i => { const g = q.groups.find(g => g.businessId === i.businessId)!; return { ...i, estimatedDeliveryDate: g.date?.slice(0, 10) ?? "Unavailable", deliveryWindow: g.plan ? `${clock(g.plan.slot.windowStart)} - ${clock(g.plan.slot.windowEnd)}` : "Pricing unavailable" }; }), location: user?.location ?? "", subtotal: q.subtotalKobo / 100, deliveryFee: q.deliveryFeeKobo / 100, serviceFee: q.serviceFeeKobo / 100, total: q.totalKobo / 100, available: q.available, quoteToken: q.token, businesses: q.groups.map(g => ({ businessId: g.businessId, businessName: g.businessName, subtotalKobo: g.subtotalKobo, deliveryFeeKobo: g.deliveryFeeKobo, selectedSlotId: g.selectedSlotId, date: g.date, options: g.options })) };
 }
-
-export interface CheckoutSummary {
-  items: CheckoutSummaryItem[];
-  location: string;
-  subtotal: number;
-  serviceFee: number;
-  total: number;
-}
-
-export async function getCheckoutSummary(userId: string): Promise<CheckoutSummary> {
-  const [cartItems, user] = await Promise.all([
-    getCartForUser(userId),
-    prisma.user.findUnique({ where: { id: userId }, select: { location: true } }),
-  ]);
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const serviceFee = subtotal * SERVICE_FEE_RATE;
-
-  // One estimate per business represented in the cart (every line from
-  // the same business shares that business's delivery days), computed
-  // with the same reusable function checkout/initialize and the product
-  // profile use.
-  const businessIds = Array.from(new Set(cartItems.map((item) => item.businessId)));
-  const estimatesByBusiness = new Map(
-    await Promise.all(businessIds.map(async (businessId) => [businessId, await getEstimatedDeliveryForBusiness(businessId)] as const))
-  );
-
-  return {
-    items: cartItems.map((item) => {
-      const { date, window } = formatEstimatedDelivery(estimatesByBusiness.get(item.businessId)!);
-      return {
-        id: item.id,
-        productName: item.productName,
-        sellerName: item.sellerName,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image,
-        selectedVariants: item.selectedVariants,
-        variantName: item.variantName,
-        estimatedDeliveryDate: date,
-        deliveryWindow: window,
-      };
-    }),
-    location: user?.location ?? "",
-    subtotal,
-    serviceFee,
-    total: subtotal + serviceFee,
-  };
-}
+export type CheckoutSummary = Awaited<ReturnType<typeof getCheckoutSummary>>;
+function clock(value: string) { const [h, m] = value.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; }

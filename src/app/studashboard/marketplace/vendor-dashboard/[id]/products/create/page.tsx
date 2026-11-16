@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/vendor-dashboard/[id]/products/create/page.tsx
+// src/app/vendor-dashboard/[id]/products/create/page.tsx
 //
 // The vendor's "Create Product" form. Submits to
 // POST /api/marketplace/vendor/[id]/products (the vendor's own product
@@ -74,7 +74,7 @@ export default function CreateVendorProductPage({ params }: { params: Promise<{ 
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="w-full py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {status === "submitting" && <Loader2 size={18} className="animate-spin" />}
           {status === "submitting" ? "Creating…" : "Create Product"}

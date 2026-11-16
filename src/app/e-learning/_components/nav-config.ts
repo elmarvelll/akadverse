@@ -34,7 +34,7 @@ import {
 // Where each role's dashboard lives. The header's AkadVerse logo uses this (always the CURRENT role's dashboard), and so do the nav
 // trees below, so the two can never disagree. Dean/VC have no dashboard yet (§29): their single placeholder page is their "home".
 export const DASHBOARD_HREF = {
-  student: "/studashboard",
+  student: "/e-learning/student/dashboard",
   faculty: "/facultydashboard",
   hod: "/e-learning/hod/dashboard",
   dapu: "/e-learning/dapu/dashboard",

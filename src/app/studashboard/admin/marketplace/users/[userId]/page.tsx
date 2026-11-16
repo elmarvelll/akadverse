@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/users/[userId]/page.tsx
+// src/app/admin/users/[userId]/page.tsx
 //
 // Admin "View Profile" for one user — safe fields only (never
 // password/tokens, see services/marketplace/admin/get-user-detail.ts's own
@@ -11,7 +11,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { isAxiosError } from "axios";
-import { AlertCircle, ArrowLeft, Loader2, Store } from "lucide-react";
+import { AlertCircle, ArrowLeft, Ban, Loader2, Store } from "lucide-react";
 import api from "@/lib/axios";
 
 interface AdminUserDetail {
@@ -19,8 +19,12 @@ interface AdminUserDetail {
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
   isAdmin: boolean;
+  role: string;
+  blocked: boolean;
+  blockedAt: string | null;
+  blockedReason: string | null;
+  accountSource: "akadverse" | "marketplace";
   location: string | null;
   createdAt: string;
   businesses: { id: string; name: string; approvalStatus: string }[];
@@ -35,6 +39,33 @@ export default function AdminUserProfilePage({ params }: { params: Promise<{ use
   const { userId } = use(params);
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "forbidden" | "not-found" | "error">("loading");
+
+  const [acting, setActing] = useState(false);
+  const [actionError, setActionError] = useState("");
+
+  // Block / unblock this account. A block signs the user out everywhere immediately (the server re-checks every
+  // request) and emails them the reason; see services/marketplace/admin/block-user.ts.
+  const setBlocked = async (block: boolean) => {
+    if (acting || !user) return;
+    let reason = "";
+    if (block) {
+      reason = window.prompt("Reason for blocking this account (the user will be emailed this reason):")?.trim() ?? "";
+      if (!reason) return;
+    } else if (!window.confirm("Unblock this account? The user will be able to sign in again.")) {
+      return;
+    }
+    setActing(true);
+    setActionError("");
+    try {
+      await api.post(`/marketplace/admin/users/${userId}/${block ? "block" : "unblock"}`, block ? { reason } : {});
+      const res = await api.get<{ user: AdminUserDetail }>(`/marketplace/admin/users/${userId}`);
+      setUser(res.data.user);
+    } catch (err) {
+      setActionError((isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "That action failed.");
+    } finally {
+      setActing(false);
+    }
+  };
 
   useEffect(() => {
     const run = async () => {
@@ -55,7 +86,7 @@ export default function AdminUserProfilePage({ params }: { params: Promise<{ use
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -63,7 +94,7 @@ export default function AdminUserProfilePage({ params }: { params: Promise<{ use
   if (loadState !== "loaded" || !user) {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">
           {loadState === "forbidden"
             ? "Admin access required."
@@ -96,7 +127,11 @@ export default function AdminUserProfilePage({ params }: { params: Promise<{ use
           </h1>
           <p className="text-sm text-gray-500 break-words">{user.email}</p>
           <div className="flex flex-wrap gap-2 mt-2">
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">{user.role}</span>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+              {user.accountSource === "akadverse" ? "AkadVerse account" : "Marketplace account"}
+            </span>
+            <span className="text-xs text-gray-600">{user.role}</span>
+                    {user.blocked && <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-600">Blocked</span>}
             {user.isAdmin && <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-600">Admin</span>}
             {user.delivererStatus && (
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-purple-50 text-purple-600">
@@ -107,17 +142,42 @@ export default function AdminUserProfilePage({ params }: { params: Promise<{ use
         </div>
       </div>
 
+      <section className="bg-white rounded-2xl border border-gray-100 p-5 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="font-semibold text-gray-900">Account access</h2>
+            <p className="text-sm text-gray-600 break-words">
+              {user.blocked
+                ? `Blocked${user.blockedAt ? ` on ${dateFormatter.format(new Date(user.blockedAt))}` : ""}${user.blockedReason ? ` — ${user.blockedReason}` : ""}`
+                : "This account can sign in and use the Marketplace."}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={acting}
+            onClick={() => setBlocked(!user.blocked)}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
+              user.blocked ? "border border-gray-300 text-gray-700 hover:bg-gray-50" : "bg-red-600 text-white hover:bg-red-700"
+            }`}
+          >
+            {acting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Ban size={14} aria-hidden />}
+            {user.blocked ? "Unblock account" : "Block account"}
+          </button>
+        </div>
+        {actionError && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-2.5 text-sm text-red-700">{actionError}</p>}
+      </section>
+
       <div className="grid sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Businesses</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Businesses</p>
           <p className="text-xl font-bold text-gray-900">{user.businessCount}</p>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Orders placed</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Orders placed</p>
           <p className="text-xl font-bold text-gray-900">{user.orderCount}</p>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Joined</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Joined</p>
           <p className="text-xl font-bold text-gray-900">{dateFormatter.format(new Date(user.createdAt))}</p>
         </div>
       </div>
@@ -138,11 +198,11 @@ export default function AdminUserProfilePage({ params }: { params: Promise<{ use
 
       <section className="bg-white rounded-2xl border border-gray-100 p-6">
         <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Store size={16} className="text-gray-400" />
+          <Store size={16} className="text-gray-500" />
           Businesses
         </h2>
         {user.businesses.length === 0 ? (
-          <p className="text-sm text-gray-400">This user hasn&apos;t registered a business.</p>
+          <p className="text-sm text-gray-500">This user hasn&apos;t registered a business.</p>
         ) : (
           <div className="space-y-2">
             {user.businesses.map((business) => (

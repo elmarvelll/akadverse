@@ -4,8 +4,8 @@
 // services/marketplace/delivery/list-ready-items.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { listReadyItems as listReadyItemsAction } from "@/services/marketplace/delivery/list-ready-items";
 
 export async function listReadyItems(): Promise<NextResponse> {

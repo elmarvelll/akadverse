@@ -1,5 +1,6 @@
 import { unstable_rethrow } from "next/navigation";
 import { ServiceError } from "@/lib/service-error";
+import { databaseDiagnostic } from "../diagnostics";
 import { publicProductivityError } from "../errors";
 export const privateHeaders = { "Cache-Control": "private, no-store", Vary: "Cookie" };
 export async function body(request: Request | Response, limit = 32768): Promise<Record<string, unknown>> {
@@ -16,7 +17,7 @@ export async function respond(fn: () => Promise<unknown>) {
     unstable_rethrow(error);
     const { status, ...failure } = publicProductivityError(error);
     const referenceId = crypto.randomUUID();
-    if (status >= 500) console.error("Productivity assistant request failed", { referenceId, code: failure.code });
+    if (status >= 500) console.error("Productivity assistant request failed", { referenceId, code: failure.code, ...databaseDiagnostic(error) });
     return Response.json({ ...failure, referenceId }, { status, headers: privateHeaders });
   }
 }

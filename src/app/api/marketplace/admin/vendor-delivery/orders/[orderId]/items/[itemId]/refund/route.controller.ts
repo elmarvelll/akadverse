@@ -4,8 +4,8 @@
 // services/marketplace/admin/vendor-delivery/refund-vendor-item.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { refundVendorItem } from "@/services/marketplace/admin/vendor-delivery/refund-vendor-item";
 
 export async function refundItem(request: NextRequest, orderId: string, itemId: string): Promise<NextResponse> {

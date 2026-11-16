@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/vendor-dashboard/[id]/products/[productId]/edit/page.tsx
+// src/app/vendor-dashboard/[id]/products/[productId]/edit/page.tsx
 //
 // The vendor's product edit form. Fetches/saves via
 // GET/PATCH /api/marketplace/vendor/[id]/products/[productId] (the
@@ -97,7 +97,7 @@ export default function EditVendorProductPage({ params }: { params: Promise<{ id
       <>
         {backLink}
         <div className="flex justify-center py-24">
-          <Loader2 size={28} className="animate-spin text-gray-400" />
+          <Loader2 size={28} className="animate-spin text-gray-500" />
         </div>
       </>
     );
@@ -108,7 +108,7 @@ export default function EditVendorProductPage({ params }: { params: Promise<{ id
       <>
         {backLink}
         <div className="flex flex-col items-center text-center py-24">
-          <AlertCircle size={28} className="text-gray-400 mb-3" />
+          <AlertCircle size={28} className="text-gray-500 mb-3" />
           <p className="text-gray-500">
             {loadState === "not-found" ? "This product doesn't exist." : "Couldn't load this product. Please try again."}
           </p>
@@ -130,7 +130,7 @@ export default function EditVendorProductPage({ params }: { params: Promise<{ id
         <button
           type="submit"
           disabled={saveStatus === "saving"}
-          className="w-full py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {saveStatus === "saving" && <Loader2 size={18} className="animate-spin" />}
           {saveStatus === "saving" ? "Saving…" : "Save changes"}

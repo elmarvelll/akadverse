@@ -13,7 +13,7 @@ import * as capacity from "@/services/marketplace/vendor/capacity/manage-vendor-
 import { listVendorOrders } from "@/services/marketplace/vendor/order/list-vendor-orders";
 import { listSellerOrders } from "@/services/marketplace/order/list-seller-orders";
 import { createVendorOrdersForCheckout } from "@/services/marketplace/vendor-checkout/create-vendor-orders-for-checkout";
-import { createOrdersForCheckout } from "@/services/marketplace/checkout/create-orders-for-checkout";
+import { createOrdersForCheckout } from "../helpers/priced-checkout";
 import { reconcileCheckoutPayment } from "@/services/marketplace/checkout/reconcile-checkout-payment";
 import { acceptOrder } from "@/services/marketplace/order/accept-order";
 import { ServiceError } from "@/lib/service-error";

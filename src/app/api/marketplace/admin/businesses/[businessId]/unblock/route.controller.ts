@@ -4,8 +4,8 @@
 // services/marketplace/admin/unblock-business.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { unblockBusiness } from "@/services/marketplace/admin/unblock-business";
 
 export async function unblock(businessId: string): Promise<NextResponse> {

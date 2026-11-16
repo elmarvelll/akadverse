@@ -14,6 +14,7 @@ export interface AdminUserRow {
   email: string;
   role: string;
   isAdmin: boolean;
+  blocked: boolean;
   createdAt: string;
 }
 
@@ -36,7 +37,7 @@ export async function searchUsers(searchParams: URLSearchParams): Promise<PageRe
   const [users, total] = await Promise.all([
     prisma.user.findMany({
       where,
-      select: { id: true, firstName: true, lastName: true, email: true, role: true, isAdmin: true, createdAt: true },
+      select: { id: true, firstName: true, lastName: true, email: true, role: true, isAdmin: true, createdAt: true, marketplaceAccount: { select: { blocked: true } } },
       orderBy: { createdAt: "desc" },
       skip: (pageParams.page - 1) * pageParams.pageSize,
       take: pageParams.pageSize,
@@ -45,7 +46,7 @@ export async function searchUsers(searchParams: URLSearchParams): Promise<PageRe
   ]);
 
   return toPageResult(
-    users.map((u) => ({ ...u, createdAt: u.createdAt.toISOString() })),
+    users.map(({ marketplaceAccount, ...u }) => ({ ...u, blocked: marketplaceAccount?.blocked ?? false, createdAt: u.createdAt.toISOString() })),
     total,
     pageParams
   );

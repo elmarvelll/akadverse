@@ -1,10 +1,3 @@
-// src/app/api/marketplace/checkout/summary/route.ts
-//
-// GET -> the checkout page's order preview. Thin route — see
-// ./route.controller.ts.
-
+import { NextRequest } from "next/server";
 import { getSummary } from "./route.controller";
-
-export async function GET() {
-  return getSummary();
-}
+export async function GET(request: NextRequest) { return getSummary(request); }

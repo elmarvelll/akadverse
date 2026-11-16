@@ -194,7 +194,7 @@ The feature uses validated domain JSON together with queryable scalar projection
 
 User ownership is reinforced by foreign keys and owner-inclusive relationships. An occurrence is unique by habit and original date, with at most the corresponding task/event projection. Owner deletion cascades from Core User as defined by the schema; linked graph relationships have additional constraints.
 
-Older generic `Task` and `Schedule` models are not the current Productivity Layer model family. The existing `student_playlists` model is not conversation storage. E-Learning `ChatConversation`/`ChatMessage` are course/Stewart-oriented and do not provide the specified Productivity conversation, execution, and pending-action lifecycle.
+Older generic `Task` and `Schedule` models are not the current Productivity Layer model family. The existing `student_playlists` model is not conversation storage. E-Learning `ChatConversation`/`ChatMessage` are course/Stuwart-oriented and do not provide the specified Productivity conversation, execution, and pending-action lifecycle.
 
 ### Recommended conversation persistence, not a migration yet
 
@@ -247,7 +247,7 @@ The browser uses secure-context microphone access, AudioContext/AudioWorklet mon
 
 Partial transcripts update the draft continuously. Final turns are deduplicated and manual edits are protected. Stop flushes/terminates and releases microphone resources; Cancel preserves committed/manual text while dropping eligible partial content. Unmount, late permissions, offline/background transitions, and microphone failures have cleanup logic. Transcription does not automatically send a chat message.
 
-The archived token/usage routes enforce same-origin/student checks, bounds, and process-local rate limits. The old auth helper requires a Stewart/E-Learning student profile, while Productivity access only requires a Core student. Resolve this difference with an approved shared speech-auth policy, preserving the checks needed by existing callers. Do not bypass role checks to make voice work.
+The archived token/usage routes enforce same-origin/student checks, bounds, and process-local rate limits. The old auth helper requires a Stuwart/E-Learning student profile, while Productivity access only requires a Core student. Resolve this difference with an approved shared speech-auth policy, preserving the checks needed by existing callers. Do not bypass role checks to make voice work.
 
 Usage duration submitted by a browser is diagnostic input, not trusted billing. Existing process-local limits are not global multi-instance quotas. Temporary-token lifetime and service limits must be reviewed when restoring/deploying the shared code.
 
@@ -385,7 +385,7 @@ Before coding, produce and review:
 4. Core conversation/message/execution/pending-action schema and reviewed migration, retention policy, indexes, ownership constraints, and deletion behaviour.
 5. A consistency design tying message dedupe, tool-step IDs, confirmation consumption, mutation receipts, and reconciliation together.
 6. Frontend panel placement, mobile/dialog interactions, message lifecycle, retry/cancel semantics, history loading, safe record links, and cache refresh after confirmed mutations.
-7. Shared speech restoration/auth policy and its effect on existing Stewart callers.
+7. Shared speech restoration/auth policy and its effect on existing Stuwart callers.
 8. Python project layout, SDK/version/model choice, validation, tool registry, provider adapter, memory client, structured errors, and tests.
 9. Environment templates with placeholders, secret placement, deployment origins, observability, and budget/timeout bounds.
 10. Ordered implementation and acceptance plan, with a small read/task vertical slice before expanding the tool surface.

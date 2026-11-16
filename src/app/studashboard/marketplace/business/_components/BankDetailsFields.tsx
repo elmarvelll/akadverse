@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/_components/BankDetailsFields.tsx
+// src/app/business/_components/BankDetailsFields.tsx
 //
 // Bank name dropdown (populated from Paystack's bank list) + account
 // number input + auto-resolved account holder name, for the business
@@ -103,7 +103,7 @@ export default function BankDetailsFields({ value, onChange, disabled }: BankDet
       cancelled = true;
     };
     // Only re-run when the account number or bank actually change — not on
-    // every `value`/`onChange` identity change, since onChange sets
+    // every `value`/studashboard/marketplace`onChange` identity change, since onChange sets
     // accountHolderName on `value` itself.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountNumber, selectedBankCode, eligibleToResolve]);
@@ -122,7 +122,7 @@ export default function BankDetailsFields({ value, onChange, disabled }: BankDet
             const bank = banks.find((b) => b.code === e.target.value);
             onChange({ ...value, bankName: bank?.name, bankCode: bank?.code, accountHolderName: undefined });
           }}
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+          className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
         >
           <option value="">{banksStatus === "loading" ? "Loading banks…" : "Select a bank"}</option>
           {banks.map((bank) => (
@@ -131,7 +131,7 @@ export default function BankDetailsFields({ value, onChange, disabled }: BankDet
             </option>
           ))}
         </select>
-        {banksStatus === "error" && <p className="mt-1.5 text-xs text-red-500">Couldn&apos;t load the bank list.</p>}
+        {banksStatus === "error" && <p className="mt-1.5 text-xs text-red-600">Couldn&apos;t load the bank list.</p>}
       </div>
 
       <div>
@@ -150,7 +150,7 @@ export default function BankDetailsFields({ value, onChange, disabled }: BankDet
             onChange({ ...value, accountNumber: digits, accountHolderName: undefined });
           }}
           placeholder="10-digit account number"
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+          className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
         />
       </div>
 
@@ -162,8 +162,8 @@ export default function BankDetailsFields({ value, onChange, disabled }: BankDet
               resolveError ? "border-red-200 bg-red-50 text-red-600" : "border-gray-200 bg-gray-50 text-gray-900"
             }`}
           >
-            {resolving && <Loader2 size={14} className="animate-spin text-gray-400" />}
-            {!resolving && !resolveError && <CheckCircle2 size={14} className="text-green-500" />}
+            {resolving && <Loader2 size={14} className="animate-spin text-gray-500" />}
+            {!resolving && !resolveError && <CheckCircle2 size={14} className="text-green-700" />}
             <span>
               {resolving && "Verifying account…"}
               {!resolving && !resolveError && value.accountHolderName}

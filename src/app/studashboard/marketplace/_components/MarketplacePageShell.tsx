@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/_components/MarketplacePageShell.tsx
+// src/app/_components/MarketplacePageShell.tsx
 //
 // The frame for every Marketplace page that sits under the fixed top navbar
 // (DashboardNavbar: `fixed`, 4rem tall) and isn't the storefront itself:
@@ -37,7 +37,7 @@ export function BackLink({ href = MARKETPLACE_HOME, label = "Back to Marketplace
   return (
     <Link
       href={href}
-      className={`inline-flex min-h-10 max-w-full items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${className}`}
+      className={`inline-flex min-h-10 max-w-full items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${className}`}
     >
       <ArrowLeft size={16} className="shrink-0" aria-hidden />
       <span className="truncate">{label}</span>

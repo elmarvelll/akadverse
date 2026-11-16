@@ -4,7 +4,7 @@
 // See services/marketplace/product/{get-owned-product-detail,update-product,delete-product}.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { requireOwnedBusinessOnly } from "@/services/marketplace/business/business-ownership.service";
 import { getOwnedProductDetail } from "@/services/marketplace/product/get-owned-product-detail";
 import { updateProduct as updateProductAction } from "@/services/marketplace/product/update-product";

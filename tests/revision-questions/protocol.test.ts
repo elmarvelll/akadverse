@@ -1,7 +1,7 @@
 import "../helpers/env";
-import { it, beforeEach } from "node:test";
+import { it, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
-import { createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { authenticateRevisionRequest, MAX_REVISION_BODY_BYTES } from "@/services/e-learning/revision-questions/security";
 import { parseRevisionPayload, serializeRevisionResponse, type RevisionPayload } from "@/services/e-learning/revision-questions/contract";
 import { RevisionWebhookError } from "@/services/e-learning/revision-questions/errors";
@@ -89,4 +89,57 @@ it("preserves mathematical case and code indentation while making MCQ label shuf
   assert.equal(canonicalQuestion(payload, shuffled, "Understand the discriminant"), original);
   assert.notEqual(canonicalQuestion(payload, { ...q, stem: "Compute X + x" }, "Objective"), canonicalQuestion(payload, { ...q, stem: "Compute x + x" }, "Objective"));
   assert.notEqual(canonicalQuestion(payload, { ...q, stem: "if x:\n  a()\nb()" }, "Objective"), canonicalQuestion(payload, { ...q, stem: "if x:\n  a()\n  b()" }, "Objective"));
+});
+
+it("logs exact byte diagnostics and effective secret length on mismatch without leaking the key or payload", async () => {
+  const logger = mock.method(console, "log", () => {});
+  try {
+    const raw = '{"a":1,"b":"é"}';
+    process.env.AI_WEBHOOK_SECRET = SECRET + "\n";
+    const wrongSignature = "a".repeat(64);
+    await assert.rejects(authenticateRevisionRequest(request(raw, { "X-Akadverse-Signature": wrongSignature }), undefined, NOW, "test-correlation"), isStatus(401));
+    assert.equal(logger.mock.callCount(), 1);
+    const [label, diagnostic] = logger.mock.calls[0].arguments as unknown as [string, Record<string, unknown>];
+    assert.equal(label, "[revision-questions] sig_debug");
+    assert.equal(diagnostic.correlationId, "test-correlation");
+    assert.equal(diagnostic.signatureReceived, wrongSignature);
+    assert.equal(diagnostic.signatureComputed, createHmac("sha256", SECRET).update(Buffer.from(raw)).digest("hex"));
+    assert.equal(diagnostic.bodySha256, createHash("sha256").update(Buffer.from(raw)).digest("hex"));
+    assert.equal(diagnostic.bodyLength, Buffer.byteLength(raw));
+    assert.equal(diagnostic.configuredSecretByteLength, Buffer.byteLength(SECRET) + 1);
+    assert.equal(diagnostic.effectiveSecretByteLength, Buffer.byteLength(SECRET));
+    assert.equal(diagnostic.configuredSecretHasOuterWhitespace, true);
+    assert.equal(diagnostic.configuredSecretHasControlCharacters, true);
+    assert.equal(diagnostic.timestampReceived, new Date(NOW).toISOString());
+    assert.equal(diagnostic.idempotencyKeyReceived, "teach_teach_original");
+    assert.equal(diagnostic.reason, "hmac_mismatch");
+    assert.ok(!JSON.stringify(diagnostic).includes(SECRET));
+    assert.ok(!JSON.stringify(diagnostic).includes('"a":1'));
+  } finally { logger.mock.restore(); }
+});
+it("reports malformed headers without consuming or parsing the body", async () => {
+  const logger = mock.method(console, "log", () => {});
+  try {
+    const req = request("not JSON", { "X-Akadverse-Signature": "sha256=" + "a".repeat(64) });
+    await assert.rejects(authenticateRevisionRequest(req, SECRET, NOW, "header-correlation"), isStatus(401));
+    assert.equal(req.bodyUsed, false);
+    const diagnostic = logger.mock.calls[0].arguments[1] as unknown as Record<string, unknown>;
+    assert.equal(diagnostic.reason, "invalid_auth_headers"); assert.equal(diagnostic.signatureComputed, null); assert.equal(diagnostic.bodyLength, null);
+  } finally { logger.mock.restore(); }
+});
+it("does not log signed request diagnostics when authentication succeeds", async () => {
+  const logger = mock.method(console, "log", () => {});
+  try { await authenticateRevisionRequest(request(), SECRET, NOW); assert.equal(logger.mock.callCount(), 0); }
+  finally { logger.mock.restore(); }
+});
+it("uses the response correlation ID in the receiver's signature diagnostic", async () => {
+  const logger = mock.method(console, "log", () => {});
+  try {
+    const response = await POST(request('{"a":1,"b":2}', { "X-Akadverse-Signature": "a".repeat(64), "X-Akadverse-Timestamp": new Date().toISOString() }));
+    assert.equal(response.status, 401);
+    const body = await response.json();
+    const diagnostic = logger.mock.calls[0].arguments[1] as unknown as Record<string, unknown>;
+    assert.equal(diagnostic.correlationId, body.error.correlation_id);
+    assert.equal(diagnostic.reason, "hmac_mismatch");
+  } finally { logger.mock.restore(); }
 });

@@ -4,7 +4,7 @@
 // services/marketplace/order/list-buyer-orders.ts.
 
 import { NextResponse } from "next/server";
-import { runController, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { listBuyerOrders } from "@/services/marketplace/order/list-buyer-orders";
 
 export async function listOrders(): Promise<NextResponse> {

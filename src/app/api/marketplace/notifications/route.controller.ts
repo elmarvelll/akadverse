@@ -4,7 +4,7 @@
 // services/marketplace/notifications/notification.service.ts.
 
 import { NextResponse } from "next/server";
-import { runController, requireSession } from "@/lib/controller-helpers";
+import { runController, requireSession } from "@/lib/marketplace-controller-helpers";
 import { listNotifications } from "@/services/marketplace/notifications/notification.service";
 
 export async function listMarketplaceNotifications(): Promise<NextResponse> {

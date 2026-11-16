@@ -5,7 +5,7 @@
 // services/marketplace/vendor/order/mark-vendor-order-ready.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
+import { runController } from "@/lib/marketplace-controller-helpers";
 import { markVendorOrderReady } from "@/services/marketplace/vendor/order/mark-vendor-order-ready";
 
 export async function markReady(businessId: string, orderId: string): Promise<NextResponse> {

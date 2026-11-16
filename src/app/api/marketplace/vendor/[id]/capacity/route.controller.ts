@@ -5,7 +5,7 @@
 // services/marketplace/vendor/capacity/manage-vendor-capacity.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
 import { clearVendorCapacityOverride, listVendorCapacity, upsertVendorCapacity } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
 

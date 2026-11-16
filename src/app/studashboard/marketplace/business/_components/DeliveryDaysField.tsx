@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/_components/DeliveryDaysField.tsx
+// src/app/business/_components/DeliveryDaysField.tsx
 //
 // The delivery-days dropdown for the business onboarding/edit form — see
 // docs/marketplace/data/delivery-days.md. "Delivery days" means days of
@@ -32,9 +32,9 @@ export default function DeliveryDaysField({ value, onChange, disabled }: Deliver
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="deliveryDaySelect">
-        Delivery days <span className="text-gray-400 font-normal">(days of the week — up to {MAX_DELIVERY_DAYS})</span>
+        Delivery days <span className="text-gray-500 font-normal">(days of the week — up to {MAX_DELIVERY_DAYS})</span>
       </label>
-      <p className="text-xs text-gray-400 mb-2">
+      <p className="text-xs text-gray-500 mb-2">
         We recommend {RECOMMENDED_MAX_DELIVERY_DAYS} or fewer, so you have enough time to prepare orders.
       </p>
 
@@ -46,7 +46,7 @@ export default function DeliveryDaysField({ value, onChange, disabled }: Deliver
           const day = e.target.value as DeliveryDay;
           if (day && !value.includes(day)) onChange([...value, day]);
         }}
-        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+        className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
       >
         <option value="" disabled>
           {atLimit ? `You've selected ${MAX_DELIVERY_DAYS} days` : "Add a delivery day…"}

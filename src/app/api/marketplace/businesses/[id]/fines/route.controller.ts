@@ -4,7 +4,7 @@
 // services/marketplace/fines/list-business-fines.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
+import { runController } from "@/lib/marketplace-controller-helpers";
 import { requireOwnedBusiness } from "@/services/marketplace/business/business-ownership.service";
 import { listBusinessFines } from "@/services/marketplace/fines/list-business-fines";
 

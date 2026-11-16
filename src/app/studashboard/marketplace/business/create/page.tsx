@@ -1,11 +1,11 @@
-// src/app/studashboard/marketplace/business/create/page.tsx
+// src/app/business/create/page.tsx
 //
 // The "create a business" onboarding page, reachable from the marketplace
 // navbar's My Businesses dropdown ("+ Add Business"). Submits to
 // POST /api/marketplace/businesses (real Prisma persistence — see that
 // route for details) and, once created, offers a "Go to Dashboard" link
 // into the new business's dashboard
-// (src/app/studashboard/marketplace/business/[id]/page.tsx).
+// (src/app/business/[id]/page.tsx).
 
 "use client";
 
@@ -72,7 +72,7 @@ export default function CreateBusinessPage() {
         <DashboardNavbar />
         <div className="pt-16 min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
           <div className="max-w-md w-full text-center bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-            <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto mb-5">
+            <div className="w-14 h-14 rounded-full bg-green-50 text-green-700 flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 size={28} />
             </div>
             <h1 className="text-xl font-bold text-gray-900 mb-2">{createdBusiness.name} submitted for review</h1>
@@ -82,7 +82,7 @@ export default function CreateBusinessPage() {
             </p>
             <Link
               href={`/studashboard/marketplace/business/${createdBusiness.id}`}
-              className="block w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full transition"
+              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition"
             >
               Go to Dashboard
             </Link>
@@ -119,7 +119,7 @@ export default function CreateBusinessPage() {
                 required
                 disabled={status === "submitting"}
                 placeholder="e.g. MunchBox"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
 
@@ -133,7 +133,7 @@ export default function CreateBusinessPage() {
                 onChange={updateField("industry")}
                 required
                 disabled={status === "submitting"}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               >
                 <option value="" disabled>
                   Select a category
@@ -158,7 +158,7 @@ export default function CreateBusinessPage() {
                 disabled={status === "submitting"}
                 rows={4}
                 placeholder="What does your business sell?"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none disabled:opacity-60"
               />
             </div>
 
@@ -170,7 +170,7 @@ export default function CreateBusinessPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="location">
-                Location <span className="text-gray-400 font-normal">(optional)</span>
+                Location <span className="text-gray-500 font-normal">(optional)</span>
               </label>
               <input
                 id="location"
@@ -179,7 +179,7 @@ export default function CreateBusinessPage() {
                 onChange={updateField("location")}
                 disabled={status === "submitting"}
                 placeholder="e.g. Block C, Female Hostel"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
           </section>
@@ -189,7 +189,7 @@ export default function CreateBusinessPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="contactInfo">
-                How should buyers reach you? <span className="text-gray-400 font-normal">(optional)</span>
+                How should buyers reach you? <span className="text-gray-500 font-normal">(optional)</span>
               </label>
               <input
                 id="contactInfo"
@@ -198,7 +198,7 @@ export default function CreateBusinessPage() {
                 onChange={updateField("contactInfo")}
                 disabled={status === "submitting"}
                 placeholder="Phone, email, or WhatsApp"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
 
@@ -214,7 +214,7 @@ export default function CreateBusinessPage() {
                   onChange={updateField("website")}
                   disabled={status === "submitting"}
                   placeholder="https://…"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                  className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
                 />
               </div>
               <div>
@@ -228,7 +228,7 @@ export default function CreateBusinessPage() {
                   onChange={updateField("instagram")}
                   disabled={status === "submitting"}
                   placeholder="@handle"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                  className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
                 />
               </div>
               <div>
@@ -242,7 +242,7 @@ export default function CreateBusinessPage() {
                   onChange={updateField("linkedin")}
                   disabled={status === "submitting"}
                   placeholder="Profile URL"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                  className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
                 />
               </div>
             </div>
@@ -259,7 +259,7 @@ export default function CreateBusinessPage() {
 
           <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Wallet size={17} className="text-gray-400" />
+              <Wallet size={17} className="text-gray-500" />
               Payout bank details
             </h2>
             <BankDetailsFields
@@ -274,7 +274,7 @@ export default function CreateBusinessPage() {
           <button
             type="submit"
             disabled={status === "submitting"}
-            className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {status === "submitting" && <Loader2 size={18} className="animate-spin" />}
             {status === "submitting" ? "Creating…" : "Create"}

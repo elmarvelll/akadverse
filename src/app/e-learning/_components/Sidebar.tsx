@@ -104,7 +104,7 @@ export default function Sidebar({
     }
     const active = pathname === leaf.href || (!!leaf.href && pathname.startsWith(`${leaf.href}/`));
     return (
-      <Link key={leaf.href} href={leaf.href!} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition ${active ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}>
+      <Link key={leaf.href} href={leaf.href!} aria-current={active ? "page" : undefined} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition ${active ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`}>
         {LeafIcon && <LeafIcon size={14} />}
         {leaf.label}
       </Link>
@@ -127,7 +127,7 @@ export default function Sidebar({
           sectionActive(section) ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
         }`;
         return section.href ? (
-          <Link key={section.label} href={section.href} aria-label={section.label} title={section.label} className={cls}>
+          <Link key={section.label} href={section.href} aria-current={sectionActive(section) ? "page" : undefined} aria-label={section.label} title={section.label} className={cls}>
             <Icon size={18} aria-hidden />
           </Link>
         ) : (
@@ -170,6 +170,7 @@ export default function Sidebar({
               <Link
                 key={section.label}
                 href={section.href}
+                aria-current={active ? "page" : undefined}
                 className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition ${
                   active ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-50"
                 }`}

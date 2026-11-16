@@ -4,7 +4,7 @@
 // See services/marketplace/vendor/product/vendor-product.service.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { getVendorProductDetail, updateVendorProduct, deleteVendorProduct } from "@/services/marketplace/vendor/product/vendor-product.service";
 import type { ProductFormValues } from "@/types/product";
 

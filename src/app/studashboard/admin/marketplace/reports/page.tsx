@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/reports/page.tsx
+// src/app/admin/reports/page.tsx
 //
 // Admin Reports tab: which business was reported, why, by whom, when, and
 // whether it's been reviewed. Reports are created by buyers from the
@@ -70,7 +70,7 @@ export default function AdminReportsPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -78,7 +78,7 @@ export default function AdminReportsPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load reports."}</p>
       </div>
     );
@@ -89,7 +89,7 @@ export default function AdminReportsPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Reports</h1>
 
       {result && result.items.length === 0 ? (
-        <p className="text-sm text-gray-400">No reported businesses.</p>
+        <p className="text-sm text-gray-500">No reported businesses.</p>
       ) : (
         result && (
           <>

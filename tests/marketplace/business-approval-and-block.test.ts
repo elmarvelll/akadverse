@@ -17,7 +17,7 @@ import { addToVendorCart } from "@/services/marketplace/vendor-cart/add-to-vendo
 import { getVendorStorefront } from "@/services/marketplace/vendor/get-vendor-storefront";
 import { getPublicProductDetail } from "@/services/marketplace/product/get-public-product-detail";
 import { searchProducts } from "@/services/marketplace/product/search-products";
-import { createOrdersForCheckout } from "@/services/marketplace/checkout/create-orders-for-checkout";
+import { createOrdersForCheckout } from "../helpers/priced-checkout";
 import { runEmailRetrySweep } from "@/services/marketplace/notifications/email-outbox";
 import { ServiceError } from "@/lib/service-error";
 

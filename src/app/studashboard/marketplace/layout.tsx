@@ -7,6 +7,7 @@
 // per-page). Purely a context wrapper — visual chrome (navbars etc.) stays
 // owned by each page/section as it already was.
 
+import "./marketplace.css";
 import { NotificationProvider } from "./_components/NotificationProvider";
 
 export default function MarketplaceLayout({ children }: { children: React.ReactNode }) {

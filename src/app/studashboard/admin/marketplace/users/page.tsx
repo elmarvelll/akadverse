@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/users/page.tsx
+// src/app/admin/users/page.tsx
 //
 // Admin Users tab: search, view, and grant/revoke admin access. `isAdmin`
 // is independent of `role` — a student, faculty, admin, or super_admin
@@ -22,6 +22,7 @@ interface UserRow {
   lastName: string;
   email: string;
   role: string;
+  blocked: boolean;
   isAdmin: boolean;
   createdAt: string;
 }
@@ -99,7 +100,7 @@ export default function AdminUsersPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load users."}</p>
       </div>
     );
@@ -111,12 +112,12 @@ export default function AdminUsersPage() {
 
       <form onSubmit={search} className="flex gap-2 mb-6">
         <div className="relative flex-1 max-w-sm">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search name or email…"
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500"
           />
         </div>
         <button type="submit" className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition">
@@ -128,14 +129,14 @@ export default function AdminUsersPage() {
 
       {loadState === "loading" && (
         <div className="flex justify-center py-16">
-          <Loader2 size={24} className="animate-spin text-gray-400" />
+          <Loader2 size={24} className="animate-spin text-gray-500" />
         </div>
       )}
 
       {loadState === "loaded" && result && (
         <>
           {result.items.length === 0 ? (
-            <p className="text-sm text-gray-400">No users found.</p>
+            <p className="text-sm text-gray-500">No users found.</p>
           ) : (
             <div className="space-y-2">
               {result.items.map((user) => (
@@ -149,11 +150,12 @@ export default function AdminUsersPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">{user.role}</span>
+                    <span className="text-xs text-gray-600">{user.role}</span>
+                    {user.blocked && <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-600">Blocked</span>}
                     {user.isAdmin && <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-600">Admin</span>}
                     <Link
                       href={`/studashboard/admin/marketplace/users/${user.id}`}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition"
                     >
                       <UserRound size={13} />
                       View Profile

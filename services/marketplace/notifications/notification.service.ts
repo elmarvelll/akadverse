@@ -9,6 +9,7 @@
 // src/app/api/marketplace/notifications/stream/route.ts and
 // sse-broadcaster.ts.
 
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { publish } from "./sse-broadcaster";
 import type { NotificationScope } from "@prisma/client";
@@ -102,4 +103,19 @@ export async function markNotificationRead(userId: string, notificationId: strin
   // Scoped to userId too, not just the id — a user must never be able to
   // mark someone else's notification as read by guessing its id.
   await prisma.notification.updateMany({ where: { id: notificationId, userId }, data: { read: true } });
+}
+
+// Persist an idempotent in-app notification inside the caller's transaction.
+// SSE is intentionally left to the next read: publishing before commit could
+// expose a notification for a transaction that later rolls back.
+export async function createTransactionalNotification(
+  tx: import("@/services/marketplace/order/shared/db").Db,
+  key: string,
+  input: CreateNotificationInput,
+): Promise<void> {
+  const id = createHash("sha256").update(key).digest("hex");
+  await tx.notification.upsert({ where: { id }, update: {}, create: {
+    id, userId: input.recipientId, scope: input.scope ?? "MARKETPLACE", type: input.type,
+    title: input.title, message: input.message, link: input.targetUrl, orderId: input.orderId, businessId: input.businessId,
+  } });
 }

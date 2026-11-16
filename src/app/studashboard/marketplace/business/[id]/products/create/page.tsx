@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/[id]/products/create/page.tsx
+// src/app/business/[id]/products/create/page.tsx
 //
 // The "Create Product" form, reached from the Products tab. Submits to
 // POST /api/marketplace/businesses/[id]/products, then returns to the
@@ -71,7 +71,7 @@ export default function CreateProductPage({ params }: { params: Promise<{ id: st
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {status === "submitting" && <Loader2 size={18} className="animate-spin" />}
           {status === "submitting" ? "Creating…" : "Create Product"}

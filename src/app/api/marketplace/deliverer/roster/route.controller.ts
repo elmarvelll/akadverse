@@ -4,7 +4,7 @@
 // upcoming schedule. See services/marketplace/deliverer/list-my-roster.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
+import { runController } from "@/lib/marketplace-controller-helpers";
 import { requireDelivererId } from "../shared/require-deliverer";
 import { listMyRoster } from "@/services/marketplace/deliverer/list-my-roster";
 

@@ -4,7 +4,7 @@
 // services/marketplace/cart/{update-cart-item-quantity,remove-cart-item}.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { updateCartItemQuantity } from "@/services/marketplace/cart/update-cart-item-quantity";
 import { removeCartItem as removeCartItemAction } from "@/services/marketplace/cart/remove-cart-item";
 

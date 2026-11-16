@@ -28,6 +28,7 @@
 // initialize and simply stops being a reservation. So a successful payment
 // results in exactly one deduction.
 
+import { notifyOverflowAssignments } from "@/services/marketplace/delivery-roster/overflow-notifications";
 import { Prisma, type CheckoutPayment } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { VerifiedTransaction } from "@/lib/external/paystack";
@@ -37,7 +38,10 @@ import { notifyAdmins } from "@/services/marketplace/notifications/notification.
 import { ORDER_PAYMENT_STATUS } from "@/services/marketplace/order/shared/paid-order";
 import { resolveVendorCapacity } from "@/services/marketplace/vendor/capacity/resolve-vendor-capacity";
 import { countVendorBookingsForSlot } from "@/services/marketplace/vendor/capacity/manage-vendor-capacity";
+import { issueHandoverCodesAfterPayment } from "@/services/marketplace/vendor-delivery/handover/handover-code";
 import { reserveLine } from "./shared/stock-reservation";
+import { resolveOccurrence } from "@/services/marketplace/delivery-roster/roster-resolution";
+import { countReservedDeliveries, loadOccurrenceUsage, usageKey, usedOf, lockRosterOperation } from "@/services/marketplace/delivery-roster/roster-capacity";
 import { logPayment } from "./shared/payment-log";
 import { enqueueOrderPaidEmails, createOrderPaidNotifications } from "./notify-order-paid";
 
@@ -94,12 +98,17 @@ async function finalizePending(payment: CheckoutPayment, verified: VerifiedTrans
         data: { status: "PAID", paidAt: now, providerStatus: verified.status, providerCheckedAt: now, lastError: null },
       });
       if (claim.count !== 1) return null;
+      if (payment.kind === "BUSINESS") await assertBusinessReservationRoom(tx, payment.reference);
       return markOrdersPaid(tx, payment, now);
     },
     { maxWait: 10000, timeout: 20000 }
-  );
+  ).catch(async (err) => {
+    if (err instanceof ReReserveError) return { review: await flagForReview(payment, `Payment received, but ${err.message}.`, verified.status) };
+    throw err;
+  });
+  if (finalized && "review" in finalized) return finalized.review;
   if (!finalized) return null;
-  await afterPaid(payment, finalized.orderIds);
+  await afterPaid(payment, finalized.newlyPaidIds);
   logPayment("info", "payment_finalized", { reference: payment.reference, kind: payment.kind, orders: finalized.orderIds.length, path: "pending" });
   return { state: "paid", orderIds: finalized.orderIds, newlyConfirmed: true, emailIds: finalized.emailIds };
 }
@@ -137,6 +146,13 @@ async function finalizeAfterRelease(payment: CheckoutPayment, verified: Verified
             const used = await countVendorBookingsForSlot(order.businessId, slotId, bookedFor, tx, { excludeReference: payment.reference });
             if (used >= capacity) throw new ReReserveError("the vendor's delivery slot is now fully booked");
           }
+          // The Vendor Market roster limit for the booking's timeframe/date.
+          const booking = orders.find((o) => o.vendorDeliveryBooking)?.vendorDeliveryBooking;
+          if (booking) await assertRosterRoom(tx, "VENDOR", booking.slotId, booking.bookedFor, payment.reference);
+        } else {
+          // Central delivery slot occurrences this checkout's orders were booked into (none when central slots aren't
+          // in use). Locked like checkout itself, so a concurrent checkout can't take the same last place.
+          await assertBusinessReservationRoom(tx, payment.reference);
         }
 
         return markOrdersPaid(tx, payment, now);
@@ -148,7 +164,7 @@ async function finalizeAfterRelease(payment: CheckoutPayment, verified: Verified
       }
     );
     if (!finalized) return null;
-    await afterPaid(payment, finalized.orderIds);
+    await afterPaid(payment, finalized.newlyPaidIds);
     logPayment("warn", "payment_finalized", { reference: payment.reference, kind: payment.kind, orders: finalized.orderIds.length, path: "late_success" });
     return { state: "paid", orderIds: finalized.orderIds, newlyConfirmed: true, emailIds: finalized.emailIds };
   } catch (err) {
@@ -159,16 +175,56 @@ async function finalizeAfterRelease(payment: CheckoutPayment, verified: Verified
   }
 }
 
+// Re-check Business holds at payment finalization while serializing against checkout.
+// Group sibling orders: excluding the reference must still reserve room for ALL of them.
+async function assertBusinessReservationRoom(tx: Prisma.TransactionClient, reference: string) {
+  await lockRosterOperation(tx, "MARKETPLACE");
+  const orders = await tx.order.findMany({ where: { paystackReference: reference }, select: { id: true } });
+  const plans = await tx.scheduledDelivery.findMany({ where: { operation: "MARKETPLACE", orderId: { in: orders.map((o) => o.id) } } });
+  const groups = new Map<string, typeof plans>();
+  for (const plan of plans) {
+    const key = usageKey(plan.slotId, plan.date);
+    groups.set(key, [...(groups.get(key) ?? []), plan]);
+  }
+  for (const group of groups.values()) {
+    const { slotId, date } = group[0];
+    const occurrence = await resolveOccurrence("MARKETPLACE", slotId, date, tx);
+    if (occurrence.closed || occurrence.limit === 0) throw new ReReserveError("its delivery slot has since been closed for that date");
+    if (occurrence.limit === null) continue;
+    const usage = (await loadOccurrenceUsage("MARKETPLACE", date, date, tx, { excludeReference: reference })).get(usageKey(slotId, date));
+    const regular = usedOf(usage) - (usage?.overflow ?? 0);
+    if (regular + group.filter((p) => !p.isOverflow).length > occurrence.limit) throw new ReReserveError("its delivery slot is now fully booked");
+  }
+}
+
+// Re-reserving a released checkout: its delivery must still fit the roster's limit for that occurrence (counting
+// everyone else, not this checkout itself).
+async function assertRosterRoom(tx: Db, operation: "VENDOR" | "MARKETPLACE", slotId: string, date: Date, reference: string) {
+  const occurrence = await resolveOccurrence(operation, slotId, date, tx);
+  if (occurrence.closed) throw new ReReserveError("its delivery slot has since been closed for that date");
+  if (occurrence.limit === null) return;
+  const used = await countReservedDeliveries(operation, slotId, date, tx, { excludeReference: reference });
+  if (used >= occurrence.limit) throw new ReReserveError("its delivery slot is now fully booked");
+}
+
 // Shared by both finalize paths, inside their transaction.
+//
+// Shared database: AkadVerse's own (older) Paystack webhook can mark this checkout's orders paid first — it handles
+// the same Paystack account and finds orders by reference. Orders already paid are therefore left as they are: no
+// second status change, timeline event, owner email or notification (AkadVerse already sent those). The checkout
+// itself is still settled (CheckoutPayment -> PAID, snapshot cart lines cleared). `orderIds` is every order of the
+// checkout (for the buyer's result); `newlyPaidIds` only those flipped here.
 async function markOrdersPaid(tx: Db, payment: CheckoutPayment, now: Date) {
-  const orders = await tx.order.findMany({ where: { paystackReference: payment.reference }, select: { id: true, userId: true } });
-  const orderIds = orders.map((o) => o.id);
+  const all = await tx.order.findMany({ where: { paystackReference: payment.reference }, select: { id: true, userId: true, paymentStatus: true } });
+  const orderIds = all.map((o) => o.id);
+  const orders = all.filter((o) => o.paymentStatus !== ORDER_PAYMENT_STATUS.PAID);
+  const newlyPaidIds = orders.map((o) => o.id);
 
   if (payment.kind === "VENDOR") {
     // Vendor orders are never manually accepted/rejected — payment
     // confirmation IS the acceptance (docs/marketplace/decisions/vendor-independent-architecture.md).
     await tx.order.updateMany({
-      where: { id: { in: orderIds } },
+      where: { id: { in: newlyPaidIds } },
       data: {
         paymentStatus: ORDER_PAYMENT_STATUS.PAID,
         status: "ACCEPTED",
@@ -182,12 +238,12 @@ async function markOrdersPaid(tx: Db, payment: CheckoutPayment, now: Date) {
       where: { paystackReference: payment.reference, status: { in: ["PENDING_PAYMENT", "CANCELLED"] } },
       data: { status: "CONFIRMED" },
     });
-    for (const orderId of orderIds) {
+    for (const orderId of newlyPaidIds) {
       await recordOrderEvent(tx, { orderId, type: "SELLER_ACCEPTED", actorType: "system", message: "Vendor orders are auto-accepted on payment — no manual accept step." });
     }
   } else {
     await tx.order.updateMany({
-      where: { id: { in: orderIds } },
+      where: { id: { in: newlyPaidIds } },
       data: { paymentStatus: ORDER_PAYMENT_STATUS.PAID, status: "PENDING_SELLER", cancelledAt: null, cancellationReason: null },
     });
   }
@@ -197,13 +253,14 @@ async function markOrdersPaid(tx: Db, payment: CheckoutPayment, now: Date) {
     await recordOrderEvent(tx, { orderId: order.id, type: "SELLER_NOTIFIED", actorType: "system" });
   }
 
-  const emailIds = await enqueueOrderPaidEmails(tx, orderIds);
-  return { orderIds, emailIds };
+  await notifyOverflowAssignments(tx, orderIds);
+  const emailIds = newlyPaidIds.length > 0 ? await enqueueOrderPaidEmails(tx, newlyPaidIds) : [];
+  return { orderIds, newlyPaidIds, emailIds };
 }
 
 // Post-commit, winner only. Failures here are logged, never surfaced: the
 // payment is already final and the owner email is safely in the outbox.
-async function afterPaid(payment: CheckoutPayment, orderIds: string[]) {
+async function afterPaid(payment: CheckoutPayment, newlyPaidIds: string[]) {
   const cartItemIds = Array.isArray(payment.cartItemIds) ? (payment.cartItemIds as unknown[]).filter((v): v is string => typeof v === "string") : [];
   try {
     if (cartItemIds.length > 0) {
@@ -214,7 +271,13 @@ async function afterPaid(payment: CheckoutPayment, orderIds: string[]) {
   } catch (err) {
     console.error(`[checkout] clearing paid cart lines for ${payment.reference} failed`, err);
   }
-  await createOrderPaidNotifications(orderIds);
+  if (newlyPaidIds.length > 0) await createOrderPaidNotifications(newlyPaidIds);
+  // Vendor Market: the student's handover code, only now that the payment is
+  // verified and the booking CONFIRMED. Never throws.
+  if (payment.kind === "VENDOR" && newlyPaidIds.length > 0) {
+    const bookings = await prisma.vendorDeliveryBooking.findMany({ where: { paystackReference: payment.reference, status: "CONFIRMED" }, select: { id: true } });
+    await issueHandoverCodesAfterPayment(bookings.map((b) => b.id));
+  }
 }
 
 async function flagForReview(payment: CheckoutPayment, reason: string, providerStatus: string): Promise<ConfirmResult> {

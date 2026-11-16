@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     if (body.conversationId !== undefined) throw badRequest("Use the conversation message endpoint to continue a saved chat.");
     const ctx = await attachmentContext(userId, body);
     if (body.grounded !== undefined && typeof body.grounded !== "boolean") throw badRequest("Invalid explanation mode.");
-    if (body.attachment || body.attachments?.length) throw new AttachmentError(422, "Please select these files again to use them with Stewart.", "ATTACHMENT_EXPIRED");
+    if (body.attachment || body.attachments?.length) throw new AttachmentError(422, "Please select these files again to use them with Stuwart.", "ATTACHMENT_EXPIRED");
     const ids = body.attachment_ids ?? [];
     if (body.grounded === true && (!Array.isArray(ids) || ids.length)) throw badRequest("Remove attachments to use external grounding, or turn grounding off.");
     const history = normalizeHistory(body.messages);

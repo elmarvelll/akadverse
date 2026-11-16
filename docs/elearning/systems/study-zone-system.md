@@ -1,10 +1,10 @@
 # System: Study Zone
 
-> **Update 2026-10-13:** Stewart is no longer a mock: it has a real backend with document upload (`services/e-learning/student/stewart/`, `/api/e-learning/stewart/*`), and a week's documents are chosen from a dropdown. The "Not implemented" section and the `stewart.ts` mock description below are superseded — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
+> **Update 2026-10-13:** Stuwart is no longer a mock: it has a real backend with document upload (`services/e-learning/student/stewart/`, `/api/e-learning/stewart/*`), and a week's documents are chosen from a dropdown. The "Not implemented" section and the `stewart.ts` mock description below are superseded — see [`docs/AKADVERSE_IMPLEMENTATION_CHANGELOG.md`](../../AKADVERSE_IMPLEMENTATION_CHANGELOG.md).
 
 ## Purpose
 
-A focused reading workspace for students: pick a registered course, move through its weeks as document tabs, read that week's material, and have **Stewart** (the AI study assistant) beside it. Added 2026-10-02 as a **frontend** feature. Courses, weeks and documents are real data; Stewart is a **mock** and is not connected to any AI service.
+A focused reading workspace for students: pick a registered course, move through its weeks as document tabs, read that week's material, and have **Stuwart** (the AI study assistant) beside it. Added 2026-10-02 as a **frontend** feature. Courses, weeks and documents are real data; Stuwart is a **mock** and is not connected to any AI service.
 
 ## Actors
 
@@ -15,7 +15,7 @@ Student only (`requireElearningRole(["student"])` + `requireStudentProfile` on b
 | Route | What it shows |
 |---|---|
 | `/e-learning/student/study-zone` | "Welcome to Study Zone / What would you like to study?" and the student's registered courses as cards. Empty states: no academic context; no approved registration (links to Course Registration). |
-| `/e-learning/student/study-zone/[courseId]` | The study workspace: week tabs → one document viewer, with Stewart beside it. 404 unless the course is in the student's **APPROVED** registration for the current session/semester. A course with no offering yet (no lecturer assigned) shows "This course has no study materials yet". |
+| `/e-learning/student/study-zone/[courseId]` | The study workspace: week tabs → one document viewer, with Stuwart beside it. 404 unless the course is in the student's **APPROVED** registration for the current session/semester. A course with no offering yet (no lecturer assigned) shows "This course has no study materials yet". |
 
 The sidebar's **Study Zone** entry (`nav-config.ts`) is a direct link with `activeOnSubpaths`, so it stays highlighted inside a course's workspace.
 
@@ -34,7 +34,7 @@ Week count comes from the semester's dates (as on My Learning). A multi-week doc
 | File | Role |
 |---|---|
 | `BackToStudyZone.tsx` | The button-style back control (workspace and the no-materials page). |
-| `StudyWorkspace.tsx` | Owns the selected week (default: first week with material) and, when a week has several documents, the selected document. Drives the tabs, the single viewer and Stewart's context. |
+| `StudyWorkspace.tsx` | Owns the selected week (default: first week with material) and, when a week has several documents, the selected document. Drives the tabs, the single viewer and Stuwart's context. |
 | `WeekTabs.tsx` | Document-style tabs; ARIA `tablist` with arrow keys / Home / End and a roving tab index. Empty weeks are shown, labelled "No material". |
 | `DocumentViewer.tsx` | One document at a time — keyed by document id, so switching unmounts the previous viewer. The toolbar (title, type, open/download, full screen) plus `VIEWERS`, which picks the format's viewer below. ZIP is download-only. |
 | `viewers/PdfViewer.tsx` | **PDF** — the actual file in the browser's built-in PDF viewer (page navigation, zoom, search, internal scrolling), from a signed URL, opened `#navpanes=0&view=FitH`. No PDF library. Phone browsers that can't show a PDF in a page (notably Android Chrome) use the toolbar's open-in-new-tab. |
@@ -42,7 +42,7 @@ Week count comes from the semester's dates (as on My Learning). A multi-week doc
 | `viewers/WordViewer.tsx` + `office/docx.ts` | **DOCX** — the actual document as a page: title/headings (style names and outline levels), paragraph alignment, bold/italic/underline/strike/colour/size, numbered (incl. nested a), i.)) and bulleted lists, tables and inline pictures, following Word's style chain. Not drawn: headers/footers, footnotes, text boxes, columns. |
 | `office/zip.ts`, `office/ooxml.ts`, `office/document-access.ts`, `office/useOfficeDocument.ts` | Zero-dependency Office reading: a ZIP reader on the browser's `DecompressionStream`, shared XML/relationship/colour helpers, the access-route fetch, and the fetch-parse hook (cancellation, retry, blob-URL cleanup). |
 | `viewers/ViewerStates.tsx` | Shared loading skeleton, empty and error-with-retry states. |
-| `StewartPanel.tsx` | Chat UI: header with "Studying: Week N · <document>", conversation log, suggestions, typing state, input (Enter sends, Shift+Enter new line). One conversation per week+document, kept while switching. |
+| `StuwartPanel.tsx` | Chat UI: header with "Studying: Week N · <document>", conversation log, suggestions, typing state, input (Enter sends, Shift+Enter new line). One conversation per week+document, kept while switching. |
 | `stewart.ts` | **Mock client.** `startThread` (greeting + short example exchange) and `askStewart` (canned reply after a delay). No network request. Replacing these two functions connects the real assistant. |
 
 ## Document access
@@ -53,14 +53,14 @@ Viewing uses the existing `GET /api/e-learning/documents/[id]/access` route (sam
 
 The document is the primary surface; everything is sized from the space actually available.
 
-- **Width follows the sidebar.** The workspace root is a CSS container (`@container`), so the split depends on the *content area's* width, not the viewport's — collapsing the sidebar (see [`layout-and-navigation.md`](layout-and-navigation.md)) can switch a stacked layout to side by side. From a 56rem container: document | Stewart, Stewart 18rem (22rem from 72rem), the document ~70–75%. Narrower: stacked, document first.
-- **Height follows the viewport.** The document column is `100dvh` minus the app header (4rem), `<main>`'s vertical padding, the one-row course header (`h-9`) and the gap — so side by side the page itself never scrolls; the PDF scrolls inside its viewer and the conversation inside Stewart.
+- **Width follows the sidebar.** The workspace root is a CSS container (`@container`), so the split depends on the *content area's* width, not the viewport's — collapsing the sidebar (see [`layout-and-navigation.md`](layout-and-navigation.md)) can switch a stacked layout to side by side. From a 56rem container: document | Stuwart, Stuwart 18rem (22rem from 72rem), the document ~70–75%. Narrower: stacked, document first.
+- **Height follows the viewport.** The document column is `100dvh` minus the app header (4rem), `<main>`'s vertical padding, the one-row course header (`h-9`) and the gap — so side by side the page itself never scrolls; the PDF scrolls inside its viewer and the conversation inside Stuwart.
 - Compact chrome: one-row course header (button-style **Back to Study Zone**, icon-only on phones; `code — title` at `text-base`), two-line week tabs, one-row document toolbar.
 - Measured in Chrome (1440×900, sidebar expanded): PDF 834×634px, page scroll 0; collapsing the sidebar widens it to 962px. 1024×768 stacks with the sidebar expanded and goes side by side when collapsed. 375/768px: stacked, no horizontal scroll.
 - The workspace root is `isolate`: the active tab's small `z-index` can't compete with the shell's header, sidebar or drawer.
 
 ## Not implemented (deliberately)
 
-- Any AI: no LLM call, RAG, embeddings, vector store, or document ingestion. Stewart's replies are canned and say so ("Preview" badge + footnote).
+- Any AI: no LLM call, RAG, embeddings, vector store, or document ingestion. Stuwart's replies are canned and say so ("Preview" badge + footnote).
 - Pixel-perfect PowerPoint/Word fidelity: the readers above cover the common content; uninstalled fonts fall back to similar system fonts, and the features listed as not drawn are skipped.
-- Persisting Stewart conversations (they live in component state for the page visit).
+- Persisting Stuwart conversations (they live in component state for the page visit).

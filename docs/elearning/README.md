@@ -10,7 +10,7 @@ A role-based academic portal at `/e-learning/<role>/...` for six roles — Stude
 
 ## Who uses it
 
-- **Student** — dashboard, Course Control (Course Registration, Add/Drop, Registration Status), **My Learning** (registered courses, syllabus/outcomes, weekly documents), Records & Analytics (Results, GPA/CGPA, Academic History), and **Study Zone** (a course's weeks as document tabs, an in-page document viewer, and Stewart — an AI study assistant with file and screenshot support).
+- **Student** — dashboard, Course Control (Course Registration, Add/Drop, Registration Status), **My Learning** (registered courses, syllabus/outcomes, weekly documents), Records & Analytics (Results, GPA/CGPA, Academic History), and **Study Zone** (a course's weeks as document tabs, an in-page document viewer, and Stuwart — an AI study assistant with file and screenshot support).
 - **Faculty** — dashboard (timetable), **My Subjects** (assigned offerings, weekly content, document upload), Results Record (entry + submit).
 - **Level Adviser** — not a role, a responsibility a Faculty account can additionally hold (`FacultyProfile.isLevelAdviser`); reviews/approves registrations for their own department+level.
 - **HOD** — reviews/approves course structures (approval publishes them), assigns lecturers (several + one coordinator) and Level Advisers (with history), approves registrations and result uploads, views results by level/course/student — scoped to their own department.
@@ -18,6 +18,8 @@ A role-based academic portal at `/e-learning/<role>/...` for six roles — Stude
 - **Dean / VC** — placeholder routes only, no functionality (§29).
 
 ## Major systems
+
+Current platform cleanup and classroom lesson assistant: [implementation and rollout notes](../platform-changes/CLASSROOM_STUWART_IMPLEMENTATION.md), [verification](../platform-changes/AKADVERSE_FINAL_VERIFICATION.md).
 
 | System | Doc |
 |---|---|
@@ -28,10 +30,10 @@ A role-based academic portal at `/e-learning/<role>/...` for six roles — Stude
 | Academic calendar (session/semester/time frames) | [`systems/academic-calendar-system.md`](systems/academic-calendar-system.md) |
 | Student portal (My Learning, Records & Analytics) | [`systems/student-portal-system.md`](systems/student-portal-system.md) |
 | Study Zone (week tabs and document viewer) | [`systems/study-zone-system.md`](systems/study-zone-system.md) |
-| Stewart persistent conversations, ownership, retries and titles | [`systems/stewart-conversations.md`](systems/stewart-conversations.md) |
-| Stewart learning-oriented Markdown/math responses and grouped references | [`systems/stewart-learning-responses.md`](systems/stewart-learning-responses.md) |
-| Stewart attachments, screenshot capture, expiry and microservice contracts | [`systems/stewart-attachments.md`](systems/stewart-attachments.md) |
-| Stewart AI assistant (student workflow, architecture, APIs, configuration, limitations) | [`systems/stewart.md`](systems/stewart.md) |
+| Stuwart persistent conversations, ownership, retries and titles | [`systems/stewart-conversations.md`](systems/stewart-conversations.md) |
+| Stuwart learning-oriented Markdown/math responses and grouped references | [`systems/stewart-learning-responses.md`](systems/stewart-learning-responses.md) |
+| Stuwart attachments, screenshot capture, expiry and microservice contracts | [`systems/stewart-attachments.md`](systems/stewart-attachments.md) |
+| Stuwart AI assistant (student workflow, architecture, APIs, configuration, limitations) | [`systems/stewart.md`](systems/stewart.md) |
 | Revision practice, signed question webhook, shared question bank, FSRS, testing and rollout | [`../../REVISION-QUESTIONS-WEBHOOK-INTEGRATION.md`](../../REVISION-QUESTIONS-WEBHOOK-INTEGRATION.md) |
 | Standalone Revisions: Course/Random modes, eligibility, sessions, evidence and rollout | [`revisions-workspace.md`](revisions-workspace.md) |
 | Course Control (registration/add-drop/status) | [`systems/course-control-system.md`](systems/course-control-system.md) |

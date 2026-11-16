@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/deliverers/assignments/page.tsx
+// src/app/admin/deliverers/assignments/page.tsx
 //
 // Delivery coordinator's "who has what right now" overview — every
 // approved deliverer, their pending pickup handoffs (with the still-valid
@@ -69,7 +69,7 @@ export default function AdminDelivererAssignmentsPage() {
 
   useEffect(() => {
     // Locally-defined wrapper — same convention as
-    // src/app/studashboard/marketplace/_components/useCart.ts.
+    // src/app/_components/useCart.ts.
     const run = async () => {
       await load();
     };
@@ -79,7 +79,7 @@ export default function AdminDelivererAssignmentsPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -87,7 +87,7 @@ export default function AdminDelivererAssignmentsPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load assignments."}</p>
       </div>
     );
@@ -99,7 +99,7 @@ export default function AdminDelivererAssignmentsPage() {
       <p className="text-sm text-gray-500 mb-6">Every approved deliverer, what&apos;s currently assigned to them, and any still-valid pickup codes.</p>
 
       {deliverers.length === 0 ? (
-        <p className="text-sm text-gray-400">No approved deliverers yet.</p>
+        <p className="text-sm text-gray-500">No approved deliverers yet.</p>
       ) : (
         <div className="space-y-4">
           {deliverers.map((deliverer) => (
@@ -116,7 +116,7 @@ export default function AdminDelivererAssignmentsPage() {
 
               {deliverer.pendingHandoffs.length > 0 && (
                 <div className="mb-4 space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Waiting to be picked up</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Waiting to be picked up</p>
                   {deliverer.pendingHandoffs.map((handoff) => (
                     <div key={handoff.handoffId} className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-900">
                       <p>
@@ -142,7 +142,7 @@ export default function AdminDelivererAssignmentsPage() {
 
               {deliverer.activeItems.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Currently assigned</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Currently assigned</p>
                   {Object.entries(
                     deliverer.activeItems.reduce<Record<string, ActiveItem[]>>((acc, item) => {
                       (acc[item.orderId] ??= []).push(item);
@@ -168,7 +168,7 @@ export default function AdminDelivererAssignmentsPage() {
                               <span>
                                 {item.quantity} x {item.productName}
                               </span>
-                              <span className="text-gray-400">{item.status}</span>
+                              <span className="text-gray-500">{item.status}</span>
                             </li>
                           ))}
                         </ul>
@@ -177,7 +177,7 @@ export default function AdminDelivererAssignmentsPage() {
                   })}
                 </div>
               ) : (
-                deliverer.pendingHandoffs.length === 0 && <p className="text-xs text-gray-400">Nothing assigned right now.</p>
+                deliverer.pendingHandoffs.length === 0 && <p className="text-xs text-gray-500">Nothing assigned right now.</p>
               )}
             </div>
           ))}

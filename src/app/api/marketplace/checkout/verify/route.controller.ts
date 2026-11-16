@@ -22,7 +22,7 @@
 //   500                — our own failure (DB, misconfiguration); logged, retryable
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
 import { loadOwnedCheckoutPayment } from "@/services/marketplace/checkout/load-owned-checkout-payment";
 import { reconcileLoadedPayment, type ReconcileResult } from "@/services/marketplace/checkout/reconcile-checkout-payment";

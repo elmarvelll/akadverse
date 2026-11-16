@@ -4,8 +4,8 @@
 // services/marketplace/admin/list-products-for-admin.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { listProductsForAdmin } from "@/services/marketplace/admin/list-products-for-admin";
 
 export async function listProducts(request: NextRequest): Promise<NextResponse> {

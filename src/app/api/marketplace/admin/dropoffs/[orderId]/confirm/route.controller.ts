@@ -4,8 +4,8 @@
 // services/marketplace/delivery/confirm-seller-dropoff.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { badRequest } from "@/lib/service-error";
 import { confirmSellerDropoff as confirmSellerDropoffAction } from "@/services/marketplace/delivery/confirm-seller-dropoff";
 

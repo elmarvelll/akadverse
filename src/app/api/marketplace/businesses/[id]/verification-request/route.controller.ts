@@ -4,7 +4,7 @@
 // services/marketplace/business/request-verification.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
+import { runController } from "@/lib/marketplace-controller-helpers";
 import { requireOwnedBusiness } from "@/services/marketplace/business/business-ownership.service";
 import { requestVerification } from "@/services/marketplace/business/request-verification";
 

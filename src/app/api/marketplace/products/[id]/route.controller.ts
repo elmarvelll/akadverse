@@ -4,7 +4,7 @@
 // services/marketplace/product/get-public-product-detail.ts.
 
 import { NextResponse } from "next/server";
-import { runController, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { getPublicProductDetail } from "@/services/marketplace/product/get-public-product-detail";
 
 export async function getPublicProduct(productId: string): Promise<NextResponse> {

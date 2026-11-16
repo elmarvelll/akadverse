@@ -1,6 +1,6 @@
-# Stewart learning response presentation
+# Stuwart learning response presentation
 
-The Study Zone renders Stewart answers as academic content with a readable width and vertical typography, rather than assistant message bubbles. Student questions retain their compact composer history styling. Follow-ups, request/session handling, Study Mode, uploads, screenshot capture, retries and loading/error behavior use the existing implementation.
+The Study Zone renders Stuwart answers as academic content with a readable width and vertical typography, rather than assistant message bubbles. Student questions retain their compact composer history styling. Follow-ups, request/session handling, Study Mode, uploads, screenshot capture, retries and loading/error behavior use the existing implementation.
 
 ## Microservice contract and AI engineer handoff
 

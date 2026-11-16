@@ -4,8 +4,8 @@
 // services/marketplace/delivery/assign-delivery.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { assignDelivery as assignDeliveryAction } from "@/services/marketplace/delivery/assign-delivery";
 
 export async function assignDelivery(request: NextRequest): Promise<NextResponse> {

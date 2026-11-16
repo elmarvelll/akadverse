@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/settings/page.tsx
+// src/app/admin/settings/page.tsx
 //
 // Admin-only form for the Marketplace's operational settings: the two
 // time windows (Seller Drop-off, Deliverer Handoff) and the central
@@ -84,7 +84,7 @@ export default function AdminSettingsPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -92,14 +92,14 @@ export default function AdminSettingsPage() {
   if (loadState === "forbidden" || loadState === "error" || !form) {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load settings."}</p>
       </div>
     );
   }
 
   const inputClass =
-    "w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500";
+    "w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500";
 
   return (
     <div className="max-w-lg">
@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
 
       <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Drop-off location</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Drop-off location</label>
           <input
             type="text"
             placeholder="e.g. Student Center, Room 12"
@@ -120,7 +120,7 @@ export default function AdminSettingsPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Drop-off window start</label>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Drop-off window start</label>
             <input
               type="text"
               placeholder="HH:MM"
@@ -130,7 +130,7 @@ export default function AdminSettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Drop-off window end</label>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Drop-off window end</label>
             <input
               type="text"
               placeholder="HH:MM"
@@ -143,7 +143,7 @@ export default function AdminSettingsPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Handoff window start</label>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Handoff window start</label>
             <input
               type="text"
               placeholder="HH:MM"
@@ -153,7 +153,7 @@ export default function AdminSettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Handoff window end</label>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Handoff window end</label>
             <input
               type="text"
               placeholder="HH:MM"
@@ -183,7 +183,7 @@ export default function AdminSettingsPage() {
       <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Delivery fee (₦)</label>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Delivery fee (₦)</label>
             <input
               type="number"
               min={0}
@@ -193,7 +193,7 @@ export default function AdminSettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Service fee per item (₦)</label>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Service fee per item (₦)</label>
             <input
               type="number"
               min={0}
@@ -205,7 +205,7 @@ export default function AdminSettingsPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Deliverer payout per handoff (₦)</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Deliverer payout per handoff (₦)</label>
           <input
             type="number"
             min={0}
@@ -216,7 +216,7 @@ export default function AdminSettingsPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Central drop-off name</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Central drop-off name</label>
           <input
             type="text"
             placeholder="e.g. Vendor Collection Point"
@@ -226,7 +226,7 @@ export default function AdminSettingsPage() {
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Drop-off instructions</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Drop-off instructions</label>
           <textarea
             rows={3}
             placeholder="How vendors/deliverers should use this point"
@@ -238,6 +238,7 @@ export default function AdminSettingsPage() {
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input
             type="checkbox"
+            className="w-4 h-4 accent-blue-600"
             checked={form.dropoffLocationActive}
             onChange={(e) => setForm({ ...form, dropoffLocationActive: e.target.checked })}
           />

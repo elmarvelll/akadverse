@@ -71,7 +71,7 @@ The file is backed up privately with its original bucket/path metadata and verif
 
 ## D. Concept Explainer
 
-Deletion uses the existing authenticated service adapter and durable AiIngestTask outbox. The runner targets only approved document IDs, waits out/blocks uncertain leases, verifies document-status absence, and leaves retriable intent if the API fails. It never opens or changes the service-owned concept_explainer schema. Temporary Stewart attachment cleanup uses the existing attachment API.
+Deletion uses the existing authenticated service adapter and durable AiIngestTask outbox. The runner targets only approved document IDs, waits out/blocks uncertain leases, verifies document-status absence, and leaves retriable intent if the API fails. It never opens or changes the service-owned concept_explainer schema. Temporary Stuwart attachment cleanup uses the existing attachment API.
 
 Live document deletion requests executed: **0**. Live retrieval deletion verification is pending the approved reset.
 
@@ -145,7 +145,7 @@ The reported P2021 classroom failure was repaired using `prisma/elearning/patche
 
 The user approved the reset, explicitly approved clearing the newly created EEE 311 live class, and requested execution without a manual maintenance pause. The runner used online mode with serializable transaction write locks, snapshot checks and account fingerprint verification. Interrupted connection attempts were retried safely.
 
-Execution receipt: `.elearning-reset/approved-online-reset.json.execution.json`, verified at 23:42 WAT. Academic and scoped Core transactions completed. All 23 account fingerprints matched. Cleared 9 registrations, 63 items, 1 result, 2 lecturer assignments, 1 classroom session, 1 expired Stewart attachment and 32 E-Learning notifications. Archived 2 old curricula and relinked the existing EEE/CPE/ICE Programme IDs to the verified 2023 references. Original teaching offering/course containers remain historical.
+Execution receipt: `.elearning-reset/approved-online-reset.json.execution.json`, verified at 23:42 WAT. Academic and scoped Core transactions completed. All 23 account fingerprints matched. Cleared 9 registrations, 63 items, 1 result, 2 lecturer assignments, 1 classroom session, 1 expired Stuwart attachment and 32 E-Learning notifications. Archived 2 old curricula and relinked the existing EEE/CPE/ICE Programme IDs to the verified 2023 references. Original teaching offering/course containers remain historical.
 
 The PowerPoint had already been removed through the application before this execution. Its queued AI deletion was completed and its status endpoint confirmed absence. No bucket deletion was performed.
 
