@@ -5,6 +5,7 @@
   "scripts": {
     "predev": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma",
     "dev": "next dev",
+    "dev:ai": "node scripts/run-productivity-ai.mjs",
     "build": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma && next build",
     "postinstall": "prisma generate && prisma generate --schema=prisma/elearning/schema.prisma",
     "start": "next start",
@@ -41,7 +42,17 @@
     "db:elearning:reset:plan": "node scripts/elearning-reset/plan.mjs",
     "db:elearning:reset": "tsx --env-file-if-exists=.env scripts/elearning-reset/execute.ts",
     "test:ccmas:extract": "python3 -m unittest discover -s tests/ccmas -v",
-    "test:elearning:reset": "node tests/ccmas/reset-rehearsal.mjs"
+    "test:elearning:reset": "node tests/ccmas/reset-rehearsal.mjs",
+    "ai:productivity:setup": "node scripts/setup-productivity-ai-local.mjs",
+    "test:productivity:ai": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/productivity-ai/security.test.ts tests/speech/*.test.ts",
+    "test:productivity:ai:db": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/productivity-ai/persistence.db.test.ts",
+    "test:productivity:ai:browser": "node scripts/verify-productivity-assistant.cjs",
+    "test:revision:webhook": "node --import tsx --experimental-test-module-mocks --test tests/revision-questions/protocol.test.ts",
+    "test:revision:webhook:db": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/revision-questions/idempotency.db.test.ts tests/revision-questions/learning.db.test.ts",
+    "test:revision:live": "node --import tsx scripts/verify-revision-live.ts",
+    "test:revision:browser": "node scripts/verify-revision-panel.cjs",
+    "test:revisions": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/revision-questions/learning.db.test.ts",
+    "test:revisions:browser": "node scripts/verify-revisions-workspace.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
@@ -54,9 +65,9 @@
     "cloudinary": "^2.11.0",
     "framer-motion": "^13.1.1",
     "html-to-image": "^1.11.13",
+    "katex": "^0.16.47",
     "livekit-client": "^2.23.0",
     "livekit-server-sdk": "^2.19.2",
-    "katex": "^0.16.47",
     "lucide-react": "^1.34.0",
     "next": "16.3.3",
     "next-auth": "^4.24.15",
@@ -69,6 +80,7 @@
     "remark-math": "^6.0.0",
     "resend": "^6.24.0",
     "sharp": "^0.34.5",
+    "ts-fsrs": "6.0.0",
     "word-extractor": "^1.0.4"
   },
   "devDependencies": {
@@ -89,5 +101,8 @@
     "@prisma/engines@6.19.3": true,
     "prisma@6.19.3": true,
     "@prisma/client@6.19.3": true
+  },
+  "engines": {
+    "node": ">=24.0.0"
   }
 }

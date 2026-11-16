@@ -29,5 +29,6 @@ function prisma(args, env) {
 
 prisma(["migrate", "deploy"], { DATABASE_URL: url, DIRECT_URL: url });
 const elearningEnv = { ELEARNING_DATABASE_URL: elearningUrl, ELEARNING_DIRECT_URL: elearningUrl };
+prisma(["db", "execute", `--schema=${ELEARNING_SCHEMA}`, "--file", "prisma/elearning/extensions.sql"], elearningEnv);
 prisma(["db", "push", "--skip-generate", `--schema=${ELEARNING_SCHEMA}`], elearningEnv);
 prisma(["db", "execute", `--schema=${ELEARNING_SCHEMA}`, "--file", "prisma/elearning/constraints.sql"], elearningEnv);

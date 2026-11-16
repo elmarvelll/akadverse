@@ -96,6 +96,7 @@ model User {
   productivityTasks         ProductivityTask[]
   productivityEvents        ProductivityEvent[]
   productivityRequests      ProductivityRequest[]
+  productivityAIConversations ProductivityAIConversation[]
   // A user's deliverer application/status, if they've ever applied — no row
   // means "not applied" (see the footer's "Become a Deliverer" state logic
   // in src/lib/deliverer.ts). Deliberately a relation, not a status column
@@ -1868,4 +1869,85 @@ model ProductivityRequest {
 
   @@id([ownerId, key])
   @@index([createdAt])
+}
+
+
+// Assistant memory belongs to Core. Python has no database credentials.
+model ProductivityAIConversation {
+  id             String   @id @default(uuid())
+  ownerId        String
+  title          String   @default("New conversation")
+  nextSequence   Int      @default(0)
+  activeTurnId   String?
+  leaseExpiresAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  owner          User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  messages       ProductivityAIMessage[]
+  executions     ProductivityAIToolExecution[]
+  pendingActions ProductivityAIPendingAction[]
+
+  @@unique([id, ownerId])
+  @@index([ownerId, updatedAt])
+}
+
+model ProductivityAIMessage {
+  id             String   @id @default(uuid())
+  conversationId String
+  ownerId        String
+  sequence       Int
+  role           String
+  content        String
+  status         String   @default("completed")
+  clientKey      String
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  conversation   ProductivityAIConversation @relation(fields: [conversationId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  executions     ProductivityAIToolExecution[]
+
+  @@unique([conversationId, clientKey])
+  @@unique([conversationId, sequence])
+  @@unique([id, ownerId])
+  @@index([ownerId, createdAt])
+}
+
+model ProductivityAIToolExecution {
+  id             String   @id @default(uuid())
+  conversationId String
+  ownerId        String
+  messageId      String
+  step           Int
+  toolName       String
+  arguments      Json
+  status         String   @default("pending")
+  result         Json?
+  error          Json?
+  operationKey   String   @unique
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+  conversation   ProductivityAIConversation @relation(fields: [conversationId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  message        ProductivityAIMessage @relation(fields: [messageId, ownerId], references: [id, ownerId], onDelete: NoAction)
+  pendingAction  ProductivityAIPendingAction?
+
+  @@unique([messageId, step])
+  @@unique([id, ownerId])
+  @@index([conversationId, createdAt])
+}
+
+model ProductivityAIPendingAction {
+  id             String   @id @default(uuid())
+  conversationId String
+  ownerId        String
+  executionId    String   @unique
+  preview        Json
+  fingerprint    String
+  status         String   @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  resolvedAt     DateTime?
+  conversation   ProductivityAIConversation @relation(fields: [conversationId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  execution      ProductivityAIToolExecution @relation(fields: [executionId, ownerId], references: [id, ownerId], onDelete: NoAction)
+
+  @@unique([executionId, ownerId])
+  @@index([conversationId, status])
 }

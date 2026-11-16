@@ -1500,3 +1500,44 @@
 .productivity-host .account-tools-panel { position: absolute; right: 0; top: 32px; z-index: 60; background: white; padding: 20px; width: min(420px, 90vw); max-height: 80vh; overflow: auto; border: 1px solid var(--border); box-shadow: 0 8px 30px #0002; border-radius: 12px; }
 .productivity-host .account-tools-panel label { display: block; margin: 10px 0; }
 .productivity-host .account-tools-panel textarea { width: 100%; }
+
+/* Account-scoped assistant. Native dialogs take precedence over this non-modal panel. */
+.productivity-host .productivity-assistant { position: fixed; right: 24px; bottom: 24px; z-index: 70; }
+.productivity-host .assistant-launcher { display: flex; align-items: center; gap: 9px; border: 0; border-radius: 999px; padding: 13px 19px; background: #274c3a; color: white; box-shadow: 0 6px 24px #0003; font-weight: 650; }
+.productivity-host .assistant-panel { position: absolute; right: 0; bottom: 62px; width: min(430px, calc(100vw - 32px)); height: min(720px, calc(100dvh - 118px)); display: flex; flex-direction: column; overflow: hidden; background: #fff; color: #20332b; border: 1px solid #d2ded7; border-radius: 20px; box-shadow: 0 12px 55px #132d3633; }
+.productivity-host .assistant-heading { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #edf4ef; }
+.productivity-host .assistant-heading small { display: block; font-size: 12px; margin-top: 3px; }
+.productivity-host .assistant-panel button { cursor: pointer; }
+.productivity-host .assistant-panel button:disabled { cursor: default; opacity: .5; }
+.productivity-host .assistant-heading button, .productivity-host .assistant-toolbar button { display: grid; place-items: center; flex-shrink: 0; background: transparent; border: 1px solid #c9d6ce; padding: 8px; border-radius: 8px; }
+.productivity-host .assistant-toolbar { display: flex; gap: 6px; padding: 10px; border-bottom: 1px solid #e4ebe6; }
+.productivity-host .assistant-toolbar select { min-width: 0; flex: 1; border: 1px solid #c9d6ce; border-radius: 8px; padding: 6px; background: white; }
+.productivity-host .assistant-messages { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 14px; font-size: 14px; line-height: 1.5; }
+.productivity-host .assistant-message { padding: 11px 13px; margin-bottom: 12px; border-radius: 12px; background: #f2f5f3; overflow-wrap: anywhere; }
+.productivity-host .assistant-message-user { margin-left: 24px; background: #e7f0f9; }
+.productivity-host .assistant-message-assistant { margin-right: 12px; }
+.productivity-host .assistant-message p { white-space: pre-wrap; margin: 5px 0; }
+.productivity-host .assistant-message small { font-size: 11px; color: #56685e; }
+.productivity-host .assistant-proposal { background: #fff8e8; border: 1px solid #ddc58d; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.productivity-host .assistant-proposal dl { margin: 8px 0; font-size: 13px; }
+.productivity-host .assistant-proposal dt { font-weight: 650; }
+.productivity-host .assistant-proposal dd { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 120px; overflow: auto; }
+.productivity-host .assistant-actions { display: flex; gap: 8px; }
+.productivity-host .assistant-actions button, .productivity-host .assistant-welcome button, .productivity-host .assistant-composer button[type=submit] { border: 1px solid #b0c3b8; border-radius: 9px; padding: 8px 13px; background: #edf4ef; }
+.productivity-host .assistant-actions button:first-child, .productivity-host .assistant-composer button[type=submit] { background: #274c3a; color: white; }
+.productivity-host .assistant-executions { font-size: 12px; margin-top: 12px; }
+.productivity-host .assistant-executions summary { cursor: pointer; font-weight: 650; }
+.productivity-host .assistant-executions article { border-bottom: 1px solid #e0e7e2; padding: 8px 0; }
+.productivity-host .assistant-executions p { margin: 3px 0; }
+.productivity-host .assistant-executions a { text-decoration: underline; }
+.productivity-host .assistant-composer { padding: 12px; border-top: 1px solid #dde6df; background: white; }
+.productivity-host .assistant-composer textarea { display: block; width: 100%; resize: vertical; min-height: 70px; max-height: 150px; border: 1px solid #b9c9bf; border-radius: 10px; padding: 9px; font: inherit; font-size: 14px; }
+.productivity-host .assistant-composer-actions { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+.productivity-host .assistant-composer-actions small { margin-right: auto; font-size: 11px; }
+.productivity-host .assistant-composer button[type=submit] { display: flex; align-items: center; gap: 6px; }
+.productivity-host .assistant-error:empty { display: none; }
+.productivity-host .assistant-error { padding: 0 12px; font-size: 12px; color: #922b26; max-height: 100px; overflow: auto; }
+.productivity-host .assistant-error button, .productivity-host .assistant-latest { text-decoration: underline; }
+.productivity-host .assistant-latest { padding: 5px; font-size: 12px; background: #edf4ef; }
+.productivity-host .assistant-panel :focus-visible, .productivity-host .assistant-launcher:focus-visible { outline: 3px solid #4a78a4; outline-offset: 2px; }
+@media (max-width: 760px) { .productivity-host .productivity-assistant { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); } .productivity-host .assistant-launcher { padding: 11px 14px; } .productivity-host .assistant-panel { bottom: 56px; height: min(700px, calc(100dvh - 100px)); width: calc(100vw - 24px); } }

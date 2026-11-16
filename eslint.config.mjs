@@ -18,6 +18,7 @@ const eslintConfig = defineConfig([
     ".local/**",
     ".local-development/**",
     ".elearning-reset/**",
+    "akadverse-productivity-ai/.venv/**",
     // Prisma-generated clients (src/generated is git-ignored and rebuilt by `prisma generate`) — not our code.
     "src/generated/**",
   ]),

@@ -1,0 +1,880 @@
+[
+  {
+    "name": "get_context",
+    "description": "Get verified student timezone, server time, and today. Do not accept a user identity.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_tasks",
+    "description": "List up to 50 current owned tasks. Active/Pending are computed by the backend; search matches title.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "",
+          "maxLength": 200
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "pending",
+            "completed",
+            "missed"
+          ]
+        },
+        "due_date": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_task",
+    "description": "Get one owned task with outcome history.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": ""
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "create_task",
+    "description": "Create an ordinary task. This sets a deadline, never a notification reminder.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "description": "",
+              "maxLength": 10000
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "dueDate": {
+              "type": "string",
+              "description": "Local calendar date YYYY-MM-DD",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "dueTime": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            }
+          },
+          "required": [
+            "title",
+            "priority"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "input"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "update_task",
+    "description": "Propose changes to an unfinished ordinary task; backend merges supplied fields and asks confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": ""
+        },
+        "changes": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "description": "",
+              "maxLength": 10000
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "dueDate": {
+              "type": "string",
+              "description": "Local calendar date YYYY-MM-DD",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "dueTime": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "task_id",
+        "changes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "complete_task",
+    "description": "Complete an eligible task; habit task must be scheduled today.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": ""
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "miss_task",
+    "description": "Record a missed task only after its deadline. Never automatic.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": ""
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "delete_task",
+    "description": "Propose soft deletion of an ordinary task, with confirmation; there is no restore.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": ""
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_habits",
+    "description": "List at most 50 owned habits and revisions. Search before choosing an ID.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "",
+          "maxLength": 200
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "save_habit",
+    "description": "Create a task/event habit or propose a revision of an existing habit. Existing edits require confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "description": "",
+              "maxLength": 10000
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "task",
+                "event"
+              ]
+            },
+            "frequency": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "weekdays"
+              ]
+            },
+            "weekdays": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 6
+              },
+              "maxItems": 7,
+              "uniqueItems": true
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "time": {
+              "type": "string",
+              "description": "Task deadline HH:mm or empty; event start HH:mm"
+            },
+            "end": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "startDate": {
+              "type": "string",
+              "description": "Local calendar date YYYY-MM-DD",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "endDate": {
+              "type": "string",
+              "description": "Local calendar date YYYY-MM-DD",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          "required": [
+            "name",
+            "description",
+            "type",
+            "frequency",
+            "weekdays",
+            "priority",
+            "time",
+            "startDate"
+          ],
+          "additionalProperties": false
+        },
+        "habit_id": {
+          "type": "string",
+          "description": ""
+        }
+      },
+      "required": [
+        "input"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "habit_occurrences",
+    "description": "Inspect up to 42 days of occurrences for one owned habit. Future outcomes cannot be recorded.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "habit_id": {
+          "type": "string",
+          "description": ""
+        },
+        "start": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "habit_id",
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "record_habit",
+    "description": "Record or correct an occurrence using its ORIGINAL scheduled date. Corrections/clearing require confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "habit_id": {
+          "type": "string",
+          "description": ""
+        },
+        "original_date": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "missed",
+            "pending"
+          ]
+        }
+      },
+      "required": [
+        "habit_id",
+        "original_date",
+        "outcome"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "archive_habit",
+    "description": "Propose archive or restore of a habit, preserving history; requires confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "habit_id": {
+          "type": "string",
+          "description": ""
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "habit_id",
+        "archived"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "replan_habit",
+    "description": "Propose a new slot for a missed event habit. Smart mode requires a fitting window and duration; preserve original occurrence identity.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "description": ""
+        },
+        "slot": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Local calendar date YYYY-MM-DD",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "start": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "end": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "timezone": {
+              "type": "string",
+              "description": "Verified account IANA timezone"
+            }
+          },
+          "required": [
+            "date",
+            "start",
+            "end",
+            "timezone"
+          ],
+          "additionalProperties": false
+        },
+        "scheduling": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "smart"
+              ]
+            },
+            "allowConflicts": {
+              "type": "boolean"
+            },
+            "durationMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1439
+            },
+            "earliest": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "latest": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event_id",
+        "slot",
+        "scheduling"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_schedule",
+    "description": "List personal/habit events and categories for up to 42 inclusive dates. Official classes use official_classes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "save_event",
+    "description": "Create a personal event or propose a full edit. Category required. Never change an official class. Conflicts need explicit confirmed override.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "",
+              "maxLength": 100,
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "description": "",
+              "maxLength": 10000,
+              "minLength": 1
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "mustComplete": {
+              "type": "boolean"
+            },
+            "subScheduleId": {
+              "type": "string",
+              "description": ""
+            },
+            "slot": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "Local calendar date YYYY-MM-DD",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "start": {
+                  "type": "string",
+                  "description": "Local 24-hour HH:mm",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "end": {
+                  "type": "string",
+                  "description": "Local 24-hour HH:mm",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "timezone": {
+                  "type": "string",
+                  "description": "Verified account IANA timezone"
+                }
+              },
+              "required": [
+                "date",
+                "start",
+                "end",
+                "timezone"
+              ],
+              "additionalProperties": false
+            },
+            "backup": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "Local calendar date YYYY-MM-DD",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "start": {
+                  "type": "string",
+                  "description": "Local 24-hour HH:mm",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "end": {
+                  "type": "string",
+                  "description": "Local 24-hour HH:mm",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "timezone": {
+                  "type": "string",
+                  "description": "Verified account IANA timezone"
+                }
+              },
+              "required": [
+                "date",
+                "start",
+                "end",
+                "timezone"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "title",
+            "description",
+            "priority",
+            "mustComplete",
+            "subScheduleId",
+            "slot"
+          ],
+          "additionalProperties": false
+        },
+        "event_id": {
+          "type": "string",
+          "description": ""
+        },
+        "scheduling": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "smart"
+              ]
+            },
+            "allowConflicts": {
+              "type": "boolean"
+            },
+            "durationMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1439
+            },
+            "earliest": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "latest": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "input"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "save_category",
+    "description": "Create a category or propose edit. Names unique ignoring case per student.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "",
+          "maxLength": 60,
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "",
+          "maxLength": 10000
+        },
+        "category_id": {
+          "type": "string",
+          "description": ""
+        },
+        "academic": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "academic"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "archive_event",
+    "description": "Propose archive or restoration of a personal event, with confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "description": ""
+        },
+        "restore": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "event_id",
+        "restore"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "set_backup",
+    "description": "Propose setting a later equal-duration backup, or remove it by omitting slot. Never automatically moves the event.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "description": ""
+        },
+        "slot": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Local calendar date YYYY-MM-DD",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "start": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "end": {
+              "type": "string",
+              "description": "Local 24-hour HH:mm",
+              "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "timezone": {
+              "type": "string",
+              "description": "Verified account IANA timezone"
+            }
+          },
+          "required": [
+            "date",
+            "start",
+            "end",
+            "timezone"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "miss_event",
+    "description": "Propose recording a missed personal-event attempt after its end; requires confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "description": ""
+        }
+      },
+      "required": [
+        "event_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "official_classes",
+    "description": "Read approved official classes for at most 42 dates. Report failures/partial data; classes are read-only.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "task_analytics",
+    "description": "Get task status, completion and deadline analytics for at most 31 inclusive dates. Planned duration is not actual study time.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "schedule_analytics",
+    "description": "Get planned schedule duration and explicit missed/rescheduling analytics for at most 31 inclusive dates. Planned duration is not actual study time.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "description": "Local calendar date YYYY-MM-DD",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "set_timezone",
+    "description": "Propose changing the account IANA timezone. This affects date/time interpretation and requires confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timezone": {
+          "type": "string",
+          "description": "",
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "timezone"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

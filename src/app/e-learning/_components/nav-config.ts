@@ -90,6 +90,7 @@ export function getStudentNav(): NavSection[] {
       ],
     },
     { label: "Study Zone", icon: Library, href: "/e-learning/student/study-zone", activeOnSubpaths: true },
+    { label: "Revisions", icon: History, href: "/e-learning/student/revisions", activeOnSubpaths: true },
     { label: "Classroom", icon: Video, href: "/e-learning/student/classroom", activeOnSubpaths: true },
     {
       label: "Records & Analytics",
