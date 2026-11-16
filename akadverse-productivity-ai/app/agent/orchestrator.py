@@ -1,6 +1,28 @@
 import json
+import logging
+import time
+import uuid
+from contextlib import asynccontextmanager
 from google.genai import types
 from ..tools.registry import validate_call
+
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def phase_timing(reference, phase, step):
+    # Only server-defined phase names and counters; never prompts, arguments,
+    # results, tokens, or exception text. finally also runs on timeout cancellation.
+    started = time.monotonic()
+    completed = False
+    try:
+        yield
+        completed = True
+    finally:
+        log = logger.info if completed else logger.warning
+        log('Assistant timing reference_id=%s phase=%s step=%s ms=%s completed=%s',
+            reference, phase, step, round((time.monotonic() - started) * 1000), completed)
 
 
 def initial_contents(context: dict) -> list:
@@ -19,14 +41,17 @@ def initial_contents(context: dict) -> list:
 
 
 async def orchestrate(backend, provider, max_calls: int = 10) -> dict:
-    context = await backend.context()
+    reference = str(uuid.uuid4())
+    async with phase_timing(reference, 'backend.context', 0):
+        context = await backend.context()
     contents = initial_contents(context)
     step = 0
     results = []
     seen_writes = set()
     read_names = {'get_context', 'list_tasks', 'get_task', 'list_habits', 'habit_occurrences', 'list_schedule', 'official_classes', 'task_analytics', 'schedule_analytics'}
     for _ in range(max_calls + 1):
-        content = await provider.generate(contents)
+        async with phase_timing(reference, 'provider.generate', step):
+            content = await provider.generate(contents)
         contents.append(content)  # Preserve provider thought signatures on function call parts.
         calls = [part.function_call for part in (content.parts or []) if part.function_call]
         if not calls:
@@ -47,7 +72,8 @@ async def orchestrate(backend, provider, max_calls: int = 10) -> dict:
                 return {'message': 'That change has already been attempted in this message. Review its saved result before asking for another copy.', 'status': 'failed'}
             if name not in read_names:
                 seen_writes.add(fingerprint)
-            result = await backend.tool(step, name, arguments)
+            async with phase_timing(reference, 'backend.tool', step):
+                result = await backend.tool(step, name, arguments)
             step += 1
             results.append(result)
             status = result.get('status')

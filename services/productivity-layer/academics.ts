@@ -6,14 +6,16 @@ import { localInstant } from "@/features/productivity/analytics/periods";
 import { slotTouchesDates } from "@/features/productivity/schedule/timetable";
 import { badRequest } from "@/lib/service-error";
 import { OfficialTimetableError } from "./errors";
+import { timed } from "./diagnostics";
 
 async function loadTimetable(ownerId: string) {
   try {
-  const context = await getCurrentAcademicContext();
-  const courses = context?.session && context.semester ? await getRegisteredCourses(ownerId, context) : [];
-  const entries = courses.length && context?.session && context.semester ? await elearningDb.timetableEntry.findMany({ where: {
-    courseId: { in: courses.map(c => c.id) }, academicSessionId: context.session.id, semesterId: context.semester.id, isApproved: true,
-  } }) : [];
+  const context = await timed("academic.context", () => getCurrentAcademicContext());
+  const courses = context?.session && context.semester ? await timed("academic.registrations", () => getRegisteredCourses(ownerId, context)) : [];
+  const sessionId = context?.session?.id, semesterId = context?.semester?.id;
+  const entries = courses.length && sessionId && semesterId ? await timed("academic.timetable", () => elearningDb.timetableEntry.findMany({ where: {
+    courseId: { in: courses.map(c => c.id) }, academicSessionId: sessionId, semesterId, isApproved: true,
+  } })) : [];
   return { context, courses, entries };
   } catch (error) { throw new OfficialTimetableError(error); }
 }

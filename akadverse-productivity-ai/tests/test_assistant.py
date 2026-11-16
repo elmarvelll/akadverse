@@ -277,3 +277,35 @@ async def test_chat_reports_backend_database_reference_without_calling_gemini(se
     assert 'category=backend action=context status=503 code=DATABASE_UNAVAILABLE' in caplog.text
     assert 'private database' not in response.text + caplog.text
     assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_timeout_cancellation_identifies_active_phase_without_private_data(caplog):
+    import asyncio
+    import logging
+    caplog.set_level(logging.INFO, logger='app.agent.orchestrator')
+
+    class SlowProvider:
+        async def generate(self, contents):
+            await asyncio.Event().wait()
+
+    with pytest.raises(TimeoutError):
+        async with asyncio.timeout(0.02):
+            await orchestrate(Backend(), SlowProvider())
+    assert 'phase=backend.context step=0' in caplog.text
+    assert 'phase=provider.generate step=0' in caplog.text
+    assert 'completed=False' in caplog.text
+    assert 'Create my task' not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_backend_timeout_identifies_tool_phase(caplog):
+    class SlowBackend(Backend):
+        async def tool(self, step, name, args):
+            raise BackendError(code='BACKEND_TIMEOUT', action='tool')
+
+    with pytest.raises(BackendError):
+        await orchestrate(SlowBackend(), Provider([call('create_task', {'input': {'title': 'private-title', 'priority': 'low'}})]))
+    assert 'phase=backend.tool step=0' in caplog.text
+    assert 'completed=False' in caplog.text
+    assert 'private-title' not in caplog.text

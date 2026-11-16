@@ -41,6 +41,16 @@ Authentication rules are unchanged. These logs contain request signatures; limit
 
 The targeted protocol tests cover raw bytes, UTF-8 byte lengths, mismatch logging, no secret/payload leakage, early rejection without body consumption, no success log and shared correlation ID. Run `npm run test:revision:webhook`.
 
-Diagnostics are **local only, not deployed**. No production secret has been changed, and no live webhook test was sent. The engineer's next live request cannot produce this new log until the receiver change is deployed.
+Production log retrieval on 16 November 2026 confirms diagnostics are deployed: deployment `dpl_DrpwfLPATAGDnKXssGAEKxptFZRq` emitted both `sig_debug` and `rejected` for correlation ID `a8f372d0-b02a-4052-a288-74f0965ba641`. The previous local-only status above was superseded by this runtime evidence. This investigation did not deploy changes, modify secrets, or send a webhook.
+
+The complete matching Vercel record, including its nested runtime log entries, is saved in [`revision-signature-a8f372d0.jsonl`](revision-signature-a8f372d0.jsonl). Retrieval used only project/environment/time/correlation filters, with no event, severity, or source filter:
+
+```sh
+vercel logs --project akadverse --environment production --since 3d --query a8f372d0-b02a-4052-a288-74f0965ba641 --json --limit 100
+```
+
+For this request, `signatureReceived`, `timestampReceived`, and `idempotencyKeyReceived` were all null; reason was `invalid_auth_headers`. Body fields and computed signature are null because rejection preceded body consumption. Configured and effective receiver key lengths were both 64 UTF-8 bytes, with no outer whitespace or control characters. This does not prove equal key contents with the sender. It also does not identify the sender of this headerless request.
+
+HMAC verification is in the **Node.js route handler**: `src/app/api/webhooks/tutor/questions/route.ts` → `handleRevisionWebhook` → `authenticateRevisionRequest`. `src/proxy.ts` explicitly passes `/api/webhooks` through before session authentication. The same handler-generated correlation ID is passed to signature diagnostics and returned in the error response. No middleware relocation is needed.
 
 A proposed temporary public diagnostic deployment for secret lengths was rejected by automatic approval review because it would expose secret-derived metadata through a public endpoint. It did not run. The requested receiver logs are the safer diagnostic path; no alternate public metadata endpoint was created.
