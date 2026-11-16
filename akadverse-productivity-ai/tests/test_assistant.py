@@ -309,3 +309,16 @@ async def test_backend_timeout_identifies_tool_phase(caplog):
     assert 'phase=backend.tool step=0' in caplog.text
     assert 'completed=False' in caplog.text
     assert 'private-title' not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_empty_final_reply_after_tool_requests_durable_backend_summary():
+    backend = Backend()
+    result = await orchestrate(backend, Provider([
+        call('create_task', {'input': {'title': 'Read', 'priority': 'low'}}),
+        answer(''),
+    ]))
+    assert result['status'] == 'failed'
+    assert 'saved operation results' in result['message']
+    assert 'clarify' not in result['message']
+    assert len(backend.calls) == 1

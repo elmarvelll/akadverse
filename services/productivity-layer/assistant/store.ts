@@ -2,10 +2,21 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { badRequest, conflict, notFound, tooManyRequests } from "@/lib/service-error";
 import { requireProductivityActor } from "../auth";
+import { interruptedOutcome } from "./outcome";
 
 export const json = (value: unknown): Prisma.InputJsonValue => JSON.parse(JSON.stringify(value ?? null));
 export const LEASE_MS = 90000;
 export type Scope = { sub: string; cid: string; turn: string };
+async function savedOutcome(tx: Prisma.TransactionClient, scope: Scope) {
+  // The owner lock must already be held: it fences an in-flight tool commit
+  // before we describe its outcome and close the turn. Never rerun a mutation.
+  const executions = await tx.productivityAIToolExecution.findMany({
+    where: { ownerId: scope.sub, conversationId: scope.cid, messageId: scope.turn },
+    orderBy: { step: "asc" }, take: 10,
+    select: { toolName: true, status: true, result: true },
+  });
+  return interruptedOutcome(executions);
+}
 export async function ownedConversation(ownerId: string, id: string) {
   const value = await prisma.productivityAIConversation.findFirst({ where: { id, ownerId } });
   if (!value) throw notFound("This assistant conversation is unavailable.");
@@ -66,7 +77,8 @@ export async function beginTurn(ownerId: string, conversationId: string, clientK
       const old = await tx.productivityAIMessage.findFirst({ where: { id: conversation.activeTurnId, ownerId, status: "processing" } });
       if (old) {
         await tx.productivityAIMessage.update({ where: { id: old.id }, data: { status: "interrupted" } });
-        await tx.productivityAIMessage.create({ data: { ownerId, conversationId, sequence: old.sequence + 1, role: "assistant", content: "The previous turn was interrupted. Its saved operation results remain below; do not assume every step failed.", status: "interrupted", clientKey: `reply:${old.id}` } });
+        const outcome = await savedOutcome(tx, { sub: ownerId, cid: conversationId, turn: old.id });
+        await tx.productivityAIMessage.create({ data: { ownerId, conversationId, sequence: old.sequence + 1, role: "assistant", content: outcome || "The previous turn was interrupted. Its saved operation results remain below; do not assume every step failed.", status: "interrupted", clientKey: `reply:${old.id}` } });
       }
     }
     const count = await tx.productivityAIMessage.count({ where: { ownerId, role: "user", createdAt: { gte: new Date(Date.now() - 3600000) } } });
@@ -83,6 +95,7 @@ export async function finishTurn(scope: Scope, content: string, status = "comple
     const message = await tx.productivityAIMessage.findFirst({ where: { id: scope.turn, conversationId: scope.cid, ownerId: scope.sub, role: "user" } });
     if (!conversation || !message || conversation.activeTurnId !== scope.turn || message.status !== "processing") return;
     if (expiredOnly && conversation.leaseExpiresAt && conversation.leaseExpiresAt.getTime() > Date.now()) return;
+    if (status === "failed" || status === "interrupted") content = await savedOutcome(tx, scope) || content;
     await tx.productivityAIMessage.create({ data: { ownerId: scope.sub, conversationId: scope.cid, sequence: message.sequence + 1, role: "assistant", content: content.slice(0, 8000), status, clientKey: `reply:${scope.turn}` } });
     await tx.productivityAIMessage.update({ where: { id: scope.turn }, data: { status } });
     await tx.productivityAIConversation.update({ where: { id: scope.cid }, data: { activeTurnId: null, leaseExpiresAt: null } });

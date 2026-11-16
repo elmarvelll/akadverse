@@ -36,17 +36,27 @@ export function databaseDiagnostic(error: unknown, depth = 0): { prismaCode?: st
   return { prismaCode, message };
 }
 export function diagnosticFailure(error: unknown) {
-  if (!enabled()) return {};
-  return { ...databaseDiagnostic(error), failedPhase: traces.getStore()?.failedPhase };
+  const trace = traces.getStore();
+  return {
+    ...databaseDiagnostic(error),
+    operation: trace?.operation,
+    failedPhase: trace?.failedPhase,
+    ms: trace ? Math.round(performance.now() - trace.started) : undefined,
+    timings: trace ? [...trace.timings] : undefined,
+  };
 }
 export async function withProductivityDiagnostics<T>(run: () => Promise<T>): Promise<T> {
-  if (!enabled()) return run();
+  // Keep bounded request-local timings in production so failure logs can
+  // distinguish pool acquisition, transaction expiry, and dependency waits.
+  // Successful production requests do not emit a timing log.
   const trace: Trace = { referenceId: crypto.randomUUID(), operation: "parse", started: performance.now(), timings: [] };
   return traces.run(trace, async () => {
     try { return await run(); }
     finally {
-      const cached = (globalThis as { prismaDatabaseUrl?: string }).prismaDatabaseUrl;
-      console.info("Productivity timing", { referenceId: trace.referenceId, operation: trace.operation, ms: Math.round(performance.now() - trace.started), failedPhase: trace.failedPhase, environmentMatchesCachedClient: cached === process.env.DATABASE_URL, timings: trace.timings });
+      if (enabled()) {
+        const cached = (globalThis as { prismaDatabaseUrl?: string }).prismaDatabaseUrl;
+        console.info("Productivity timing", { referenceId: trace.referenceId, operation: trace.operation, ms: Math.round(performance.now() - trace.started), failedPhase: trace.failedPhase, environmentMatchesCachedClient: cached === process.env.DATABASE_URL, timings: trace.timings });
+      }
     }
   });
 }

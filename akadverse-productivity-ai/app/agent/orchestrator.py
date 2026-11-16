@@ -56,6 +56,10 @@ async def orchestrate(backend, provider, max_calls: int = 10) -> dict:
         calls = [part.function_call for part in (content.parts or []) if part.function_call]
         if not calls:
             text = '\n'.join(part.text for part in (content.parts or []) if part.text and not part.thought).strip()
+            if not text and results:
+                # Let the backend summarize durable executions instead of
+                # asking for clarification after an operation already ran.
+                return {'message': 'The assistant returned no final reply. Review the saved operation results.', 'status': 'failed'}
             return {'message': text[:8000] or 'Please clarify what you would like to do.',
                     'status': 'completed' if results else 'awaiting_clarification'}
         responses = []
