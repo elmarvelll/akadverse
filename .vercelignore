@@ -6,6 +6,15 @@ checkpoints/
 
 .local/
 .elearning-reset/
+.cleanup-backups/
+.claude/
+.codex/
+.agents/
+.aws/
+.vscode/
+.idea/
+# Prisma clients are regenerated for the deployment platform by postinstall/build.
+src/generated/
 **/browser-profile/
 **/browser-profile-*/
 

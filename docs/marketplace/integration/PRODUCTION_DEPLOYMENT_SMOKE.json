@@ -1,0 +1,63 @@
+{
+  "deployment": "https://akadverse-kkk9ai7ym-elmarvellls-projects.vercel.app",
+  "productionDomainsPromoted": false,
+  "authenticatedCustomerOperationsTested": false,
+  "results": [
+    {
+      "name": "home",
+      "path": "/",
+      "status": 307,
+      "cliExitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "providers",
+      "path": "/api/auth/providers",
+      "status": 200,
+      "cliExitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "checkout",
+      "path": "/api/marketplace/checkout/summary",
+      "status": 401,
+      "cliExitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "delivery-overview",
+      "path": "/api/marketplace/admin/deliveries/overview",
+      "status": 401,
+      "cliExitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "revision",
+      "path": "/api/e-learning/revision",
+      "status": 401,
+      "cliExitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "productivity-ai",
+      "path": "/api/productivity/assistant",
+      "status": 401,
+      "cliExitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "briefing",
+      "path": "/api/cron/vendor-slot-briefing",
+      "status": 401,
+      "cliExitCode": 0,
+      "passed": true
+    },
+    {
+      "name": "revision-webhook",
+      "path": "/api/webhooks/tutor/questions",
+      "status": 401,
+      "cliExitCode": 0,
+      "passed": true
+    }
+  ]
+}

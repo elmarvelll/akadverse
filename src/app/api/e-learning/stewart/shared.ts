@@ -1,6 +1,6 @@
 // src/app/api/e-learning/stewart/shared.ts
 //
-// Shared by Stewart's two routes: who may use Stewart, and turning service errors into JSON (the same
+// Shared by Stuwart's two routes: who may use Stuwart, and turning service errors into JSON (the same
 // `{ error }` shape the document-access route returns, so the browser handles both the same way).
 
 import { NextResponse } from "next/server";
@@ -8,7 +8,7 @@ import { isDatabaseUnavailable } from "@/lib/database-availability";
 import { ServiceError } from "@/lib/service-error";
 import { requireElearningRole, requireStudentProfile } from "@/services/e-learning/shared/auth";
 
-// Stewart is part of the student Study Zone: a signed-in student with an E-Learning profile. Anyone else gets
+// Stuwart is part of the student Study Zone: a signed-in student with an E-Learning profile. Anyone else gets
 // 401/403 before any upload is read or any model call is made.
 export async function requireStewartStudent(): Promise<string> {
   const session = await requireElearningRole(["student"]);

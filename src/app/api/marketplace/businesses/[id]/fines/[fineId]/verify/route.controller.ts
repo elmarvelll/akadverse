@@ -4,7 +4,7 @@
 // services/marketplace/fines/verify-fine-payment.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { badRequest, notFound, paymentRequired, conflict } from "@/lib/service-error";
 import { requireOwnedBusiness } from "@/services/marketplace/business/business-ownership.service";
 import { verifyFinePaymentByReference } from "@/services/marketplace/fines/verify-fine-payment";

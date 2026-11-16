@@ -4,7 +4,7 @@
 // services/marketplace/vendor/side/side.service.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { updateSide, deleteSide, type SideFormValues } from "@/services/marketplace/vendor/side/side.service";
 
 export async function updateSideHandler(request: NextRequest, businessId: string, sideId: string): Promise<NextResponse> {

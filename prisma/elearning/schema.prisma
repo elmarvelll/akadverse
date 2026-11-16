@@ -1001,6 +1001,10 @@ enum ClassroomStatus {
 // services/e-learning/classroom/sessions.ts — Prisma can't express a partial
 // unique index).
 model ClassroomSession {
+  lessonTopic      String?
+  lessonWeekNumber Int?
+  lessonDocumentId String?
+  lessonVersion    Int @default(0)
   id               String          @id @default(cuid())
   courseOffering   CourseOffering  @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
   courseOfferingId String

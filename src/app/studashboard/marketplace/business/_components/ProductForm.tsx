@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/_components/ProductForm.tsx
+// src/app/business/_components/ProductForm.tsx
 //
 // The product name/category/description/price/cost/stock/image/variants
 // fields, shared by the "Create Product" page and the "Update Inventory"
@@ -43,7 +43,7 @@ export default function ProductForm({ value, onChange, disabled }: ProductFormPr
             required
             disabled={disabled}
             placeholder="e.g. Floral Phone Case"
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+            className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
           />
         </div>
 
@@ -57,7 +57,7 @@ export default function ProductForm({ value, onChange, disabled }: ProductFormPr
             onChange={updateField("category")}
             required
             disabled={disabled}
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+            className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
           >
             <option value="" disabled>
               Select a category
@@ -82,7 +82,7 @@ export default function ProductForm({ value, onChange, disabled }: ProductFormPr
             disabled={disabled}
             rows={4}
             placeholder="What is this product?"
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none disabled:opacity-60"
+            className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none disabled:opacity-60"
           />
         </div>
 
@@ -100,12 +100,12 @@ export default function ProductForm({ value, onChange, disabled }: ProductFormPr
               onChange={updateField("price")}
               required
               disabled={disabled}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+              className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="product-cost">
-              Cost (₦) <span className="text-gray-400 font-normal">(optional)</span>
+              Cost (₦) <span className="text-gray-500 font-normal">(optional)</span>
             </label>
             <input
               id="product-cost"
@@ -116,7 +116,7 @@ export default function ProductForm({ value, onChange, disabled }: ProductFormPr
               onChange={updateField("cost")}
               disabled={disabled}
               placeholder="0"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+              className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
             />
           </div>
           <div>
@@ -132,7 +132,7 @@ export default function ProductForm({ value, onChange, disabled }: ProductFormPr
               onChange={updateField("stock")}
               required
               disabled={disabled}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+              className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
             />
           </div>
         </div>

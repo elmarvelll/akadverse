@@ -26,7 +26,7 @@ The command takes a read-only repeatable-read snapshot of all Prisma models, cou
 | Teaching content | CourseMaterial, LearningResource, Syllabus | Requires source-file decision; do not delete metadata independently |
 | Academic periods | AcademicTimeFrame | Review; dates are deliberate DAPU configuration, not disposable activity by default |
 | Classroom activity | ClassroomSession, ClassroomQuestion, ClassroomQuestionVote, ClassroomPoll, ClassroomPollResponse | Reset candidates, child-first |
-| Stewart activity | ChatMessage, ChatConversation, StewartAttachment | Reset candidates; attachment binaries are upstream and expire separately |
+| Stuwart activity | ChatMessage, ChatConversation, StewartAttachment | Reset candidates; attachment binaries are upstream and expire separately |
 | AI integration | AiIngestTask | Preserve pending cleanup tasks until remote deletion is verified |
 | Core notification activity | Notification with scope ELEARNING | Separate narrowly scoped inventory/decision; this command never opens Core |
 | Other Core data | User, credentials, roles, marketplace data, assets | Excluded entirely |

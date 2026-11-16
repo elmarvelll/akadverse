@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/_components/MarketplaceCartDrawer.tsx
+// src/app/_components/MarketplaceCartDrawer.tsx
 //
 // The single cart drawer every marketplace page renders — replaces the
 // old per-page split of CartDrawer.tsx (Business) / VendorCartDrawer.tsx
@@ -23,6 +23,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, X, Minus, Plus, ShoppingCart, ShoppingBag, Trash2 } from "lucide-react";
 import type { CartLineItem } from "@/types/cart";
 import type { VendorCartLineItem } from "@/types/vendor-cart";
+import { groupVendorCart } from "./group-vendor-cart";
 
 const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 });
 
@@ -96,7 +97,7 @@ function CartPanel({
               type="button"
               onClick={() => setTab("business")}
               className={`relative pb-4 text-sm font-semibold transition flex items-center gap-1.5 ${
-                tab === "business" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
+                tab === "business" ? "text-gray-900" : "text-gray-500 hover:text-gray-600"
               }`}
             >
               <ShoppingCart size={15} />
@@ -114,7 +115,7 @@ function CartPanel({
               type="button"
               onClick={() => setTab("vendor")}
               className={`relative pb-4 text-sm font-semibold transition flex items-center gap-1.5 ${
-                tab === "vendor" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
+                tab === "vendor" ? "text-gray-900" : "text-gray-500 hover:text-gray-600"
               }`}
             >
               <ShoppingBag size={15} />
@@ -157,7 +158,7 @@ function BusinessCartBody({
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {status === "loading" ? (
           <div className="flex justify-center py-16">
-            <Loader2 size={22} className="animate-spin text-gray-400" />
+            <Loader2 size={22} className="animate-spin text-gray-500" />
           </div>
         ) : items.length === 0 ? (
           <p className="text-sm text-gray-500 text-center mt-10">Your Business cart is empty.</p>
@@ -168,7 +169,7 @@ function BusinessCartBody({
                 {item.image ? (
                   <Image src={item.image} alt={item.productName} fill sizes="64px" className="object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px]">No image</div>
+                  <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px]">No image</div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -178,30 +179,30 @@ function BusinessCartBody({
                     type="button"
                     onClick={() => onRemove(item.id)}
                     aria-label="Remove item"
-                    className="text-gray-300 hover:text-red-500 transition shrink-0"
+                    className="text-gray-500 hover:text-red-500 transition shrink-0"
                   >
                     <Trash2 size={14} />
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 truncate">by {item.sellerName}</p>
-                {item.variantName && <p className="text-xs text-gray-400 mt-0.5 truncate">{item.variantName}</p>}
+                {item.variantName && <p className="text-xs text-gray-500 mt-0.5 truncate">{item.variantName}</p>}
                 <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-1.5 py-0.5">
+                  <div className="flex items-center gap-2 border border-gray-400 bg-white rounded-lg px-1.5 py-0.5">
                     <button
                       type="button"
                       onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
                       disabled={item.quantity <= 1}
-                      className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
+                      className="w-7 h-7 flex items-center justify-center rounded-md text-gray-800 hover:text-gray-950 hover:bg-gray-100 transition disabled:opacity-40"
                       aria-label="Decrease quantity"
                     >
                       <Minus size={13} />
                     </button>
-                    <span className="text-xs font-medium w-4 text-center">{item.quantity}</span>
+                    <span className="text-xs font-semibold text-gray-900 w-6 text-center tabular-nums">{item.quantity}</span>
                     <button
                       type="button"
                       onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
                       disabled={item.quantity >= item.stock}
-                      className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
+                      className="w-7 h-7 flex items-center justify-center rounded-md text-gray-800 hover:text-gray-950 hover:bg-gray-100 transition disabled:opacity-40"
                       aria-label="Increase quantity"
                     >
                       <Plus size={13} />
@@ -221,13 +222,13 @@ function BusinessCartBody({
           <span className="font-bold text-gray-900">₦{nairaFormatter.format(subtotal)}</span>
         </div>
         {items.length === 0 ? (
-          <button type="button" disabled className="w-full py-3 bg-blue-500 text-white font-semibold rounded-full opacity-50 cursor-not-allowed">
+          <button type="button" disabled className="w-full py-3 bg-blue-600 text-white font-semibold rounded-full opacity-50 cursor-not-allowed">
             Checkout
           </button>
         ) : (
           <Link
             href="/studashboard/marketplace/checkout"
-            className="block w-full text-center py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full transition"
+            className="block w-full text-center py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition"
           >
             Checkout
           </Link>
@@ -243,62 +244,61 @@ function VendorCartBody({ items, subtotal, onUpdateQuantity, onRemove, status = 
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {status === "loading" ? (
           <div className="flex justify-center py-16">
-            <Loader2 size={22} className="animate-spin text-gray-400" />
+            <Loader2 size={22} className="animate-spin text-gray-500" />
           </div>
         ) : items.length === 0 ? (
           <p className="text-sm text-gray-500 text-center mt-10">Your Vendor cart is empty.</p>
         ) : (
-          items.map((item) => (
-            <div key={item.id} className="flex gap-3">
-              <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                {item.image ? (
-                  <Image src={item.image} alt={item.name} fill sizes="64px" className="object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px]">
-                    {item.kind === "side" ? "Side" : "No image"}
+          groupVendorCart(items).map((group) => (
+            <section key={group.businessId} aria-label={`Order from ${group.vendorName}`} className="rounded-2xl border border-gray-100 p-3">
+              <p className="text-xs font-semibold text-gray-500 mb-3">From {group.vendorName}</p>
+              <div className="space-y-4">
+                {group.mains.map((item) => (
+                  <div key={item.id} className="flex gap-3">
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                      {item.image ? (
+                        <Image src={item.image} alt={item.name} fill sizes="64px" className="object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px]">No image</div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-medium text-gray-900 text-sm truncate">{item.name}</h3>
+                        <button type="button" onClick={() => onRemove(item.id)} aria-label={`Remove ${item.name}`} className="text-gray-500 hover:text-red-500 transition shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      {item.variantName && <p className="text-xs text-gray-500 mt-0.5 truncate">{item.variantName}</p>}
+                      <div className="mt-2 flex items-center justify-between">
+                        <VendorQuantity item={item} onUpdateQuantity={onUpdateQuantity} />
+                        <span className="font-semibold text-sm text-gray-900">₦{nairaFormatter.format(item.price * item.quantity)}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-medium text-gray-900 text-sm truncate">{item.name}</h3>
-                  <button
-                    type="button"
-                    onClick={() => onRemove(item.id)}
-                    aria-label="Remove item"
-                    className="text-gray-300 hover:text-red-500 transition shrink-0"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+
+              {group.sides.length > 0 && (
+                <div className={`${group.mains.length > 0 ? "mt-3 ml-4 pl-3 border-l-2 border-purple-100" : ""}`}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-purple-700 mb-2">Sides</p>
+                  <ul className="space-y-2">
+                    {group.sides.map((item) => (
+                      <li key={item.id} className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 truncate">{item.name}</p>
+                          <p className="text-xs text-gray-500">₦{nairaFormatter.format(item.price * item.quantity)}</p>
+                        </div>
+                        <VendorQuantity item={item} onUpdateQuantity={onUpdateQuantity} />
+                        <button type="button" onClick={() => onRemove(item.id)} aria-label={`Remove ${item.name}`} className="text-gray-500 hover:text-red-500 transition shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <p className="text-xs text-gray-500 truncate">by {item.vendorName}</p>
-                {item.variantName && <p className="text-xs text-gray-400 mt-0.5 truncate">{item.variantName}</p>}
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-1.5 py-0.5">
-                    <button
-                      type="button"
-                      onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                      disabled={item.quantity <= 1}
-                      className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus size={13} />
-                    </button>
-                    <span className="text-xs font-medium w-4 text-center">{item.quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                      disabled={item.stock !== null && item.quantity >= item.stock}
-                      className="text-gray-400 hover:text-gray-700 transition disabled:opacity-30"
-                      aria-label="Increase quantity"
-                    >
-                      <Plus size={13} />
-                    </button>
-                  </div>
-                  <span className="font-semibold text-sm text-gray-900">₦{nairaFormatter.format(item.price * item.quantity)}</span>
-                </div>
-              </div>
-            </div>
+              )}
+            </section>
           ))
         )}
       </div>
@@ -309,18 +309,45 @@ function VendorCartBody({ items, subtotal, onUpdateQuantity, onRemove, status = 
           <span className="font-bold text-gray-900">₦{nairaFormatter.format(subtotal)}</span>
         </div>
         {items.length === 0 ? (
-          <button type="button" disabled className="w-full py-3 bg-purple-500 text-white font-semibold rounded-full opacity-50 cursor-not-allowed">
+          <button type="button" disabled className="w-full py-3 bg-purple-600 text-white font-semibold rounded-full opacity-50 cursor-not-allowed">
             Book an Order
           </button>
         ) : (
           <Link
             href="/studashboard/marketplace/vendor-checkout"
-            className="block w-full text-center py-3 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-full transition"
+            className="block w-full text-center py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-full transition"
           >
             Book an Order
           </Link>
         )}
       </div>
     </>
+  );
+}
+
+// The vendor cart's quantity stepper, shared by main items and sides.
+function VendorQuantity({ item, onUpdateQuantity }: { item: VendorCartLineItem; onUpdateQuantity: (id: string, quantity: number) => void }) {
+  return (
+    <div className="flex items-center gap-2 border border-gray-400 bg-white rounded-lg px-1.5 py-0.5">
+      <button
+        type="button"
+        onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+        disabled={item.quantity <= 1}
+        className="w-7 h-7 flex items-center justify-center rounded-md text-gray-800 hover:text-gray-950 hover:bg-gray-100 transition disabled:opacity-40"
+        aria-label={`Decrease ${item.name} quantity`}
+      >
+        <Minus size={13} />
+      </button>
+      <span className="text-xs font-semibold text-gray-900 w-6 text-center tabular-nums">{item.quantity}</span>
+      <button
+        type="button"
+        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+        disabled={item.stock !== null && item.quantity >= item.stock}
+        className="w-7 h-7 flex items-center justify-center rounded-md text-gray-800 hover:text-gray-950 hover:bg-gray-100 transition disabled:opacity-40"
+        aria-label={`Increase ${item.name} quantity`}
+      >
+        <Plus size={13} />
+      </button>
+    </div>
   );
 }

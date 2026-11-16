@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "desktop Dashboard reaches exact student route and active state",
+    "collapsed desktop rail uses same destination and active state",
+    "mobile drawer Dashboard navigates and closes the drawer",
+    "transcription growth preserves manual scroll; compact arrow resumes follow",
+    "375px classroom panel fits viewport with accessible input and current lesson",
+    "question answered and persisted history restored after close/reopen",
+    "AI failure preserves the classroom and video controls",
+    "Escape closes the assistant",
+    "desktop panel leaves classroom space and respects reduced motion"
+  ]
+}

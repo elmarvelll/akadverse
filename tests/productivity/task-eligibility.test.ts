@@ -62,14 +62,14 @@ it("selected weekdays, archived settings and owner checks preserve the existing 
   assert.equal(todoTasks([occurrence("2030-01-15")], [{ ...habit, revisions: [{ ...habit.revisions[0], archived: true }] }], zone, now).length, 0);
   assert.equal(taskAnalytics(month(), "another-student", range, zone, now).workload.active, 0);
 });
-it("keeps analytics values and chart legends visible while calculation prose is collapsed", () => {
+it("keeps analytics values and chart legends visible after calculation prose is removed", () => {
   const result = taskAnalytics(month(), "student", range, zone, now);
   const taskMarkup = renderToStaticMarkup(createElement(TaskAnalyticsView, { result }));
   assert.match(taskMarkup, /Current workload/); assert.match(taskMarkup, /Active tasks<\/dt><dd>1/);
   assert.match(taskMarkup, /role="img"/); assert.match(taskMarkup, /Tasks completed by day/);
-  assert.match(taskMarkup, /<details><summary>How it/); assert.doesNotMatch(taskMarkup, /<details open/);
+  assert.doesNotMatch(taskMarkup, /How it.s calculated|About these figures/);
   const empty = scheduleAnalytics({ version: 1, schedules: [], events: [] }, [], "student", range, zone);
   const scheduleMarkup = renderToStaticMarkup(createElement(ScheduleAnalyticsView, { result: empty }));
   assert.match(scheduleMarkup, /No planned time in this period/); assert.match(scheduleMarkup, /planned hours/);
-  assert.match(scheduleMarkup, /<details><summary>How it/);
+  assert.doesNotMatch(scheduleMarkup, /How it.s calculated|About these figures/);
 });

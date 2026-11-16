@@ -18,7 +18,7 @@ Tasks use READY, CLAIMED, ACCEPTED, RETRY, DONE and ATTENTION states. Temporary 
 
 Lecturer deletion first persists a DELETE task, then uses the existing Storage deletion and material deletion workflow. `onDelete: SetNull` retains the task's stable document ID. Cleanup accepts 204/404 and retries independently of the removed original. An active POST lease delays cleanup. If processing may still be running, a successful DELETE stays ATTENTION: the current service does not document worker cancellation and could recreate embeddings afterward. Do not claim race-free remote deletion until that contract is strengthened.
 
-DAPU's dashboard links to `/e-learning/dapu/ai-ingestion`, which shows task totals, outstanding tasks, attempts, timestamps and safe errors. Only DAPU can retry reviewed tasks, and remotely submitted ingestion IDs cannot be reset through this action. Original access and retrieval/Stewart functionality are outside this integration change.
+DAPU's dashboard links to `/e-learning/dapu/ai-ingestion`, which shows task totals, outstanding tasks, attempts, timestamps and safe errors. Only DAPU can retry reviewed tasks, and remotely submitted ingestion IDs cannot be reset through this action. Original access and retrieval/Stuwart functionality are outside this integration change.
 
 ## Verified HTTP contract and remaining dependencies
 

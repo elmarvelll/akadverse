@@ -6,6 +6,7 @@
 // The shape differs by role: the lecturer sees who asked and the poll tallies; a student sees
 // anonymous questions, vote counts, and only their own poll answer.
 
+import { lessonView, type ClassroomLesson } from "./lesson";
 import { elearningDb } from "@/lib/db/elearning";
 import { requireClassroomRole, type ClassroomParticipant } from "@/services/e-learning/classroom/access";
 import { resolveIdentities, fullName } from "@/services/e-learning/shared/identity";
@@ -33,6 +34,7 @@ export interface ClassroomPollView {
 
 export interface ClassroomState {
   live: boolean;
+  lesson?: ClassroomLesson | null;
   questions: ClassroomQuestionView[];
   poll: ClassroomPollView | null;
 }
@@ -59,6 +61,7 @@ export async function getClassroomState(user: ClassroomParticipant, sessionId: s
 
   return {
     live: true,
+    lesson: lessonView(classroom),
     questions: questions
       .map((q) => ({
         id: q.id,

@@ -167,3 +167,8 @@ it("requires confirmation for habit corrections reached through general task too
   assert.equal(result.status, "failed");
   assert.equal((await prisma.productivityTask.findUniqueOrThrow({ where: { id: taskId } })).outcome, "completed");
 });
+it("rejects expired callback admission before returning assistant context", async () => {
+  const scope = await start();
+  await prisma.productivityAIConversation.update({ where: { id: scope.cid }, data: { leaseExpiresAt: new Date(Date.now() - 1000) } });
+  await assert.rejects(serviceCallback({ ...scope, iss: "test", aud: "test", exp: 9999999999, iat: 0, jti: "test" }, { action: "context" }), (error: unknown) => !!error && typeof error === "object" && "status" in error && error.status === 409);
+});

@@ -12,11 +12,11 @@ Sessions, submitted answers, evaluations and review history are durable. The ses
 
 ## Three separate systems
 
-- **Study Zone:** material access, Stewart explanations and independent teaching practice. It supplies verified practice evidence, not automatic eligibility from merely opening a document or generating an explanation.
+- **Study Zone:** material access, Stuwart explanations and independent teaching practice. It supplies verified practice evidence, not automatic eligibility from merely opening a document or generating an explanation.
 - **Question Bank:** existing `RevisionQuestion`, embedding, variant and provenance records own reusable question content. Generation and semantic deduplication stay in the existing webhook pipeline.
 - **Revisions:** selection, persistent sessions, student answers/feedback and personal review scheduling. It works without the Study Zone interface being open.
 
-Learning context is prepared asynchronously from saved revision evidence and can be used by Stewart. Failure to update that context does not undo a successful revision.
+Learning context is prepared asynchronously from saved revision evidence and can be used by Stuwart. Failure to update that context does not undo a successful revision.
 
 ## Coverage policy approved for compatibility
 
@@ -107,13 +107,13 @@ Scheduling reuses pinned **`ts-fsrs@6.0.0`**, FSRS-7 defaults, and the existing 
 
 Learning evidence references the session answer/evaluation and authoritative review log rather than duplicating answer payloads. The user's approved rule marks **consistent retrieval** only after independently correct, no-review-flag responses on at least three distinct questions for the concept. Repeating one question three times does not qualify. The label is evidence, **not mastered status**; formal conceptual mastery remains `not_assessed`. FSRS retention and recall ratings remain separate.
 
-## Prepared learning context and Stewart
+## Prepared learning context and Stuwart
 
 After a review commits, a bounded dirty signal requests context refresh. If the signal fails, the review remains successful. The existing worker can rediscover missed signals from durable review logs and retry.
 
 `learning-context.ts` builds a bounded summary of the latest 100 completed reviews and up to 30 concepts. Historical distinct-question evidence for those concepts is aggregated in the worker, not during ordinary student requests. Snapshot writes use version/claim fencing so a newer review cannot be erased by a stale refresh.
 
-The existing cron sweep processes at most five context rows per sweep. There is no new cron endpoint or queue service. `preparedRevisionContext()` reads one student snapshot and returns safely when unavailable. Stewart receives a complete compact reference for up to three concepts (without raw answers or internal IDs), as a bounded reference-data prefix through its existing question field when space permits; request/response schemas do not change. The student's own question takes priority over that optional context. Prepared history is not used to grant eligibility.
+The existing cron sweep processes at most five context rows per sweep. There is no new cron endpoint or queue service. `preparedRevisionContext()` reads one student snapshot and returns safely when unavailable. Stuwart receives a complete compact reference for up to three concepts (without raw answers or internal IDs), as a bounded reference-data prefix through its existing question field when space permits; request/response schemas do not change. The student's own question takes priority over that optional context. Prepared history is not used to grant eligibility.
 
 ## Configuration and release state
 
@@ -161,7 +161,7 @@ Coverage includes revoked registration, missing coverage, invalid source/publica
 
 | Status | Work |
 |---|---|
-| Completed | First standalone route/navigation; Course/Random sessions; existing bank/shared FSRS reuse; dynamic eligibility and publication; answers/feedback/ratings/history/resume; conservative retrieval evidence; recoverable context preparation; bounded Stewart integration; additive migration/RLS; local activation and focused checks. |
+| Completed | First standalone route/navigation; Course/Random sessions; existing bank/shared FSRS reuse; dynamic eligibility and publication; answers/feedback/ratings/history/resume; conservative retrieval evidence; recoverable context preparation; bounded Stuwart integration; additive migration/RLS; local activation and focused checks. |
 | Compatible implementation | Coverage comes from verified passed practice, as delegated by the user, rather than a nonexistent delivered lesson ledger. Source provenance uses a clearly labelled metadata snapshot. |
 | Pending AI agreement | Stable material/lesson versions and delivered-concept lineage, optional source/evaluation-criteria fields, schema-version negotiation, actual execution/token usage metadata and retry semantics. Existing contracts were not silently extended. |
 | Pending deployment | Hosting application deployment, remote environment flags, public producer callback end-to-end test, regular authenticated schedule, load/latency verification and deployed administrator notification delivery. |

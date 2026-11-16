@@ -5,7 +5,7 @@
 // services/marketplace/business/report-business.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
 import { reportBusiness } from "@/services/marketplace/business/report-business";
 

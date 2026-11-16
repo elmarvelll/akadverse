@@ -1,4 +1,4 @@
-# Stewart attachments and screenshots
+# Stuwart attachments and screenshots
 
 Implemented 10 November 2026 against the current Concept Explainer README supplied by the user (`Downloads/README.md`, Phases 3.5a–3.5c and 4a). The older sibling `Concept Explainer` checkout is a different, outdated implementation. No microservice source or API was changed.
 

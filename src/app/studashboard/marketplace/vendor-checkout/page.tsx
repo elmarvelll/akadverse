@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/vendor-checkout/page.tsx
+// src/app/vendor-checkout/page.tsx
 //
 // Vendor checkout — mirrors the Business checkout/page.tsx flow exactly
 // (summary -> Paystack popup -> server-side verify), with the two Vendor-
@@ -25,6 +25,7 @@ import Image from "next/image";
 import { isAxiosError } from "axios";
 import { AlertCircle, CheckCircle2, Clock, Loader2, MapPin, ShoppingBag } from "lucide-react";
 import api from "@/lib/axios";
+import { groupVendorCart } from "@/app/studashboard/marketplace/_components/group-vendor-cart";
 import { confirmPayment, openPaystackCheckout, reportCancelled } from "../checkout/_components/paystackCheckout";
 import DeliveryDatePicker, { todayIsoDate } from "./_components/DeliveryDatePicker";
 import type { VendorCartLineItem } from "@/types/vendor-cart";
@@ -196,20 +197,20 @@ export default function VendorCheckoutPage() {
 
         {status === "loading" && (
           <div className="flex justify-center py-24">
-            <Loader2 size={28} className="animate-spin text-gray-400" />
+            <Loader2 size={28} className="animate-spin text-gray-500" />
           </div>
         )}
 
         {status === "error" && (
           <div className="flex flex-col items-center text-center py-24">
-            <AlertCircle size={28} className="text-gray-400 mb-3" />
+            <AlertCircle size={28} className="text-gray-500 mb-3" />
             <p className="text-gray-500">Couldn&apos;t load your checkout. Please try again.</p>
           </div>
         )}
 
         {status === "empty" && (
           <div className="flex flex-col items-center text-center py-24 bg-white rounded-2xl border border-gray-100">
-            <ShoppingBag size={28} className="text-gray-300 mb-3" />
+            <ShoppingBag size={28} className="text-gray-400 mb-3" />
             <p className="text-gray-500 mb-4">Your Vendor cart is empty.</p>
             <Link href="/studashboard/marketplace" className="text-sm font-semibold text-purple-600 hover:text-purple-700 transition">
               Browse School Vendors
@@ -219,7 +220,7 @@ export default function VendorCheckoutPage() {
 
         {status === "success" && (
           <div className="text-center bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-            <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto mb-5">
+            <div className="w-14 h-14 rounded-full bg-green-50 text-green-700 flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 size={28} />
             </div>
             <h1 className="text-xl font-bold text-gray-900 mb-2">Order booked!</h1>
@@ -228,7 +229,7 @@ export default function VendorCheckoutPage() {
             </p>
             <Link
               href="/studashboard/marketplace"
-              className="block w-full py-3 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-full transition"
+              className="block w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-full transition"
             >
               Back to Marketplace
             </Link>
@@ -242,27 +243,44 @@ export default function VendorCheckoutPage() {
 
             <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
               <h2 className="font-semibold text-gray-900 mb-4">Your order</h2>
-              <div className="space-y-4">
-                {summary.items.map((item) => (
-                  <div key={item.id} className="flex gap-3">
-                    <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                      {item.image ? (
-                        <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px]">
-                          {item.kind === "side" ? "Side" : "No image"}
+              <div className="space-y-5">
+                {groupVendorCart(summary.items).map((group) => (
+                  <div key={group.businessId}>
+                    <p className="text-xs font-semibold text-gray-500 mb-3">From {group.vendorName}</p>
+                    <div className="space-y-4">
+                      {group.mains.map((item) => (
+                        <div key={item.id} className="flex gap-3">
+                          <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                            {item.image ? (
+                              <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px]">No image</div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+                            {item.variantName && <p className="text-xs text-gray-500">{item.variantName}</p>}
+                            <p className="text-xs text-gray-500 mt-0.5">Qty {item.quantity}</p>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900 shrink-0">₦{nairaFormatter.format(item.price * item.quantity)}</p>
                         </div>
-                      )}
+                      ))}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-                      <p className="text-xs text-gray-500">by {item.vendorName}</p>
-                      {item.variantName && <p className="text-xs text-gray-400">{item.variantName}</p>}
-                      <p className="text-xs text-gray-500 mt-0.5">Qty {item.quantity}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900 shrink-0">
-                      ₦{nairaFormatter.format(item.price * item.quantity)}
-                    </p>
+                    {group.sides.length > 0 && (
+                      <div className={group.mains.length > 0 ? "mt-3 ml-4 pl-3 border-l-2 border-purple-100" : ""}>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-purple-700 mb-1.5">Sides</p>
+                        <ul className="space-y-1.5">
+                          {group.sides.map((item) => (
+                            <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
+                              <span className="text-gray-800 min-w-0 truncate">
+                                {item.quantity} x {item.name}
+                              </span>
+                              <span className="font-medium text-gray-900 shrink-0">₦{nairaFormatter.format(item.price * item.quantity)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -270,7 +288,7 @@ export default function VendorCheckoutPage() {
 
             <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
               <label htmlFor="location" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <MapPin size={16} className="text-gray-400" />
+                <MapPin size={16} className="text-gray-500" />
                 Delivery location
               </label>
               <input
@@ -280,7 +298,7 @@ export default function VendorCheckoutPage() {
                 onChange={(e) => setLocation(e.target.value)}
                 disabled={status === "paying" || status === "verifying"}
                 placeholder="e.g. Block C, Female Hostel"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition disabled:opacity-60"
               />
             </section>
 
@@ -295,16 +313,16 @@ export default function VendorCheckoutPage() {
 
             <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
               <p className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                <Clock size={16} className="text-gray-400" />
+                <Clock size={16} className="text-gray-500" />
                 Delivery slot
               </p>
               {slotsRefreshing ? (
                 <div className="flex justify-center py-6">
-                  <Loader2 size={20} className="animate-spin text-gray-400" />
+                  <Loader2 size={20} className="animate-spin text-gray-500" />
                 </div>
               ) : (
               <div className="space-y-2">
-                {summary.slots.length === 0 && <p className="text-sm text-gray-400">No delivery slots configured.</p>}
+                {summary.slots.length === 0 && <p className="text-sm text-gray-500">No delivery slots configured.</p>}
                 {summary.slots.map((slot) => {
                   const disabled = !slot.bookable;
                   const selected = selectedSlotId === slot.id;
@@ -315,11 +333,11 @@ export default function VendorCheckoutPage() {
                       disabled={disabled || status === "paying" || status === "verifying"}
                       onClick={() => setSelectedSlotId(slot.id)}
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition disabled:opacity-40 disabled:cursor-not-allowed ${
-                        selected ? "border-purple-500 bg-purple-50 text-purple-800" : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                        selected ? "border-purple-500 bg-purple-50 text-purple-800" : "border-gray-300 text-gray-700 hover:bg-gray-50"
                       }`}
                     >
                       <span className="font-medium">{slot.label}</span>
-                      <span className="text-xs text-gray-400">{disabled ? "Unavailable" : `${slot.capacity - slot.booked} spot(s) left`}</span>
+                      <span className="text-xs text-gray-500">{disabled ? "Unavailable" : `${slot.capacity - slot.booked} spot(s) left`}</span>
                     </button>
                   );
                 })}
@@ -353,7 +371,7 @@ export default function VendorCheckoutPage() {
               type="button"
               onClick={handleBookOrder}
               disabled={status === "paying" || status === "verifying"}
-              className="w-full py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {(status === "paying" || status === "verifying") && <Loader2 size={18} className="animate-spin" />}
               {status === "verifying" ? "Confirming payment…" : status === "paying" ? "Opening payment…" : "Book an Order"}

@@ -4,9 +4,9 @@
 // services/marketplace/deliverer/reject-deliverer-application.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { rejectDelivererApplication } from "@/services/marketplace/deliverer/reject-deliverer-application";
 
 export async function rejectDeliverer(delivererId: string, request: NextRequest): Promise<NextResponse> {

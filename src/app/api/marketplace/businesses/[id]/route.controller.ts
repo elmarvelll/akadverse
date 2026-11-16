@@ -4,7 +4,7 @@
 // services/marketplace/business/{get-business-detail,update-business}.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { getBusinessDetail } from "@/services/marketplace/business/get-business-detail";
 import { updateBusiness as updateBusinessAction } from "@/services/marketplace/business/update-business";
 import type { BusinessFormValues } from "@/types/business";

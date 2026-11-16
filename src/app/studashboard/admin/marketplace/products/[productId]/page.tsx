@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/products/[productId]/page.tsx
+// src/app/admin/products/[productId]/page.tsx
 //
 // Admin product detail — full description, every image, every variant
 // with its own price/stock, and the owning business (linking back to the
@@ -59,7 +59,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ p
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -67,7 +67,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ p
   if (loadState !== "loaded" || !product) {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">
           {loadState === "forbidden"
             ? "Admin access required."
@@ -98,7 +98,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ p
               // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL
               <img src={gallery[activeImage]} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">No image</div>
+              <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">No image</div>
             )}
           </div>
           {gallery.length > 1 && (
@@ -121,7 +121,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ p
         </div>
 
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide">{product.category}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">{product.category}</p>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words mt-1">{product.name}</h1>
           <Link
             href={`/studashboard/admin/marketplace/businesses/${product.business.id}`}
@@ -145,7 +145,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ p
             >
               {product.stock > 0 ? `In stock — ${product.stock}` : "Out of stock"}
             </span>
-            <span className="text-xs text-gray-400">Listed {dateFormatter.format(new Date(product.createdAt))}</span>
+            <span className="text-xs text-gray-500">Listed {dateFormatter.format(new Date(product.createdAt))}</span>
           </div>
 
           <p className="text-sm text-gray-600 mt-4 leading-relaxed">{product.description}</p>

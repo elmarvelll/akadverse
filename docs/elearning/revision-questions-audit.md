@@ -8,7 +8,7 @@ Reviewed 15 November 2026 on `productivity-layer-integration`, including local `
 
 | Component | Location / finding |
 | --- | --- |
-| Stewart explanations and conversations | `services/e-learning/student/stewart/`, `src/app/api/e-learning/stewart/`. Student-authorised chat exists; no teaching-stage pass result or tracker is persisted. |
+| Stuwart explanations and conversations | `services/e-learning/student/stewart/`, `src/app/api/e-learning/stewart/`. Student-authorised chat exists; no teaching-stage pass result or tracker is persisted. |
 | AI service client | `services/e-learning/ai-ingest/client.ts`. Reuses `CONCEPT_EXPLAINER_API_URL` (or legacy `AI_SERVICE_URL`) and `AI_SERVICE_API_KEY`. |
 | Durable work and cron | `services/e-learning/ai-ingest/worker.ts`, `AiIngestTask`, `/api/cron/ai-ingest`, shared `requireCronSecret`. Existing leases/backoff are useful patterns; INGEST/DELETE tasks are not teaching-generation jobs. |
 | Notifications | `services/marketplace/notifications/notification.service.ts`: persisted admin fan-out and SSE. Email delivery/outbox also exists. No separate notification provider is necessary. |

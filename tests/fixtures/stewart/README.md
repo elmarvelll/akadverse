@@ -1,4 +1,4 @@
-# Recorded Stewart response
+# Recorded Stuwart response
 
 `conflict-response.json` contains the actual `answer`, source titles/previews and retrieval counters returned by the configured Concept Explainer `/explain` on 10 November 2026 for `pls explain intra group conflict`, EEE311 Week 1. The document ID was replaced with a stable fixture identifier. No credentials, student identity or session history are included.
 

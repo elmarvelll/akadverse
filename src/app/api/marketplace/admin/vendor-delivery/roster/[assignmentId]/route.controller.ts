@@ -4,8 +4,8 @@
 // assignment. See services/marketplace/admin/roster/manage-roster.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { cancelRosterAssignment } from "@/services/marketplace/admin/roster/manage-roster";
 
 export async function deleteAssignment(assignmentId: string): Promise<NextResponse> {

@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/vendor/[id]/page.tsx
+// src/app/vendor/[id]/page.tsx
 //
 // Public vendor storefront — profile (name, category, location,
 // availability), products (opens the shared ProductDetailModal, same one
@@ -9,12 +9,14 @@
 
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { AlertCircle, Clock, Loader2, MapPin } from "lucide-react";
+import { use, useState } from "react";
+import { AlertCircle, Clock, MapPin } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import MarketplaceNavbar from "../../_components/MarketplaceNavbar";
 import ProductCard from "../../_components/ProductCard";
 import ProductDetailModal from "../../_components/ProductDetailModal";
+import { LoadError, PRODUCT_GRID_CLASS, ProductGridSkeleton } from "../../_components/ProductGrid";
+import { useLoad } from "../../_components/use-load";
 import MarketplaceCartDrawer from "../../_components/MarketplaceCartDrawer";
 import { useCart } from "../../_components/useCart";
 import { useVendorCart } from "../../_components/useVendorCart";
@@ -41,8 +43,8 @@ interface VendorStorefront {
 
 export default function VendorStorefrontPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [vendor, setVendor] = useState<VendorStorefront | null>(null);
-  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const vendorState = useLoad(`vendor:${id}`, () => api.get<{ vendor: VendorStorefront }>(`/marketplace/vendor/${id}`).then((res) => res.data.vendor));
+  const vendor = vendorState.status === "success" ? vendorState.data : null;
   const [detailProductId, setDetailProductId] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const cart = useCart();
@@ -52,18 +54,9 @@ export default function VendorStorefrontPage({ params }: { params: Promise<{ id:
     vendorCart.refresh();
   };
 
-  useEffect(() => {
-    api
-      .get<{ vendor: VendorStorefront }>(`/marketplace/vendor/${id}`)
-      .then((res) => {
-        setVendor(res.data.vendor);
-        setStatus("loaded");
-      })
-      .catch(() => setStatus("error"));
-  }, [id]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-clip">
       <DashboardNavbar />
       <div className="pt-16">
         <MarketplaceNavbar cartCount={cart.count + vendorCart.count} onCartClick={() => setCartOpen(true)} />
@@ -80,23 +73,35 @@ export default function VendorStorefrontPage({ params }: { params: Promise<{ id:
           <BackLink />
         </nav>
 
-        {status === "loading" && (
-          <div className="flex justify-center py-24">
-            <Loader2 size={28} className="animate-spin text-gray-400" />
+        {vendorState.status === "loading" && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10" role="status" aria-label="Loading vendor">
+            <div aria-hidden className="flex items-start gap-4 mb-10 motion-safe:animate-skeleton">
+              <div className="w-16 h-16 rounded-2xl bg-gray-300 shrink-0" />
+              <div className="flex-1 space-y-2 pt-1">
+                <div className="h-6 w-48 max-w-full rounded bg-gray-400" />
+                <div className="h-4 w-32 rounded bg-gray-300" />
+              </div>
+            </div>
+            <ProductGridSkeleton count={8} />
           </div>
         )}
 
-        {status === "error" && (
-          <div className="flex flex-col items-center text-center py-24 px-6">
-            <AlertCircle size={28} className="text-gray-400 mb-3" />
-            <p className="text-gray-500">This vendor isn&apos;t available.</p>
-          </div>
-        )}
+        {vendorState.status === "error" &&
+          (vendorState.httpStatus === 404 ? (
+            <div className="flex flex-col items-center text-center py-24 px-6">
+              <AlertCircle size={28} className="text-gray-500 mb-3" aria-hidden />
+              <p className="text-gray-500">This vendor isn&apos;t available.</p>
+            </div>
+          ) : (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+              <LoadError message="Couldn't load this vendor. Check your connection and try again." onRetry={vendorState.retry} />
+            </div>
+          ))}
 
-        {status === "loaded" && vendor && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        {vendorState.status === "success" && vendor && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
             <div className="flex items-start gap-4 mb-2">
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-gray-300 text-xs">
+              <div className="w-16 h-16 rounded-2xl bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-gray-600 text-xs">
                 {vendor.secureUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={vendor.secureUrl} alt={vendor.name} className="w-full h-full object-cover" />
@@ -104,8 +109,8 @@ export default function VendorStorefrontPage({ params }: { params: Promise<{ id:
                   "No image"
                 )}
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{vendor.name}</h1>
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{vendor.name}</h1>
                 <p className="text-sm text-gray-500">{vendor.vendorCategory ?? "School Vendor"}</p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-500">
                   {vendor.location && (
@@ -134,9 +139,9 @@ export default function VendorStorefrontPage({ params }: { params: Promise<{ id:
             <section className="mt-10">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Menu</h2>
               {vendor.products.length === 0 ? (
-                <p className="text-sm text-gray-400">No products listed yet.</p>
+                <p className="text-sm text-gray-500">No products listed yet.</p>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className={PRODUCT_GRID_CLASS}>
                   {vendor.products.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -151,7 +156,7 @@ export default function VendorStorefrontPage({ params }: { params: Promise<{ id:
             {vendor.sides.length > 0 && (
               <section className="mt-10">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Sides</h2>
-                <p className="text-xs text-gray-400 mb-3">Order sides on their own, or alongside items from the menu above.</p>
+                <p className="text-xs text-gray-500 mb-3">Order sides on their own, or alongside items from the menu above.</p>
                 <div className="flex flex-wrap gap-2">
                   {vendor.sides.map((side) => (
                     <button

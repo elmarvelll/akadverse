@@ -1,23 +1,30 @@
-// src/app/studashboard/marketplace/deliverer/page.tsx
+// src/app/deliverer/page.tsx
 //
 // The Delivery Dashboard — only reachable in practice via the footer's
 // "Delivery Dashboard" link once a deliverer is approved (see
 // services/marketplace/deliverer/deliverer.service.ts); every API call here still 403s server-side for a
 // non-approved deliverer regardless of how someone reaches this URL. Shows
-// pending pickup handoffs (with the seller<->deliverer OTP entry) and every
-// assigned delivery item across its lifecycle. The deliverer never adds
-// items manually — everything shown here came from a business marking it
-// READY_FOR_PICKUP and the delivery coordinator assigning it. See
-// docs/marketplace/systems/deliverer-system.md.
+// the Vendor Market delivery cards (one per slot: processing until each
+// student's code confirms it — no pickup or check-in step; see
+// _components/DeliveryCards.tsx), Business pending pickup handoffs (with the
+// coordinator<->deliverer OTP entry) and every assigned Business delivery item
+// across its lifecycle. The deliverer never adds
+// items manually — everything shown here was assigned by an admin or the
+// roster. See docs/marketplace/systems/deliverer-system.md.
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { isAxiosError } from "axios";
-import { AlertCircle, CalendarClock, Loader2, Package, Truck } from "lucide-react";
+import { AlertCircle, CalendarClock, ClipboardList, Landmark, Loader2, Package, Truck } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 import api from "@/lib/axios";
 import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
+import DeliveryCards, { type ManifestCard } from "./_components/DeliveryCards";
+import { DELIVERY_PANELS, cardsForPanel, deliveryPanel, type DeliveryPanel } from "./_components/delivery-panels";
+import type { DelivererScheduleRow } from "@/lib/delivery-schedule";
+import ScheduleOverview from "./_components/ScheduleOverview";
+import PayoutAccountSection from "./_components/PayoutAccountSection";
 
 interface Handoff {
   id: string;
@@ -34,6 +41,8 @@ interface Handoff {
 // docs/marketplace/decisions/vendor-independent-architecture.md.
 interface RosterEntry {
   id: string;
+  // Which delivery operation the shift is for (weekly roster or date-only).
+  operation?: "MARKETPLACE" | "VENDOR";
   date: string;
   status: string;
   slotLabel: string;
@@ -44,6 +53,8 @@ interface RosterEntry {
 }
 
 interface DeliveryItemRow {
+  windowStartAt?: string | null;
+  isOverflow?: boolean;
   deliveryItemId: string;
   status: string;
   quantity: number;
@@ -63,37 +74,53 @@ interface DeliveryItemRow {
 }
 
 export default function DelivererDashboardPage() {
+  const [panel, setPanel] = useState<DeliveryPanel>("Scheduled");
+  const [schedule, setSchedule] = useState<DelivererScheduleRow[]>([]);
+  const [clock, setClock] = useState(() => new Date());
   const [handoffs, setHandoffs] = useState<Handoff[]>([]);
   const [items, setItems] = useState<DeliveryItemRow[]>([]);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
+  const [cards, setCards] = useState<ManifestCard[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "forbidden" | "error">("loading");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  const load = async () => {
-    setLoadState("loading");
+  // silent: refresh in place (after an action) without the full-page spinner.
+  const load = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoadState("loading");
     try {
-      const [handoffsRes, itemsRes, rosterRes] = await Promise.all([
+      const [handoffsRes, itemsRes, rosterRes, manifestRes, scheduleRes] = await Promise.all([
         api.get<{ handoffs: Handoff[] }>("/marketplace/deliverer/handoffs"),
         api.get<{ items: DeliveryItemRow[] }>("/marketplace/deliverer/deliveries"),
         api.get<{ roster: RosterEntry[] }>("/marketplace/deliverer/roster"),
+        api.get<{ cards: ManifestCard[] }>("/marketplace/deliverer/manifest"),
+        api.get<{ schedule: DelivererScheduleRow[] }>("/marketplace/deliverer/schedule"),
       ]);
+      setSchedule(scheduleRes.data.schedule);
+      setClock(new Date());
       setHandoffs(handoffsRes.data.handoffs);
       setItems(itemsRes.data.items);
       setRoster(rosterRes.data.roster);
+      setCards(manifestRes.data.cards);
       setLoadState("loaded");
     } catch (err) {
+      if (silent && isAxiosError(err) && !err.response) return; // offline: keep showing what we have
       setLoadState(isAxiosError(err) && err.response?.status === 403 ? "forbidden" : "error");
     }
   };
 
   useEffect(() => {
     // Locally-defined wrapper — same convention as
-    // src/app/studashboard/marketplace/_components/useCart.ts.
+    // src/app/_components/useCart.ts.
     const run = async () => {
       await load();
     };
     run();
+    const timer = window.setInterval(() => {
+      setClock(new Date());
+      void load({ silent: true });
+    }, 30_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const run = async (id: string, action: () => Promise<unknown>) => {
@@ -101,7 +128,7 @@ export default function DelivererDashboardPage() {
     setError("");
     try {
       await action();
-      await load();
+      await load({ silent: true });
     } catch (err) {
       setError((isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "That action failed.");
     } finally {
@@ -132,7 +159,7 @@ export default function DelivererDashboardPage() {
       <div className="min-h-screen bg-gray-50">
         <DashboardNavbar />
         <div className="flex justify-center py-24">
-          <Loader2 size={28} className="animate-spin text-gray-400" />
+          <Loader2 size={28} className="animate-spin text-gray-500" />
         </div>
       </div>
     );
@@ -143,7 +170,7 @@ export default function DelivererDashboardPage() {
       <div className="min-h-screen bg-gray-50">
         <DashboardNavbar />
         <div className="flex flex-col items-center text-center py-24 px-4">
-          <AlertCircle size={28} className="text-gray-400 mb-3" />
+          <AlertCircle size={28} className="text-gray-500 mb-3" />
           <p className="text-gray-500">You don&apos;t have Delivery Dashboard access yet.</p>
         </div>
       </div>
@@ -155,7 +182,7 @@ export default function DelivererDashboardPage() {
       <div className="min-h-screen bg-gray-50">
         <DashboardNavbar />
         <div className="flex flex-col items-center text-center py-24 px-4">
-          <AlertCircle size={28} className="text-gray-400 mb-3" />
+          <AlertCircle size={28} className="text-gray-500 mb-3" />
           <p className="text-gray-500">Couldn&apos;t load the Delivery Dashboard. Please try again.</p>
         </div>
       </div>
@@ -163,28 +190,34 @@ export default function DelivererDashboardPage() {
   }
 
   const pendingHandoffs = handoffs.filter((h) => !h.delivererConfirmedPickupAt);
+  // Vendor Market items are handled on the delivery cards, per student.
+  const businessItems = items.filter((item) => item.businessType !== "SCHOOL_VENDOR" && deliveryPanel(item.status, item.windowStartAt, clock) === panel);
+  const panelCards = cardsForPanel(cards, panel, clock);
 
   return (
     <MarketplacePageShell width="5xl" className="space-y-10">
-        <h1 className="text-2xl font-bold text-gray-900">Delivery Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900 print:hidden">Delivery Dashboard</h1>
 
         {error && <div className="text-sm p-3 rounded-lg text-red-700 bg-red-100">{error}</div>}
 
-        <section>
+        <section className="print:hidden">
           <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <CalendarClock size={16} className="text-gray-400" />
+            <CalendarClock size={16} className="text-gray-500" />
             Upcoming schedule
           </h2>
           {roster.length === 0 ? (
-            <p className="text-sm text-gray-400">You&apos;re not on the roster for any upcoming timeframe yet.</p>
+            <p className="text-sm text-gray-500">You&apos;re not on the roster for any upcoming timeframe yet.</p>
           ) : (
             <div className="space-y-2">
               {roster.map((r) => (
                 <div key={r.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-medium text-gray-900">
-                      {new Date(r.date).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })} · {r.slotLabel}
+                      {new Date(r.date).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })} · {r.slotLabel}
                     </p>
+                    {r.operation && (
+                      <p className="text-xs font-medium text-blue-700">{r.operation === "MARKETPLACE" ? "Marketplace deliveries" : "Vendor deliveries"}</p>
+                    )}
                     <p className="text-xs text-gray-500">
                       Delivery window {r.windowStart}–{r.windowEnd} · Arrive by {r.requiredArrivalTime} ({r.arrivalLeadMins} min early)
                     </p>
@@ -196,13 +229,25 @@ export default function DelivererDashboardPage() {
           )}
         </section>
 
+        <nav aria-label="Delivery panels" className="flex flex-wrap gap-2">
+          {DELIVERY_PANELS.map((name) => <button key={name} type="button" aria-pressed={panel === name} onClick={() => setPanel(name)} className={`rounded-xl px-4 py-2 text-sm font-semibold ${panel === name ? "bg-blue-600 text-white" : "bg-white text-gray-700 border"}`}>{name}</button>)}
+        </nav>
+        <ScheduleOverview rows={schedule} panel={panel} now={clock} />
         <section>
           <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Package size={16} className="text-gray-400" />
-            Pending pickups
+            <ClipboardList size={16} className="text-gray-500" />
+            Vendor delivery cards
           </h2>
-          {pendingHandoffs.length === 0 ? (
-            <p className="text-sm text-gray-400">No pickups waiting on your OTP handoff.</p>
+          <DeliveryCards cards={panelCards} onChanged={() => void load({ silent: true })} />
+        </section>
+
+        <section className="print:hidden">
+          <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Package size={16} className="text-gray-500" />
+            Pending pickups (Marketplace Business orders)
+          </h2>
+          {panel !== "Ongoing / Processing" ? <p className="text-sm text-gray-500">Pickup handoffs are shown in Ongoing / Processing.</p> : pendingHandoffs.length === 0 ? (
+            <p className="text-sm text-gray-500">No Business pickups waiting on your OTP handoff. Vendor Market orders need no pickup confirmation.</p>
           ) : (
             <div className="space-y-2">
               {pendingHandoffs.map((h) => (
@@ -225,21 +270,29 @@ export default function DelivererDashboardPage() {
           )}
         </section>
 
-        <section>
+        <section className="print:hidden">
           <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Truck size={16} className="text-gray-400" />
-            Assigned items
+            <Landmark size={16} className="text-gray-500" />
+            Payout account
           </h2>
-          {items.length === 0 ? (
-            <p className="text-sm text-gray-400">No items assigned to you yet.</p>
+          <PayoutAccountSection />
+        </section>
+
+        <section className="print:hidden">
+          <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Truck size={16} className="text-gray-500" />
+            Marketplace (Business) items
+          </h2>
+          {businessItems.length === 0 ? (
+            <p className="text-sm text-gray-500">No Business items assigned to you.</p>
           ) : (
             <div className="space-y-2">
-              {items.map((item) => (
+              {businessItems.map((item) => (
                 <div key={item.deliveryItemId} className="bg-white rounded-2xl border border-gray-100 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
                     <div>
                       <p className="font-medium text-gray-900">
-                        {item.quantity} x {item.productName}
+                        Business Delivery · {item.quantity} x {item.productName}
                       </p>
                       <p className="text-xs text-gray-500">{item.businessName} · Order #{item.orderId.slice(0, 8)}</p>
                     </div>
@@ -255,8 +308,9 @@ export default function DelivererDashboardPage() {
                       {item.estimatedDate} · {item.deliveryWindow} · {item.deliveryLocation || "No location set."}
                     </p>
                   )}
+                  <p className="text-xs font-medium text-amber-700">{item.isOverflow ? "Overflow — extra delivery" : "Regular assignment"}</p>
                   {item.failedDeliveryAttempts > 0 && (
-                    <p className="text-xs text-amber-600 mb-2">
+                    <p className="text-xs text-amber-700 mb-2">
                       {item.failedDeliveryAttempts} failed attempt(s)
                       {item.retryDeliveryAt && ` · retry after ${new Date(item.retryDeliveryAt).toLocaleString()}`}
                     </p>

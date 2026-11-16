@@ -1,8 +1,8 @@
-// Stewart, the Study Zone's AI study assistant — browser client.
+// Stuwart, the Study Zone's AI study assistant — browser client.
 //
-// Talks to the two Stewart routes (/api/e-learning/stewart/chat and /attachments); the model itself is only ever
+// Talks to the two Stuwart routes (/api/e-learning/stewart/chat and /attachments); the model itself is only ever
 // called from the server. Everything the server refuses (not signed in, not registered for the course, file too
-// large, unreadable document, Stewart not configured, provider busy) comes back as `{ error }` written for students,
+// large, unreadable document, Stuwart not configured, provider busy) comes back as `{ error }` written for students,
 // and is thrown here as an Error with that message so the panel can show it as-is.
 
 import { checkStewartAttachment } from "@/lib/stewart/config";
@@ -52,7 +52,7 @@ export class StewartRequestError extends Error {
 
 export const STEWART_SUGGESTIONS = ["Summarise the document I attached", "Explain the key terms", "Quiz me on this topic"];
 
-const GENERIC = "Stewart couldn't answer just now. Please try again.";
+const GENERIC = "Stuwart couldn't answer just now. Please try again.";
 
 async function readError(res: Response, fallback: string): Promise<StewartRequestError> {
   const body = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
@@ -61,7 +61,7 @@ async function readError(res: Response, fallback: string): Promise<StewartReques
 
 // The opening line of a conversation (local only — not part of what the model sees).
 export function startThread(_ctx: StewartContext, threadKey: string): StewartMessage[] {
-  return [{ id: `${threadKey}-welcome`, role: "stewart", local: true, text: "Hi, I am Stewart. How can I help you today?" }];
+  return [{ id: `${threadKey}-welcome`, role: "stewart", local: true, text: "Hi, I am Stuwart. How can I help you today?" }];
 }
 
 export async function askStewart(messages: StewartMessage[], ctx: StewartContext, attachment: StewartAttachment | StewartAttachment[] | null, grounded = false, persistent?: { conversationId: string; requestId: string }): Promise<StewartReply> {

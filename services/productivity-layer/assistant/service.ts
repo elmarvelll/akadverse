@@ -9,7 +9,9 @@ import { executeTool, performMutation, resultProjection } from "./tools";
 
 export async function serviceCallback(scope: Delegation, input: Record<string, unknown>) {
   await requireProductivityActor(scope.sub);
-  await prisma.$transaction(async tx => { await assertTurn(tx, scope); });
+  // Read-only admission check: no locks or writes need a pinned transaction.
+  // Every tool mutation still rechecks/fences its turn inside its own write transaction.
+  await assertTurn(prisma, scope);
   if (input.action === "context") {
     const [view, account] = await Promise.all([conversationView(scope.sub, scope.cid), executeProductivityAs(scope.sub, { operation: "context", args: [] })]);
     return { account, conversation_id: scope.cid, turn_id: scope.turn, messages: view.messages.slice(-24), pending: view.pending.filter(row => !row.expired).map(row => ({ id: row.id, preview: { tool: (row.preview as { tool?: string }).tool, arguments: (row.preview as { arguments?: unknown }).arguments }, expiresAt: row.expiresAt })), executions: view.executions.slice(0, 10).map(row => ({ ...row, result: boundedMemory(row.result) })) };

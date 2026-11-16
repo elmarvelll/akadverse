@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import DocumentViewer from "../../src/app/e-learning/student/study-zone/_components/DocumentViewer";
-import StewartPanel from "../../src/app/e-learning/student/study-zone/_components/StewartPanel";
+import StewartPanel from "../../src/app/e-learning/student/study-zone/_components/StuwartPanel";
 import type { StudyDocument } from "../../services/e-learning/student/study-zone";
 function Harness() {
   const [queueKey, setQueueKey] = useState("test");

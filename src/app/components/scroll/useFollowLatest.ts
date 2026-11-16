@@ -41,6 +41,6 @@ export function useFollowLatest<T extends HTMLElement>(contextKey:string, thresh
   const observeChildren=()=>{resize.disconnect();resize.observe(node);for(const child of node.children)resize.observe(child);};observeChildren();
   const children=new MutationObserver(observeChildren);children.observe(node,{childList:true});
   return()=>{mutation.disconnect();children.disconnect();resize.disconnect();node.removeEventListener("scroll",onScroll);node.removeEventListener("wheel",wheel);node.removeEventListener("touchstart",touchStart);node.removeEventListener("touchmove",touchMove);node.removeEventListener("keydown",keydown);if(frame.current!==null){cancelAnimationFrame(frame.current);frame.current=null;}};
- },[pause,schedule,threshold]);
+ },[contextKey,pause,schedule,threshold]);
  return {ref,paused,pause,follow};
 }

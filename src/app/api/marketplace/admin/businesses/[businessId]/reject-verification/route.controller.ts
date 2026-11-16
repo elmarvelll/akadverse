@@ -4,9 +4,9 @@
 // services/marketplace/admin/reject-verification-request.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { rejectVerificationRequest } from "@/services/marketplace/admin/reject-verification-request";
 
 export async function rejectVerification(businessId: string, request: NextRequest): Promise<NextResponse> {

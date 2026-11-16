@@ -5,7 +5,7 @@
 // services/marketplace/vendor/capacity/vendor-delivery-schedule.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { clearVendorDateAvailability, setVendorDateAvailability } from "@/services/marketplace/vendor/capacity/vendor-delivery-schedule";
 
 export async function putDateOverride(request: NextRequest, businessId: string): Promise<NextResponse> {

@@ -20,7 +20,7 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Zap, House, Bot, BookOpen, ShoppingBag, ShieldCheck, Loader2 } from "lucide-react";
+import { Zap, BookOpen, ShoppingBag, ShieldCheck, Loader2 } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 
 const workspaces = [
@@ -34,18 +34,9 @@ const workspaces = [
     path: "/studashboard/productivity-layer",
   },
   {
-    id: 2,
-    title: "Main Menu",
-    description: "Access campus tools and the student dashboard.",
-    icon: House,
-    color: "text-purple-500",
-    bgColor: "bg-purple-50",
-    path: "/studashboard/main-menu",
-  },
-  {
     id: 3,
     title: "Marketplace",
-    description: "Buy, sell, and hire within your campus community — browse products and skills, list your own, and manage orders.",
+    description: "Buy, sell, and hire within your campus community — browse products, list your own, and manage orders.",
     icon: ShoppingBag,
     color: "text-orange-500",
     bgColor: "bg-orange-50",
@@ -63,15 +54,6 @@ const workspaces = [
     // studashboard/** — E-Learning is a separate academic domain, not a
     // Marketplace section (AGENTS.md §1/§45).
     path: "/e-learning/student/dashboard",
-  },
-  {
-    id: 5,
-    title: "AI Studio",
-    description: "Your AI-powered academic assistant for research, writing, and study support. This is the main AI workspace where students interact with AI tools such as chat, research assistance, note summarization, and study planning.",
-    icon: Bot,
-    color: "text-pink-500",
-    bgColor: "bg-pink-50",
-    path: "/studashboard/ai-studio",
   },
   {
     id: 6,

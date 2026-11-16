@@ -9,7 +9,6 @@
 
 import type { Db } from "@/services/marketplace/order/shared/db";
 import { recordOrderEvent } from "@/services/marketplace/order/record-order-event";
-import { recomputeOrderDeliveryOutcome } from "@/services/marketplace/order/recompute-order-delivery-outcome";
 
 export async function markItemEligibleForPayout(db: Db, orderItemId: string, orderId: string) {
   await db.orderItem.update({

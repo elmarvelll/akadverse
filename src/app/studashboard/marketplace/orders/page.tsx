@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/orders/page.tsx
+// src/app/orders/page.tsx
 //
 // Buyer order tracking — item-level status per order, since different
 // items in the same order can be in completely different states
@@ -42,8 +42,13 @@ interface OrderRow {
   deliveryWindow: string | null;
   isDisputed: boolean;
   disputeResolvedAt: string | null;
+  // Vendor Market: the delivery booking this order belongs to, and the
+  // student's handover code for it (shared by every vendor order in it).
+  vendorDelivery?: { reference: string; date: string; slotLabel: string; code: string | null; delivered: boolean } | null;
   items: OrderItemRow[];
 }
+
+const deliveryDayFormatter = new Intl.DateTimeFormat("en-NG", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" });
 
 function itemStatusLabel(item: OrderItemRow): string {
   if (item.cancelledAt) return "Cancelled";
@@ -88,6 +93,26 @@ function OrderCard({ order, busyId, onDispute }: { order: OrderRow; busyId: stri
         ))}
       </ul>
 
+      {order.vendorDelivery && (
+        <div className="mb-3 p-3 rounded-xl bg-purple-50 text-purple-900 text-xs space-y-1">
+          <p>
+            Delivery {deliveryDayFormatter.format(new Date(`${order.vendorDelivery.date}T00:00:00Z`))}, {order.vendorDelivery.slotLabel} · ref #{order.vendorDelivery.reference}
+          </p>
+          {order.vendorDelivery.delivered ? (
+            <p className="font-medium">Delivered.</p>
+          ) : order.vendorDelivery.code ? (
+            <>
+              <p>
+                Your delivery code: <span className="font-mono text-base font-bold tracking-[0.25em]">{order.vendorDelivery.code}</span>
+              </p>
+              <p>Give it to the deliverer only after you&apos;ve received and checked your order. It covers every vendor in this delivery.</p>
+            </>
+          ) : (
+            <p>Your delivery code isn&apos;t available yet — check back shortly or contact support.</p>
+          )}
+        </div>
+      )}
+
       {order.items.some((item) => item.deliveryOtp) && (
         <div className="mt-3 p-3 rounded-xl bg-blue-50 text-blue-800 text-xs">
           Delivery code:{" "}
@@ -111,7 +136,7 @@ function OrderCard({ order, busyId, onDispute }: { order: OrderRow; busyId: stri
           type="button"
           disabled={busyId === order.id}
           onClick={() => onDispute(order.id)}
-          className="mt-3 text-xs text-gray-400 hover:text-red-500 underline transition disabled:opacity-50"
+          className="mt-3 text-xs text-gray-500 hover:text-red-500 underline transition disabled:opacity-50"
         >
           Dispute this order
         </button>
@@ -137,7 +162,7 @@ export default function BuyerOrdersPage() {
 
   useEffect(() => {
     // Locally-defined wrapper — same convention as
-    // src/app/studashboard/marketplace/_components/useCart.ts.
+    // src/app/_components/useCart.ts.
     const run = async () => {
       await load();
     };
@@ -167,20 +192,20 @@ export default function BuyerOrdersPage() {
 
         {loadState === "loading" && (
           <div className="flex justify-center py-24">
-            <Loader2 size={28} className="animate-spin text-gray-400" />
+            <Loader2 size={28} className="animate-spin text-gray-500" />
           </div>
         )}
 
         {loadState === "error" && (
           <div className="flex flex-col items-center text-center py-24">
-            <AlertCircle size={28} className="text-gray-400 mb-3" />
+            <AlertCircle size={28} className="text-gray-500 mb-3" />
             <p className="text-gray-500">Couldn&apos;t load your orders.</p>
           </div>
         )}
 
         {loadState === "loaded" && orders.length === 0 && (
           <div className="flex flex-col items-center text-center py-24 bg-white rounded-2xl border border-gray-100">
-            <Package size={28} className="text-gray-300 mb-3" />
+            <Package size={28} className="text-gray-400 mb-3" />
             <p className="text-gray-500">No orders yet.</p>
           </div>
         )}
@@ -190,7 +215,7 @@ export default function BuyerOrdersPage() {
             <section>
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Business Orders</h2>
               {businessOrders.length === 0 ? (
-                <p className="text-sm text-gray-400">No Business orders yet.</p>
+                <p className="text-sm text-gray-500">No Business orders yet.</p>
               ) : (
                 <div className="space-y-4">
                   {businessOrders.map((order) => (
@@ -203,7 +228,7 @@ export default function BuyerOrdersPage() {
             <section>
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Vendor Orders</h2>
               {vendorOrders.length === 0 ? (
-                <p className="text-sm text-gray-400">No Vendor orders yet.</p>
+                <p className="text-sm text-gray-500">No Vendor orders yet.</p>
               ) : (
                 <div className="space-y-4">
                   {vendorOrders.map((order) => (

@@ -4,9 +4,9 @@
 // services/marketplace/admin/block-business.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { blockBusiness } from "@/services/marketplace/admin/block-business";
 
 export async function block(businessId: string, request: NextRequest): Promise<NextResponse> {

@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/[id]/analytics/page.tsx
+// src/app/business/[id]/analytics/page.tsx
 //
 // The business dashboard's Analytics tab — revenue, profit, orders,
 // products, all computed server-side in GET /api/marketplace/businesses/[id]
@@ -32,7 +32,7 @@ export default function BusinessAnalyticsPage({ params }: { params: Promise<{ id
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -40,7 +40,7 @@ export default function BusinessAnalyticsPage({ params }: { params: Promise<{ id
   if (loadState !== "loaded" || !business) {
     return (
       <div className="flex flex-col items-center text-center py-24">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">Couldn&apos;t load analytics for this business.</p>
       </div>
     );

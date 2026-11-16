@@ -1,4 +1,4 @@
-# Stewart persistent conversations
+# Stuwart persistent conversations
 
 Implemented 11 November 2026. AkadVerse stores owned conversations and complete message records in the existing E-Learning database. Concept Explainer remains the only AI pipeline. The current microservice OpenAPI was inspected: `/explain` accepts `question`, `course_offering_id`, `week`, optional `attachment_ids` and `session_id`. It does not expose a history, conversation-management or session-deletion endpoint. Responses remain synchronous JSON; there was no streaming implementation to replace.
 
@@ -50,11 +50,11 @@ The microservice has no documented generation idempotency key. If its response i
 
 The first message supplies a temporary title of at most eight words. After the first successful exchange, the title is derived from a meaningful Markdown heading, or the question's subject with introductory request wording removed. It is generated once, saved and reflected in the list. This requires no extra AI request or response latency. A title failure keeps the temporary title. Title storage is suitable for a future rename action, which is not implemented here.
 
-New chats display only “Hi, I am Stewart. How can I help you today?” as a local welcome state. It is never sent to the AI as history or saved as an assistant message. Long introductory text and initial suggestion chips were removed.
+New chats display only “Hi, I am Stuwart. How can I help you today?” as a local welcome state. It is never sent to the AI as history or saved as an assistant message. Long introductory text and initial suggestion chips were removed.
 
 ## Frontend and attachments
 
-The existing Stewart panel now has New chat, collapsible Chat history, active selection, refresh/retry, paginated history, loading/empty/error states, and a delete confirmation. History is filtered to the current course in the UI and can span its available weeks/documents; the API can list all owned conversations. Selecting restores transcript, grounding mode, study context and unexpired attachment IDs. The surrounding document viewer, Study Mode and capture controls are retained.
+The existing Stuwart panel now has New chat, collapsible Chat history, active selection, refresh/retry, paginated history, loading/empty/error states, and a delete confirmation. History is filtered to the current course in the UI and can span its available weeks/documents; the API can list all owned conversations. Selecting restores transcript, grounding mode, study context and unexpired attachment IDs. The surrounding document viewer, Study Mode and capture controls are retained.
 
 Persistent uploads are not deleted merely because the tab closes. They remain reusable for six hours, until explicit removal or conversation deletion. Pending unuploaded files remain local and may need reselection after refresh. Old image binaries cannot be reconstructed from metadata, so refreshed messages retain filenames/source provenance and use thumbnails only where a local original remains available.
 
@@ -79,4 +79,4 @@ Tests: `tests/elearning/stewart-conversations.test.ts` covers ownership, first-m
 - The exact SQL patch passed an isolated-schema rollback test including the message cascade. It was then applied to the configured E-Learning database; both new tables and all expected indexes were verified with Prisma. Existing application records were not reset.
 - The live service OpenAPI returned 200 and confirmed the supported request fields and absence of history/session CRUD endpoints. Automated generation tests use recording fixtures; no production user conversation was fabricated for testing. No production build/deployment success is claimed.
 
-Files added: the conversation/title/shared-explanation services, conversation API routes, additive schema patch, conversation integration tests and shared browser fixture. Existing Prisma schema, Stewart chat/attachment adapters, client/panel/workspace, regression scripts and documentation were extended. No dependency or credential was added.
+Files added: the conversation/title/shared-explanation services, conversation API routes, additive schema patch, conversation integration tests and shared browser fixture. Existing Prisma schema, Stuwart chat/attachment adapters, client/panel/workspace, regression scripts and documentation were extended. No dependency or credential was added.

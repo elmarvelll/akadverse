@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/dropoffs/page.tsx
+// src/app/admin/dropoffs/page.tsx
 //
 // Delivery coordinator's "who's at the counter right now" screen — orders
 // whose seller has requested the Seller -> Coordinator handoff (an OTP is
@@ -49,7 +49,7 @@ export default function AdminDropoffsPage() {
 
   useEffect(() => {
     // Locally-defined wrapper — same convention as
-    // src/app/studashboard/marketplace/_components/useCart.ts.
+    // src/app/_components/useCart.ts.
     const run = async () => {
       await load();
     };
@@ -77,7 +77,7 @@ export default function AdminDropoffsPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -85,7 +85,7 @@ export default function AdminDropoffsPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load drop-offs."}</p>
       </div>
     );
@@ -99,7 +99,7 @@ export default function AdminDropoffsPage() {
       </p>
 
       {dropoffs.length === 0 ? (
-        <p className="text-sm text-gray-400">No sellers waiting to be received.</p>
+        <p className="text-sm text-gray-500">No sellers waiting to be received.</p>
       ) : (
         <div className="space-y-3">
           {dropoffs.map((dropoff) => (
@@ -137,7 +137,7 @@ export default function AdminDropoffsPage() {
                   placeholder="6-digit code"
                   value={otpByOrder[dropoff.orderId] ?? ""}
                   onChange={(e) => setOtpByOrder((current) => ({ ...current, [dropoff.orderId]: e.target.value }))}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 w-40"
+                  className="px-4 py-2 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 w-40"
                 />
                 <button
                   type="button"

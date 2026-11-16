@@ -1,4 +1,4 @@
-# Stewart lecture presentation and Study Mode
+# Stuwart lecture presentation and Study Mode
 
 > **11 November 2026:** Saved conversations, messages, independent sessions, retry safety, history selection and the simple welcome state are now implemented. See [persistent conversation contracts and rollout](stewart-conversations.md). Unsent drafts and unuploaded files still live only in the current browser visit.
 
@@ -45,15 +45,15 @@ Equations accept readable `text` plus optional native MathML data: string leaves
 
 Types: `lecture_board`, `worked_example`, `revision_notes`, and `quiz` use the shared modular board, rendering only supplied sections. `quick_answer` uses compact text. `general_response`, legacy messages, unsupported versions, and invalid payloads use the reply fallback. Ordinary replies support a small safe Markdown subset (headings, bold, inline code, fenced code); other Markdown remains readable text. No Markdown or math library existed previously. Raw HTML is escaped.
 
-Questions support multiple choice (`options: string[]`), true/false, and short answers. Selections stay in component state. “Discuss answer with Stewart” uses the existing send action and existing chat limits; the frontend never scores answers or creates assessments.
+Questions support multiple choice (`options: string[]`), true/false, and short answers. Selections stay in component state. “Discuss answer with Stuwart” uses the existing send action and existing chat limits; the frontend never scores answers or creates assessments.
 
 ## Workspace and state
 
 Study Mode sits alongside the viewer's existing capture and open/download actions. A workspace-header entry also works when a week has no document. Leave Study Mode or Escape returns to the normal layout. The root changes layout without moving or replacing the chat or viewer in the React tree. Per-document conversation history, unsent drafts, pending attachments, selected week/document and ongoing requests retain their existing state. State remains scoped to this page visit, as before.
 
-Desktop uses a viewport workspace with independently scrolling viewer and chat. The divider uses pointer capture for mouse/touch, with bounded widths; arrow keys adjust it and Home/End select limits. Below 768px, Notes and Stewart buttons switch visibility while both components remain mounted. Body scrolling is restored on exit, focus returns to the entry control, and surrounding application siblings are inert while the workspace is open.
+Desktop uses a viewport workspace with independently scrolling viewer and chat. The divider uses pointer capture for mouse/touch, with bounded widths; arrow keys adjust it and Home/End select limits. Below 768px, Notes and Stuwart buttons switch visibility while both components remain mounted. Body scrolling is restored on exit, focus returns to the entry control, and surrounding application siblings are inert while the workspace is open.
 
-The left panel reuses the existing course PDF/DOCX/PPTX viewer and document selector. Chat attachments retain their existing previews and upload handling in Stewart. They do not become course documents and are not opened in the left viewer; supporting full previews for arbitrary private chat attachments requires a separate agreed preview/access design. The empty state explains week selection and Add files. Existing PDF text-selection capability is unchanged.
+The left panel reuses the existing course PDF/DOCX/PPTX viewer and document selector. Chat attachments retain their existing previews and upload handling in Stuwart. They do not become course documents and are not opened in the left viewer; supporting full previews for arbitrary private chat attachments requires a separate agreed preview/access design. The empty state explains week selection and Add files. Existing PDF text-selection capability is unchanged.
 
 Add files is now a compact row above the full-width textarea/send row. File selection, validation, preview, upload retry, capture, retake, deletion and conversation tokens use the existing implementation.
 

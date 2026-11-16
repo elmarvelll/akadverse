@@ -8,8 +8,8 @@
 // server-side session lookup — no client-supplied field can affect either.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { revokeAdmin as revokeAdminAction } from "@/services/marketplace/admin/revoke-admin";
 
 export async function revokeAdmin(userId: string): Promise<NextResponse> {

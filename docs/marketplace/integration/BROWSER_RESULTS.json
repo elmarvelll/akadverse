@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "checks": [
+    "product failure is an error with retry, never an empty catalog",
+    "product retry loads the actual product card",
+    "failed add preserves the modal and shows the server error",
+    "confirmed add refreshes carts, alerts once, and closes modal",
+    "375px storefront fits; tap filter opens and Escape closes it",
+    "main AkadVerse dashboard navigation remains present",
+    "range selection refreshes server quote without initializing payment",
+    "409 requires renewed user acknowledgement and never opens a popup automatically",
+    "explicit acknowledgement submits selected range/token and verifies popup success server-side",
+    "375px checkout fits the viewport"
+  ]
+}

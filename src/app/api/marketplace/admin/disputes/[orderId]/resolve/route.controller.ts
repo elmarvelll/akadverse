@@ -4,9 +4,9 @@
 // services/marketplace/admin/resolve-dispute.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { resolveDispute, type DisputeResponsibleParty } from "@/services/marketplace/admin/resolve-dispute";
 
 export async function resolve(orderId: string, request: NextRequest): Promise<NextResponse> {

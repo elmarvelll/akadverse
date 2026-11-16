@@ -4,7 +4,7 @@
 // services/marketplace/deliverer/apply-for-deliverer.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { applyForDeliverer, type DelivererApplicationInput } from "@/services/marketplace/deliverer/apply-for-deliverer";
 
 export async function apply(request: NextRequest): Promise<NextResponse> {

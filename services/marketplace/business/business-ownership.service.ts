@@ -8,8 +8,8 @@
 // src/lib/controller-helpers.ts for how controllers turn that into the
 // right HTTP response.
 
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import type { Session } from "next-auth";
+import { getActiveSession } from "@/lib/marketplace-session";
 import { prisma } from "@/lib/prisma";
 import { unauthorized, notFound } from "@/lib/service-error";
 
@@ -19,7 +19,7 @@ export interface OwnedBusiness {
 }
 
 export async function requireOwnedBusiness(businessId: string): Promise<OwnedBusiness> {
-  const session = await getServerSession(authOptions);
+  const session = await getActiveSession();
   if (!session?.user?.id) {
     throw unauthorized();
   }

@@ -5,7 +5,7 @@
 // src/lib/controller-helpers.ts because it's specific to this one
 // resource tree, unlike requireSessionUserId which every folder needs.
 
-import { requireSessionUserId } from "@/lib/controller-helpers";
+import { requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { requireApprovedDeliverer } from "@/services/marketplace/deliverer/require-approved-deliverer";
 
 export async function requireDelivererId(): Promise<string> {

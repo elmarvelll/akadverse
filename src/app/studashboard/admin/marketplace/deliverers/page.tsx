@@ -1,7 +1,7 @@
-// src/app/studashboard/admin/marketplace/deliverers/page.tsx
+// src/app/admin/deliverers/page.tsx
 //
 // Admin deliverer-application approval queue. Nested under
-// studashboard/marketplace/ (not /admindashboard, which has no Marketplace
+//  (not /admindashboard, which has no Marketplace
 // tooling yet — see docs/marketplace/decisions/delivery-coordinator-is-admin.md)
 // so it lives alongside the rest of the Marketplace UI; every API call
 // here is still gated server-side by src/lib/admin.ts#requireAdmin
@@ -22,6 +22,10 @@ interface DelivererRow {
   lastName: string;
   email: string;
   phone: string | null;
+  hasPayoutAccount?: boolean;
+  bankName?: string | null;
+  accountHolderName?: string | null;
+  accountNumberLast4?: string | null;
   // Location info (spec §69) — shown here since an admin reviewing an
   // application legitimately needs it.
   hall: string | null;
@@ -68,7 +72,7 @@ export default function AdminDeliverersPage() {
 
   useEffect(() => {
     // Locally-defined wrapper (not just `load()` directly) — same
-    // convention as src/app/studashboard/marketplace/_components/useCart.ts,
+    // convention as src/app/_components/useCart.ts,
     // which this repo's stricter react-hooks/set-state-in-effect rule wants.
     const run = async () => {
       await load();
@@ -101,7 +105,7 @@ export default function AdminDeliverersPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -109,7 +113,7 @@ export default function AdminDeliverersPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load applications."}</p>
       </div>
     );
@@ -124,7 +128,7 @@ export default function AdminDeliverersPage() {
         </Link>
       </div>
       {deliverers.length === 0 ? (
-        <p className="text-sm text-gray-400">No applications yet.</p>
+        <p className="text-sm text-gray-500">No applications yet.</p>
       ) : (
         <div className="space-y-2">
           {deliverers.map((d) => (
@@ -134,12 +138,15 @@ export default function AdminDeliverersPage() {
                   {d.firstName} {d.lastName}
                 </p>
                 <p className="text-xs text-gray-500">{d.email} {d.phone && `· ${d.phone}`}</p>
+                <p className={`text-xs ${d.hasPayoutAccount ? "text-gray-500" : "text-amber-700"}`}>
+                  {d.hasPayoutAccount ? `Payout: ${d.accountHolderName} · ${d.bankName} •••• ${d.accountNumberLast4}` : "No payout account — payouts are held"}
+                </p>
                 {(d.hall || d.room) && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {[d.hall, d.room].filter(Boolean).join(", ")}
                   </p>
                 )}
-                {d.preferredAvailability && <p className="text-xs text-gray-400">Prefers: {formatPreferences(d.preferredAvailability)}</p>}
+                {d.preferredAvailability && <p className="text-xs text-gray-500">Prefers: {formatPreferences(d.preferredAvailability)}</p>}
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">{d.status}</span>

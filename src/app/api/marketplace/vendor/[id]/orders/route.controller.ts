@@ -4,7 +4,7 @@
 // services/marketplace/vendor/order/list-vendor-orders.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
+import { runController } from "@/lib/marketplace-controller-helpers";
 import { listVendorOrders } from "@/services/marketplace/vendor/order/list-vendor-orders";
 
 export async function getOrders(businessId: string): Promise<NextResponse> {

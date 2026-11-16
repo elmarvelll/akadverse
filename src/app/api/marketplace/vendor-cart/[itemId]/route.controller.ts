@@ -7,7 +7,7 @@
 // make.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { updateVendorCartItemQuantity } from "@/services/marketplace/vendor-cart/update-vendor-cart-item-quantity";
 import { removeCartItem } from "@/services/marketplace/cart/remove-cart-item";
 

@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/products/page.tsx
+// src/app/admin/products/page.tsx
 //
 // Admin "all products" view — grouped by business, literally: each page
 // of results is a page of businesses (only ones with products), with that
@@ -69,7 +69,7 @@ export default function AdminProductsPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load products."}</p>
       </div>
     );
@@ -81,12 +81,12 @@ export default function AdminProductsPage() {
 
       <form onSubmit={search} className="flex gap-2 mb-6">
         <div className="relative flex-1 max-w-sm">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search product or business…"
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500"
           />
         </div>
         <button type="submit" className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition">
@@ -96,20 +96,20 @@ export default function AdminProductsPage() {
 
       {loadState === "loading" && (
         <div className="flex justify-center py-16">
-          <Loader2 size={24} className="animate-spin text-gray-400" />
+          <Loader2 size={24} className="animate-spin text-gray-500" />
         </div>
       )}
 
       {loadState === "loaded" && result && (
         <>
           {result.items.length === 0 ? (
-            <p className="text-sm text-gray-400">No products found.</p>
+            <p className="text-sm text-gray-500">No products found.</p>
           ) : (
             <div className="space-y-6">
               {result.items.map((group) => (
                 <div key={group.businessId}>
                   <div className="flex flex-wrap items-center gap-2 mb-2.5">
-                    <Store size={14} className="text-gray-400 shrink-0" />
+                    <Store size={14} className="text-gray-500 shrink-0" />
                     <Link
                       href={`/studashboard/admin/marketplace/businesses/${group.businessId}`}
                       className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition truncate max-w-[16rem]"
@@ -121,7 +121,7 @@ export default function AdminProductsPage() {
                         {group.businessApprovalStatus.replace("_", " ")}
                       </span>
                     )}
-                    <span className="text-xs text-gray-400">· {group.products.length} product(s)</span>
+                    <span className="text-xs text-gray-500">· {group.products.length} product(s)</span>
                   </div>
 
                   <div className="space-y-2">
@@ -152,7 +152,7 @@ export default function AdminProductsPage() {
                             {product.stock > 0 ? "In stock" : "Out of stock"}
                           </span>
                           {product.variants.length > 0 && (
-                            <p className="text-xs text-gray-400 mt-1">{product.variants.length} variant(s)</p>
+                            <p className="text-xs text-gray-500 mt-1">{product.variants.length} variant(s)</p>
                           )}
                         </div>
                       </Link>

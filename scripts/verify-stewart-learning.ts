@@ -68,8 +68,8 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 1200, height: 850 } });
     const errors: string[] = []; page.on("pageerror", (e: Error) => errors.push(e.message));
     await page.goto(`http://127.0.0.1:${(server.address() as { port: number }).port}`);
-    const explanation = page.getByRole("article", { name: "Stewart explanation", exact: true });
-    const send = async (question: string) => { const before = await explanation.count(); await page.getByRole("textbox").fill(question); await page.getByRole("button", { name: "Send message to Stewart" }).click(); await explanation.nth(before).waitFor(); return explanation.nth(before); };
+    const explanation = page.getByRole("article", { name: "Stuwart explanation", exact: true });
+    const send = async (question: string) => { const before = await explanation.count(); await page.getByRole("textbox").fill(question); await page.getByRole("button", { name: "Send message to Stuwart" }).click(); await explanation.nth(before).waitFor(); return explanation.nth(before); };
     const actual = await send("actual");
     assert.equal((await actual.innerText()).split("Imagine a student project group tasked with creating a presentation.").length - 1, 1);
     assert.ok(!(await actual.innerText()).includes("AI_GENERATED"));

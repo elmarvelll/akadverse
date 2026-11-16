@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/fines/page.tsx
+// src/app/admin/fines/page.tsx
 //
 // Admin Fines tab: who was fined, why (late delivery), how much, and the
 // real, server-verified Paystack payment status/reference. See
@@ -56,7 +56,7 @@ export default function AdminFinesPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -64,7 +64,7 @@ export default function AdminFinesPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load fines."}</p>
       </div>
     );
@@ -75,7 +75,7 @@ export default function AdminFinesPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Fines</h1>
 
       {result && result.items.length === 0 ? (
-        <p className="text-sm text-gray-400">No fines found.</p>
+        <p className="text-sm text-gray-500">No fines found.</p>
       ) : (
         result && (
           <>
@@ -89,7 +89,7 @@ export default function AdminFinesPage() {
                       {fine.orderId && ` · Order #${fine.orderId.slice(0, 8)}`} · issued {dateTimeFormatter.format(new Date(fine.createdAt))}
                     </p>
                     {fine.status === "PAID" && fine.paidAt && (
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         Paid {dateTimeFormatter.format(new Date(fine.paidAt))}
                         {fine.paystackReference && ` · ref ${fine.paystackReference}`}
                       </p>

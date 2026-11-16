@@ -4,13 +4,15 @@ import RevisionPracticePanel from "./RevisionPracticePanel";
 import StewartResponse from "./LectureBoard";
 import FilePreview from "./AttachmentPreview";
 import { useEffect, useRef, useState } from "react";
+import { useFollowLatest } from "@/app/components/scroll/useFollowLatest";
+import { JumpToLatest } from "@/app/components/scroll/JumpToLatest";
 import { useSpeechToText } from "@/app/components/voice/useSpeechToText";
 import { VoiceInputControls, VoiceInputStatus } from "@/app/components/voice/VoiceInputControls";
 import { AlertCircle, BookOpen, Loader2, Paperclip, SendHorizontal, Sparkles, X } from "lucide-react";
 import { checkStewartAttachment, STEWART_MAX_ATTACHMENTS, STEWART_ATTACHMENT_ACCEPT, STEWART_MAX_ATTACHMENT_MB, STEWART_MAX_MESSAGE_CHARS } from "@/lib/stewart/config";
 import { StewartRequestError, askStewart, attachDocument, discardAttachment, startThread, createChat, deleteChat, listChats, readChat, storedMessage, type ChatConversation, type StewartAttachment, type StewartContext, type StewartMessage } from "./stewart";
 
-export default function StewartPanel({ context, threadKey, studyingLabel, className = "", files, onFilesChange, onRetake, onReferenceCountChange, onComposerKeyChange, onConversationContextChange }: {
+export default function StuwartPanel({ context, threadKey, studyingLabel, className = "", files, onFilesChange, onRetake, onReferenceCountChange, onComposerKeyChange, onConversationContextChange }: {
   onReferenceCountChange?: (count: number) => void;
   onComposerKeyChange?: (thread: string, key: string) => void;
   onConversationContextChange?: (week: number, documentId: string | null) => string | void;
@@ -53,7 +55,10 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
   const sending = useRef(new Set<string>());
   const requests = useRef(new Map<string, { question: string; requestId: string; clientKey: string; grounded: boolean }>());
   const [attachError, setAttachError] = useState<string | null>(null);
-  const logRef = useRef<HTMLOListElement>(null);
+  const logFollow = useFollowLatest<HTMLOListElement>(key);
+  const logRef = logFollow.ref;
+  const pauseLog = logFollow.pause;
+  const transcriptFollow = useFollowLatest<HTMLTextAreaElement>(JSON.stringify([key, speech.active]));
   const scrollBeforePage = useRef<{ key: string; height: number; top: number } | null>(null);
   const currentView = useRef({ key, threadKey, loadingConversation });
   useEffect(() => { currentView.current = { key, threadKey, loadingConversation }; }, [key, threadKey, loadingConversation]);
@@ -75,9 +80,12 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
   useEffect(() => {
     const log = logRef.current; if (!log) return;
     const previous = scrollBeforePage.current;
-    log.scrollTop = previous?.key === key ? previous.top + log.scrollHeight - previous.height : log.scrollHeight;
-    scrollBeforePage.current = null;
-  }, [messages.length, typing, key]);
+    if (previous?.key === key) {
+      pauseLog();
+      log.scrollTop = previous.top + log.scrollHeight - previous.height;
+      scrollBeforePage.current = null;
+    }
+  }, [messages.length, key, logRef, pauseLog]);
 
   function remember(view: string, conversation: ChatConversation) {
     conversationRef.current[view] = conversation;
@@ -239,7 +247,7 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
         previous.filter((a) => originals.current.has(a.attachment_id)).forEach(discardAttachment);
         onFilesChange((current) => [...current, ...recovered.filter((file) => !current.includes(file))]);
       }
-      const message = error instanceof Error ? error.message : "Stewart couldn't answer. Please retry.";
+      const message = error instanceof Error ? error.message : "Stuwart couldn't answer. Please retry.";
       setDrafts((all) => ({ ...all, [view]: question }));
       setThreads((all) => ({ ...all, [view]: [...(all[view] ?? []).filter((m) => !m.local).map((m) => m.requestId === request.requestId && m.role === "student" ? { ...m, status: "FAILED" as const } : m), { id: `${request.requestId}-error`, role: "stewart", local: true, text: message }] }));
     } finally {
@@ -287,14 +295,14 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
   }
 
   return (
-    <section aria-label="Stewart, AI study assistant" className={`flex min-h-0 min-w-0 flex-col rounded-2xl border border-gray-200 bg-white ${className}`}>
+    <section aria-label="Stuwart, AI study assistant" className={`flex min-h-0 min-w-0 flex-col rounded-2xl border border-gray-200 bg-white ${className}`}>
       <header className="border-b border-gray-100 px-4 py-3">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white" aria-hidden>
             <Sparkles size={18} />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold text-gray-900">Stewart</h2>
+            <h2 className="text-base font-bold text-gray-900">Stuwart</h2>
             <p className="text-xs text-gray-700">AI Study Assistant</p>
           </div>
         </div>
@@ -324,14 +332,15 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
         {loadingConversation && <p role="status" className="mt-2 text-xs text-gray-500">Loading conversation…</p>}
       </div>
       {messageCursors[key] && <button type="button" onClick={olderMessages} disabled={!!loadingConversation} className="py-2 text-xs underline">Load older messages</button>}
-      <ol ref={logRef} role="log" aria-label="Conversation with Stewart" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <div className="relative flex min-h-0 flex-1 flex-col">
+      <ol ref={logRef} role="log" aria-label="Conversation with Stuwart" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.map((m) => (
           <li key={m.id} className={`flex ${m.role === "student" ? "justify-end" : "justify-start"}`}>
             <div className={m.role === "student" ? "min-w-0 max-w-[95%] break-words rounded-xl bg-blue-600 px-3.5 py-2.5 text-sm text-white" : "w-full min-w-0 break-words text-sm text-slate-800"}>
-              <span className="sr-only">{m.role === "student" ? "You" : "Stewart"}: </span>
+              <span className="sr-only">{m.role === "student" ? "You" : "Stuwart"}: </span>
               {m.role === "stewart" && !m.local ? <StewartResponse text={m.text} sources={m.sources} attachmentFiles={previewFiles} educational={m.educational} onAnswer={send} disabled={!!pendingKey || uploading || !!loadingConversation} /> : <span className="whitespace-pre-wrap">{m.text}</span>}
               {m.role === "student" && m.status === "FAILED" && <div className="mt-2 text-xs"><span>Response unavailable. </span><button type="button" disabled={!!pendingKey || uploading || !!loadingConversation} onClick={() => send(m.text, m.requestId, m.grounded)} className="font-semibold underline">Retry response</button></div>}
-              {m.role === "student" && m.status === "PENDING" && !typing && <p role="status" className="mt-2 text-xs">Waiting for Stewart’s response…</p>}
+              {m.role === "student" && m.status === "PENDING" && !typing && <p role="status" className="mt-2 text-xs">Waiting for Stuwart’s response…</p>}
               {m.attachments && <ul aria-label="Message attachments" className="mt-2 space-y-1">{m.attachments.map((a, index) => <li key={index} className="flex items-center gap-2">{a.file && <FilePreview file={a.file} />}<span className="text-xs">{a.name}</span></li>)}</ul>}
 
             </div>
@@ -340,11 +349,13 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
         {typing && (
           <li className="flex justify-start">
             <div className="flex items-center gap-2 py-3 text-sm text-slate-500">
-              <Loader2 size={14} className="animate-spin" aria-hidden /> {ready ? "Stewart is reading and thinking…" : "Stewart is thinking…"}
+              <Loader2 size={14} className="animate-spin" aria-hidden /> {ready ? "Stuwart is reading and thinking…" : "Stuwart is thinking…"}
             </div>
           </li>
         )}
       </ol>
+      {logFollow.paused && <JumpToLatest onClick={() => logFollow.follow(true)} label="Jump to latest message" className="absolute bottom-3 right-3" />}
+      </div>
 
       <div className="border-t border-gray-100 p-3">
         <button type="button" aria-pressed={grounded} disabled={!!pendingKey || uploading || !!loadingConversation} onClick={() => setGrounding((all) => ({ ...all, [threadKey]: !grounded }))} className={`mb-2 rounded-xl border px-3 py-2 text-xs font-semibold ${grounded ? "border-blue-600 bg-blue-100 text-blue-900" : "border-gray-300 bg-white text-gray-700"}`}>
@@ -404,8 +415,10 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
             {uploading ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Paperclip size={16} aria-hidden />}<span className="text-xs">Add files</span>
           </button>
           <div className="basis-full" />
-          <label htmlFor="stewart-input" className="sr-only">Ask Stewart a question</label>
+          <label htmlFor="stewart-input" className="sr-only">Ask Stuwart a question</label>
+          <div className="relative min-w-0 flex-1">
           <textarea
+            ref={transcriptFollow.ref}
             id="stewart-input"
             rows={1}
             disabled={!!pendingKey || uploading || !!loadingConversation}
@@ -418,28 +431,30 @@ export default function StewartPanel({ context, threadKey, studyingLabel, classN
                 send(draft);
               }
             }}
-            placeholder={ready ? "Ask about the attached document…" : "Ask Stewart…"}
+            placeholder={ready ? "Ask about the attached document…" : "Ask Stuwart…"}
             aria-invalid={tooLong}
             aria-describedby="stewart-hint stewart-voice-status"
-            className="max-h-32 min-h-[2.5rem] min-w-0 flex-1 resize-none rounded-xl border px-3 py-2 text-sm"
+            className="block w-full max-h-32 min-h-[2.5rem] min-w-0 resize-none rounded-xl border px-3 py-2 pr-10 text-sm"
           />
+          {transcriptFollow.paused && <JumpToLatest onClick={() => transcriptFollow.follow(true)} className="absolute bottom-1 right-1" />}
+          </div>
           <VoiceInputControls speech={speech} disabled={!!pendingKey || uploading || !!loadingConversation} />
           <button
             type="submit"
             disabled={(!draft.trim() && !files.length) || speech.active || !!pendingKey || uploading || tooLong || !!loadingConversation}
-            aria-label="Send message to Stewart"
+            aria-label="Send message to Stuwart"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
             <SendHorizontal size={16} aria-hidden />
           </button>
         </form>
-        <div id="stewart-voice-status"><VoiceInputStatus speech={speech} recipient="Stewart" /></div>
+        <div id="stewart-voice-status"><VoiceInputStatus speech={speech} recipient="Stuwart" /></div>
         <p id="stewart-hint" className={`mt-2 text-[11px] ${tooLong ? "text-red-800" : "text-gray-600"}`}>
           {tooLong
             ? `That message is too long (${draft.length.toLocaleString("en")} of ${STEWART_MAX_MESSAGE_CHARS.toLocaleString("en")} characters).`
             : uploading
               ? "You can send your question once the document has finished uploading."
-              : "Stewart can make mistakes — check important answers against your course material."}
+              : "Stuwart can make mistakes — check important answers against your course material."}
         </p>
       </div>
     </section>

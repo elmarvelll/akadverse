@@ -4,7 +4,7 @@
 // (spec §11). See services/marketplace/vendor/order/mark-vendor-order-failed.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { markVendorOrderFailed } from "@/services/marketplace/vendor/order/mark-vendor-order-failed";
 
 export async function markFailed(request: NextRequest, businessId: string, orderId: string): Promise<NextResponse> {

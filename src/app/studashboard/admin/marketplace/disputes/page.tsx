@@ -1,9 +1,9 @@
-// src/app/studashboard/admin/marketplace/disputes/page.tsx
+// src/app/admin/disputes/page.tsx
 //
 // Admin Disputes tab: disputed orders with buyer/business/items/amount and
 // the full historical OrderEvent trail (not just current state) — see
 // services/marketplace/admin/list-disputed-orders.ts. Disputes are opened
-// by buyers from src/app/studashboard/marketplace/orders/page.tsx.
+// by buyers from src/app/orders/page.tsx.
 
 "use client";
 
@@ -106,7 +106,7 @@ export default function AdminDisputesPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function AdminDisputesPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load disputes."}</p>
       </div>
     );
@@ -125,7 +125,7 @@ export default function AdminDisputesPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Disputes</h1>
 
       {result && result.items.length === 0 ? (
-        <p className="text-sm text-gray-400">No disputed orders.</p>
+        <p className="text-sm text-gray-500">No disputed orders.</p>
       ) : (
         result && (
           <>
@@ -157,33 +157,33 @@ export default function AdminDisputesPage() {
                         >
                           {resolved ? "Resolved" : "Open"}
                         </span>
-                        {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                        {expanded ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
                       </div>
                     </button>
 
                     {expanded && (
                       <div className="border-t border-gray-100 p-4 space-y-4">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Dispute reason</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Dispute reason</p>
                           <p className="text-sm text-gray-700">{order.disputeReason}</p>
                         </div>
 
                         {order.disputeResolution && (
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Resolution</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Resolution</p>
                             <p className="text-sm text-gray-700">{order.disputeResolution}</p>
                           </div>
                         )}
 
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Order state</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Order state</p>
                           <p className="text-sm text-gray-700">
                             {order.status} · {order.fulfillmentStatus ?? "—"} · {order.deliveryOutcome} · payment {order.paymentStatus}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Items</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Items</p>
                           <div className="space-y-1">
                             {order.items.map((item) => (
                               <p key={item.id} className="text-sm text-gray-700">
@@ -195,7 +195,7 @@ export default function AdminDisputesPage() {
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Full history</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Full history</p>
                           <div className="space-y-1">
                             {order.events.map((event) => (
                               <p key={event.id} className="text-xs text-gray-500">

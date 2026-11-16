@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/vendor/apply/page.tsx
+// src/app/vendor/apply/page.tsx
 //
 // The "Become a Vendor" application page, reachable from the marketplace
 // footer. Submits to POST /api/marketplace/vendor/apply (real Prisma
@@ -68,7 +68,7 @@ export default function VendorApplyPage() {
         <DashboardNavbar />
         <div className="pt-16 min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
           <div className="max-w-md w-full text-center bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-            <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto mb-5">
+            <div className="w-14 h-14 rounded-full bg-green-50 text-green-700 flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 size={28} />
             </div>
             <h1 className="text-xl font-bold text-gray-900 mb-2">{createdName} submitted for review</h1>
@@ -78,7 +78,7 @@ export default function VendorApplyPage() {
             </p>
             <Link
               href="/studashboard/marketplace"
-              className="block w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full transition"
+              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition"
             >
               Back to Marketplace
             </Link>
@@ -111,7 +111,7 @@ export default function VendorApplyPage() {
                 onChange={updateField("applicantName")}
                 required
                 disabled={status === "submitting"}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
 
@@ -127,7 +127,7 @@ export default function VendorApplyPage() {
                 required
                 disabled={status === "submitting"}
                 placeholder="e.g. Mama T's Kitchen"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
 
@@ -141,7 +141,7 @@ export default function VendorApplyPage() {
                 onChange={updateField("vendorCategory")}
                 required
                 disabled={status === "submitting"}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               >
                 {VENDOR_CATEGORIES.map((category) => (
                   <option key={category} value={category}>
@@ -163,7 +163,7 @@ export default function VendorApplyPage() {
                 required
                 disabled={status === "submitting"}
                 placeholder="e.g. Block C, Female Hostel"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
 
@@ -178,7 +178,7 @@ export default function VendorApplyPage() {
                   value={form.availabilityStart}
                   onChange={updateField("availabilityStart")}
                   disabled={status === "submitting"}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                  className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
                 />
               </div>
               <div>
@@ -191,7 +191,7 @@ export default function VendorApplyPage() {
                   value={form.availabilityEnd}
                   onChange={updateField("availabilityEnd")}
                   disabled={status === "submitting"}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                  className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
                 />
               </div>
             </div>
@@ -199,7 +199,7 @@ export default function VendorApplyPage() {
 
           <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Wallet size={17} className="text-gray-400" />
+              <Wallet size={17} className="text-gray-500" />
               Payout bank details
             </h2>
             <p className="text-xs text-gray-500">
@@ -218,7 +218,7 @@ export default function VendorApplyPage() {
           <button
             type="submit"
             disabled={status === "submitting"}
-            className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {status === "submitting" && <Loader2 size={18} className="animate-spin" />}
             {status === "submitting" ? "Submitting…" : "Submit application"}

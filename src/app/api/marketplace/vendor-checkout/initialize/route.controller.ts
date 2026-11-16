@@ -8,9 +8,8 @@
 // Business and Vendor checkout.
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { getActiveSession } from "@/lib/marketplace-session";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { unauthorized, badRequest } from "@/lib/service-error";
 import { getPaystackPublicKey } from "@/lib/external/paystack";
 import { createVendorOrdersForCheckout, EmptyCartError } from "@/services/marketplace/vendor-checkout/create-vendor-orders-for-checkout";
@@ -20,10 +19,14 @@ import { CHECKOUT_CURRENCY } from "@/services/marketplace/checkout/shared/checko
 
 export async function initializeVendorCheckout(request: NextRequest): Promise<NextResponse> {
   return runController(async () => {
-    const session = await getServerSession(authOptions);
+    const session = await getActiveSession();
     if (!session?.user?.id) throw unauthorized();
 
     const body = await readJsonBody<{ slotId?: string; location?: string; date?: string }>(request);
+    if (!body || typeof body !== "object" || Array.isArray(body) ||
+      typeof body.slotId !== "string" ||
+      (body.location !== undefined && typeof body.location !== "string") ||
+      (body.date !== undefined && typeof body.date !== "string")) throw badRequest("Invalid vendor checkout request.");
     if (!body.slotId?.trim()) throw badRequest("slotId is required.");
 
     // Settle this buyer's earlier unpaid vendor attempt first, so a retry

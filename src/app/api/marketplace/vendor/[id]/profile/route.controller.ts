@@ -6,7 +6,7 @@
 // services/marketplace/vendor/{get-vendor-profile,update-vendor-profile}.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { getVendorProfile } from "@/services/marketplace/vendor/get-vendor-profile";
 import { updateVendorProfile, type VendorProfileUpdateInput } from "@/services/marketplace/vendor/update-vendor-profile";
 

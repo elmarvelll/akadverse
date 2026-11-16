@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { prisma } from "@/lib/prisma";
 import { installFakeProviders, paystack, resend } from "../helpers/fake-providers";
 import { businessCheckoutScenario, makeUser, addToCart, stockOf } from "../helpers/fixtures";
-import { createOrdersForCheckout } from "@/services/marketplace/checkout/create-orders-for-checkout";
+import { createOrdersForCheckout } from "../helpers/priced-checkout";
 import { reconcileCheckoutPayment } from "@/services/marketplace/checkout/reconcile-checkout-payment";
 import { runCheckoutReconcileSweep } from "@/services/marketplace/checkout/run-checkout-reconcile-sweep";
 import { loadOwnedCheckoutPayment } from "@/services/marketplace/checkout/load-owned-checkout-payment";
@@ -33,11 +33,11 @@ describe("business checkout — initialize", () => {
     const s = await businessCheckoutScenario({ stock: 5, price: 1500, quantity: 2 });
     const init = await createOrdersForCheckout(s.buyer.id, "Hall A");
 
-    assert.equal(init.amountKobo, 300000, "amount is computed server-side from DB prices");
+    assert.equal(init.amountKobo, 315000, "amount is computed server-side from DB prices");
     assert.equal(await stockOf(s.product.id), 3, "stock is reserved");
     const p = await payment(init.reference);
     assert.equal(p.status, "PENDING");
-    assert.equal(p.amountKobo, 300000);
+    assert.equal(p.amountKobo, 315000);
     assert.ok(p.expiresAt > new Date());
     assert.deepEqual((await ordersOf(init.reference)).map((o) => o.paymentStatus), ["pending"]);
 
@@ -132,6 +132,29 @@ describe("business checkout — successful payment", () => {
     const callsBefore = paystack.verifyCalls.length;
     await reconcileCheckoutPayment(init.reference, "verify");
     assert.equal(paystack.verifyCalls.length, callsBefore, "an already-finalized checkout does not call Paystack again");
+  });
+});
+
+describe("business checkout — shared database with AkadVerse's older webhook", () => {
+  it("if AkadVerse already marked the orders paid, the Marketplace settles its checkout without a second event, email or notification", async () => {
+    const s = await businessCheckoutScenario({ stock: 5, quantity: 1 });
+    const init = await createOrdersForCheckout(s.buyer.id, "Hall A");
+    paystack.set(init.reference, { status: "success", amount: init.amountKobo });
+    // What AkadVerse's committed confirmPaymentByReference does on its webhook: flip the orders by reference, record
+    // the created event, notify the owner.
+    const [order] = await ordersOf(init.reference);
+    await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: "paid" } });
+    await prisma.orderEvent.create({ data: { orderId: order.id, type: "ORDER_CREATED", actorType: "buyer", actorId: s.buyer.id } });
+
+    const result = await reconcileCheckoutPayment(init.reference, "verify");
+    assert.equal(result.state, "paid");
+    assert.ok(result.state === "paid" && result.orderIds.includes(order.id), "the buyer still gets their order back");
+    assert.equal((await payment(init.reference)).status, "PAID", "the checkout is settled");
+    assert.equal(await prisma.orderEvent.count({ where: { orderId: order.id, type: "ORDER_CREATED" } }), 1, "no duplicate timeline event");
+    assert.equal(await ownerNotifications(s.owner.id), 0, "no second notification from the Marketplace");
+    assert.equal(await ownerEmails([order.id]), 0, "no second owner email from the Marketplace");
+    assert.equal(await prisma.cartItem.count({ where: { userId: s.buyer.id } }), 0, "the paid cart line is cleared");
+    assert.equal(await stockOf(s.product.id), 4, "still exactly one stock deduction");
   });
 });
 

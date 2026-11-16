@@ -5,7 +5,7 @@
 // services/marketplace/vendor/create-vendor-application.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { createVendorApplication } from "@/services/marketplace/vendor/create-vendor-application";
 import type { VendorApplicationFormValues } from "@/types/vendor";
 

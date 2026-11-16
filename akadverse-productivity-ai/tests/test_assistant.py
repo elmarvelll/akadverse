@@ -204,3 +204,76 @@ async def test_streamed_request_body_limit_is_enforced_before_parsing():
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='https://service.test') as client:
         result = await client.post('/api/v1/assistant/chat', content=chunks(), headers={'content-type': 'application/json'})
         assert result.status_code == 413
+
+
+@pytest.mark.asyncio
+async def test_backend_database_failure_preserves_only_safe_metadata_and_never_retries(settings):
+    count = 0
+    reference = 'c116e351-e6c1-4e22-8785-1ac44ee73bd5'
+    def handler(request):
+        nonlocal count
+        count += 1
+        return httpx.Response(503, json={'code': 'DATABASE_UNAVAILABLE', 'referenceId': reference,
+                                        'error': 'postgresql://private-credential@example.test/private-data'})
+    backend = AkadverseClient(settings, 'private-callback-token', httpx.MockTransport(handler))
+    with pytest.raises(BackendError) as failure:
+        await backend.tool(0, 'create_task', {'input': {'title': 'Read', 'priority': 'low'}})
+    error = failure.value
+    assert error.status == 503 and error.code == 'DATABASE_UNAVAILABLE' and error.action == 'tool'
+    assert error.reference_id == reference and reference in error.public_message
+    assert 'database is temporarily unreachable' in error.public_message
+    assert 'private' not in str(error) + error.public_message
+    assert count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('status,payload,expected', [
+    (503, {'code': 'DATABASE_TIMEOUT', 'referenceId': 'unsafe-private-credential'}, 'DATABASE_TIMEOUT'),
+    (503, {'code': 'private-credential', 'referenceId': 'private-credential'}, 'BACKEND_HTTP_ERROR'),
+    (200, {'result': None}, 'BACKEND_INVALID_RESPONSE'),
+])
+async def test_backend_rejects_unsafe_metadata_and_invalid_result(settings, status, payload, expected):
+    backend = AkadverseClient(settings, 'token', httpx.MockTransport(lambda _: httpx.Response(status, json=payload)))
+    with pytest.raises(BackendError) as failure:
+        await backend.context()
+    assert failure.value.code == expected and failure.value.reference_id is None
+    assert 'private-credential' not in failure.value.public_message
+
+
+@pytest.mark.asyncio
+async def test_backend_timeout_is_not_a_provider_error_and_is_not_retried(settings):
+    calls = 0
+    def handler(request):
+        nonlocal calls
+        calls += 1
+        raise httpx.ReadTimeout('private-url-and-token', request=request)
+    with pytest.raises(BackendError) as failure:
+        await AkadverseClient(settings, 'token', httpx.MockTransport(handler)).context()
+    assert failure.value.code == 'BACKEND_TIMEOUT' and calls == 1
+    assert 'private-url' not in failure.value.public_message
+
+
+@pytest.mark.asyncio
+async def test_chat_reports_backend_database_reference_without_calling_gemini(settings, signing, monkeypatch, caplog):
+    import app.main as main
+    import app.security as security
+    reference = 'c116e351-e6c1-4e22-8785-1ac44ee73bd5'
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(503, json={'code': 'DATABASE_UNAVAILABLE', 'referenceId': reference,
+                                        'error': 'private database URL and password'})
+    monkeypatch.setattr(main, 'get_settings', lambda: settings)
+    monkeypatch.setattr(security, 'get_settings', lambda: settings)
+    monkeypatch.setattr(main, 'AkadverseClient', lambda _, token: AkadverseClient(settings, token, httpx.MockTransport(handler)))
+    monkeypatch.setattr(main, 'GeminiClient', lambda _: object())  # Would fail if generate() were called.
+    headers = {'Authorization': 'Bearer ' + signing[1](), 'X-Productivity-Service-Token': settings.productivity_ai_service_token.get_secret_value()}
+    payload = {'conversation_id': 'conversation-A', 'turn_id': 'turn-0001', 'callback_token': signing[1]('akadverse-productivity-backend')}
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='https://service.test') as client:
+        response = await client.post('/api/v1/assistant/chat', json=payload, headers=headers)
+    assert response.status_code == 200 and response.json()['status'] == 'failed'
+    assert 'database is temporarily unreachable' in response.json()['message']
+    assert reference in response.json()['message'] and reference in caplog.text
+    assert 'category=backend action=context status=503 code=DATABASE_UNAVAILABLE' in caplog.text
+    assert 'private database' not in response.text + caplog.text
+    assert len(calls) == 1

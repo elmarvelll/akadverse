@@ -7,7 +7,7 @@
 // ever read or change its own schedule.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { getVendorDeliverySchedule, setVendorDeliveryWeekdays } from "@/services/marketplace/vendor/capacity/vendor-delivery-schedule";
 
 export async function getSchedule(businessId: string): Promise<NextResponse> {

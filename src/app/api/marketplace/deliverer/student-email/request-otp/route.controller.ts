@@ -4,7 +4,7 @@
 // services/marketplace/deliverer/request-student-email-otp.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { requestStudentEmailOtp } from "@/services/marketplace/deliverer/request-student-email-otp";
 
 export async function requestOtp(request: NextRequest): Promise<NextResponse> {

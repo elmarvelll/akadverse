@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/_components/ProductImagesField.tsx
+// src/app/business/_components/ProductImagesField.tsx
 //
 // The product form's multi-image control — up to a handful of gallery
 // images, reusing the same POST /api/marketplace/uploads (Cloudinary)
@@ -78,7 +78,7 @@ export default function ProductImagesField({ value, onChange, disabled }: Produc
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1.5">
-        Product images <span className="text-gray-400 font-normal">(optional — first image is the main one)</span>
+        Product images <span className="text-gray-500 font-normal">(optional — first image is the main one)</span>
       </label>
 
       {value.length > 0 && (
@@ -124,16 +124,16 @@ export default function ProductImagesField({ value, onChange, disabled }: Produc
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={disabled || uploading}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-60"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-60"
         >
           {uploading ? <Loader2 size={14} className="animate-spin" /> : value.length === 0 ? <ImageIcon size={14} /> : <Upload size={14} />}
           {uploading ? "Uploading…" : value.length === 0 ? "Add images" : "Add more images"}
         </button>
       ) : (
-        <p className="text-xs text-gray-400">Maximum of {MAX_IMAGES} images.</p>
+        <p className="text-xs text-gray-500">Maximum of {MAX_IMAGES} images.</p>
       )}
       <input ref={inputRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" />
-      {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

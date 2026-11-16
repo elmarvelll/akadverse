@@ -1,6 +1,6 @@
 import { Bone, LoadingRegion } from "../../../_components/Skeletons";
 
-// Same frame as the workspace (compact course header, tabs on the document panel, Stewart beside it once the content
+// Same frame as the workspace (compact course header, tabs on the document panel, Stuwart beside it once the content
 // area is wide enough), so nothing jumps when the real page arrives.
 export default function Loading() {
   return (

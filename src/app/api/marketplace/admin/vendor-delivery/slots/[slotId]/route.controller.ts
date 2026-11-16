@@ -4,8 +4,8 @@
 // services/marketplace/admin/vendor-delivery/manage-vendor-slots.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { updateVendorSlot, type VendorSlotInput } from "@/services/marketplace/admin/vendor-delivery/manage-vendor-slots";
 
 export async function updateSlot(request: NextRequest, slotId: string): Promise<NextResponse> {
