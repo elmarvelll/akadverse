@@ -12,7 +12,7 @@ export async function handleRevisionWebhook(request: Request) {
   const correlationId = crypto.randomUUID(), start = Date.now();
   let claim: RevisionClaim | undefined;
   try {
-    const authenticated = await authenticateRevisionRequest(request);
+    const authenticated = await authenticateRevisionRequest(request, undefined, undefined, correlationId);
     const payload = parseRevisionPayload(authenticated.raw, authenticated.idempotencyKey);
     revisionLog("received", { correlationId, eventId: payload.event_id, teachingEventId: payload.teaching_event_id, conceptId: payload.context.concept_id });
     if (process.env.REVISION_QUESTIONS_ENABLED !== "true") throw new RevisionWebhookError(503, "REVISION_DISABLED", "Revision processing has not been enabled for this deployment.", 60);

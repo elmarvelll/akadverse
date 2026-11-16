@@ -1,0 +1,97 @@
+{
+  "readOnly": true,
+  "crossAppPricesMatch": true,
+  "crossAppSyntheticCodeCompatibility": true,
+  "serviceFeeKobo": 15000,
+  "approvedPriceRecords": 12,
+  "plans": [
+    {
+      "business": "Roberts Business",
+      "range": "16:00–17:00",
+      "feeKobo": 50000,
+      "available": true,
+      "nextDate": "2026-11-18"
+    },
+    {
+      "business": "Roberts Business",
+      "range": "17:00–18:00",
+      "feeKobo": 65000,
+      "available": true,
+      "nextDate": "2026-11-18"
+    },
+    {
+      "business": "Roberts Business",
+      "range": "18:00–19:00",
+      "feeKobo": 80000,
+      "available": true,
+      "nextDate": "2026-11-18"
+    },
+    {
+      "business": "Munchbox",
+      "range": "16:00–17:00",
+      "feeKobo": 50000,
+      "available": true,
+      "nextDate": "2026-11-19"
+    },
+    {
+      "business": "Munchbox",
+      "range": "17:00–18:00",
+      "feeKobo": 65000,
+      "available": true,
+      "nextDate": "2026-11-19"
+    },
+    {
+      "business": "Munchbox",
+      "range": "18:00–19:00",
+      "feeKobo": 80000,
+      "available": true,
+      "nextDate": "2026-11-19"
+    },
+    {
+      "business": "Plug",
+      "range": "16:00–17:00",
+      "feeKobo": 50000,
+      "available": true,
+      "nextDate": "2026-11-21"
+    },
+    {
+      "business": "Plug",
+      "range": "17:00–18:00",
+      "feeKobo": 65000,
+      "available": true,
+      "nextDate": "2026-11-21"
+    },
+    {
+      "business": "Plug",
+      "range": "18:00–19:00",
+      "feeKobo": 80000,
+      "available": true,
+      "nextDate": "2026-11-21"
+    },
+    {
+      "business": "Ricopoppi chips",
+      "range": "16:00–17:00",
+      "feeKobo": 50000,
+      "available": true,
+      "nextDate": "2026-11-19"
+    },
+    {
+      "business": "Ricopoppi chips",
+      "range": "17:00–18:00",
+      "feeKobo": 65000,
+      "available": true,
+      "nextDate": "2026-11-19"
+    },
+    {
+      "business": "Ricopoppi chips",
+      "range": "18:00–19:00",
+      "feeKobo": 80000,
+      "available": true,
+      "nextDate": "2026-11-19"
+    }
+  ],
+  "outstandingCodeSamples": 8,
+  "compatibleOutstandingCodes": 1,
+  "livePaymentsCreated": 0,
+  "liveEmailsSent": 0
+}

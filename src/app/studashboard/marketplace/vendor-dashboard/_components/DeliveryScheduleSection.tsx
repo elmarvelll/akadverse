@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/vendor-dashboard/_components/DeliveryScheduleSection.tsx
+// src/app/vendor-dashboard/_components/DeliveryScheduleSection.tsx
 //
 // The vendor's delivery SCHEDULE: which days of the week it delivers
 // (recurring), plus date-by-date exceptions — close one date, or open an
@@ -101,12 +101,12 @@ export default function DeliveryScheduleSection({ businessId, onChanged }: { bus
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 size={22} className="animate-spin text-gray-400" />
+        <Loader2 size={22} className="animate-spin text-gray-500" />
       </div>
     );
   }
   if (loadState === "error" || !schedule) {
-    return <p className="text-sm text-gray-400 py-4">Couldn&apos;t load your delivery schedule.</p>;
+    return <p className="text-sm text-gray-500 py-4">Couldn&apos;t load your delivery schedule.</p>;
   }
 
   const weekdaysDirty = weekdayDraft.length !== schedule.weekdays.length || weekdayDraft.some((d) => !schedule.weekdays.includes(d));
@@ -208,7 +208,7 @@ export default function DeliveryScheduleSection({ businessId, onChanged }: { bus
                         type="button"
                         disabled={busy !== null}
                         onClick={() => setDate(day.date, false)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                       >
                         {busy === day.date ? <Loader2 size={12} className="animate-spin" /> : <CalendarOff size={12} />} Close this date
                       </button>
@@ -217,7 +217,7 @@ export default function DeliveryScheduleSection({ businessId, onChanged }: { bus
                         type="button"
                         disabled={busy !== null}
                         onClick={() => setDate(day.date, true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                       >
                         {busy === day.date ? <Loader2 size={12} className="animate-spin" /> : <CalendarPlus size={12} />} Deliver this date
                       </button>
@@ -228,7 +228,7 @@ export default function DeliveryScheduleSection({ businessId, onChanged }: { bus
                         disabled={busy !== null}
                         onClick={() => resetDate(day.date)}
                         aria-label={`Reset ${formatDate(day.date)} to the weekly schedule`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                       >
                         <RotateCcw size={12} /> Reset
                       </button>
@@ -264,18 +264,18 @@ export default function DeliveryScheduleSection({ businessId, onChanged }: { bus
         >
           <label className="text-xs text-gray-600">
             Date
-            <input type="date" required value={newDate} min={today.toISOString().slice(0, 10)} max={maxDate} onChange={(e) => setNewDate(e.target.value)} disabled={busy !== null} className="mt-1 block px-3 py-2 border border-gray-200 rounded-xl text-sm" />
+            <input type="date" required value={newDate} min={today.toISOString().slice(0, 10)} max={maxDate} onChange={(e) => setNewDate(e.target.value)} disabled={busy !== null} className="mt-1 block px-3 py-2 border border-gray-400 bg-white text-gray-900 rounded-xl text-sm" />
           </label>
           <label className="text-xs text-gray-600">
             Status
-            <select value={newAvailable} onChange={(e) => setNewAvailable(e.target.value as "closed" | "open")} disabled={busy !== null} className="mt-1 block px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white">
+            <select value={newAvailable} onChange={(e) => setNewAvailable(e.target.value as "closed" | "open")} disabled={busy !== null} className="mt-1 block px-3 py-2 border border-gray-400 bg-white text-gray-900 rounded-xl text-sm bg-white">
               <option value="closed">No delivery</option>
               <option value="open">Delivering (custom date)</option>
             </select>
           </label>
           <label className="text-xs text-gray-600 flex-1 min-w-[10rem]">
             Note (optional)
-            <input type="text" maxLength={200} value={newNote} onChange={(e) => setNewNote(e.target.value)} disabled={busy !== null} placeholder="e.g. Public holiday" className="mt-1 block w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" />
+            <input type="text" maxLength={200} value={newNote} onChange={(e) => setNewNote(e.target.value)} disabled={busy !== null} placeholder="e.g. Public holiday" className="mt-1 block w-full px-3 py-2 border border-gray-400 bg-white text-gray-900 rounded-xl text-sm" />
           </label>
           <button type="submit" disabled={!newDate || busy !== null} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-50">
             {busy === "new" && <Loader2 size={14} className="animate-spin" />} Save date

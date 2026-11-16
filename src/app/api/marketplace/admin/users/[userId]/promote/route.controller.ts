@@ -9,8 +9,8 @@
 // is no `role` field accepted from the client at all.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { promoteUserToAdmin } from "@/services/marketplace/admin/promote-user-to-admin";
 
 export async function promoteUser(userId: string): Promise<NextResponse> {

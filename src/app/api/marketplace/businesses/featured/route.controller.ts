@@ -4,7 +4,7 @@
 // services/marketplace/business/get-featured-businesses.ts.
 
 import { NextResponse } from "next/server";
-import { runController, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { getFeaturedBusinesses as getFeaturedBusinessesAction } from "@/services/marketplace/business/get-featured-businesses";
 
 export async function getFeaturedBusinesses(): Promise<NextResponse> {

@@ -1,5 +1,7 @@
 # Marketplace — Documentation
 
+For the 2026-11-16 standalone integration, current parity, tests and pending production prerequisites, see [the synchronization reports](integration/README.md). The older system notes below predate that integration.
+
 > **Status check first:** this documentation describes the Marketplace **as it actually exists in the codebase today** (last verified 2026-08-28). AkadVerse is a student-platform monorepo; the Marketplace is one feature area inside it (`src/app/studashboard/marketplace/`, `src/app/api/marketplace/`). As of this update, it implements the **full order lifecycle**: business/product listing, cart, Paystack checkout, seller accept/reject, seller processing and central drop-off, delivery-coordinator assignment, deliverer pickup/delivery (with OTP handoffs), delivery retry/cancellation, item-level escrow, seller payouts via Paystack Transfers, late-delivery fines, deliverer application/admin approval, and five scheduled cron jobs.
 >
 > Every claim below is checked against the actual schema/routes/components. Where the codebase is silent, this doc says **Undocumented / requires clarification** instead of guessing. See [`todo/`](todo/) for what's still genuinely missing (mostly hardening, not core functionality).

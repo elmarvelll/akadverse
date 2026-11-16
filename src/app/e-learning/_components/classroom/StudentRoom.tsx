@@ -3,6 +3,7 @@
 // A student's live class: watch the stream, raise a hand to ask a (text) question, "me too" other students' questions,
 // and answer the lecturer's "Do you understand?" poll, which pops up over the bottom-left of the video.
 
+import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
 import { Hand, Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
 import LiveStage from "./LiveStage";
@@ -11,6 +12,7 @@ import { useClassroomState } from "./useClassroomState";
 import { callAction } from "./callAction";
 import { askQuestionAction, respondToPollAction, toggleVoteAction } from "./actions";
 
+const ClassroomStuwart = dynamic(() => import("./ClassroomStuwart"), { ssr: false });
 const MAX = 300;
 
 export default function StudentRoom({ sessionId, courseLabel, backHref }: { sessionId: string; courseLabel: string; backHref: string }) {
@@ -37,6 +39,7 @@ export default function StudentRoom({ sessionId, courseLabel, backHref }: { sess
 
   return (
     <div className="space-y-4">
+      {state && <ClassroomStuwart sessionId={sessionId} lesson={state.lesson ?? null} />}
       <div>
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-red-700">
           <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" aria-hidden /> Live

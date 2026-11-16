@@ -152,7 +152,7 @@ The backend limits a student to 30 new conversations per day and 30 messages/dec
 
 ## Voice
 
-Shared endpoints are `/api/speech/token` and `/api/speech/usage`. Core student authentication matches Productivity access; an E-Learning profile is not required. Existing Stewart authorisation is unchanged because this branch did not previously expose these shared speech routes.
+Shared endpoints are `/api/speech/token` and `/api/speech/usage`. Core student authentication matches Productivity access; an E-Learning profile is not required. Existing Stuwart authorisation is unchanged because this branch did not previously expose these shared speech routes.
 
 The microphone sends PCM audio directly to AssemblyAI using a temporary token. Partial/final transcripts populate an editable draft. Stop finalises; Cancel releases resources and preserves committed/manual text. Sending always requires the student's Send action. Python and Gemini receive no microphone bytes. HTTPS or loopback is required by browser microphone permissions.
 
@@ -215,3 +215,7 @@ Routine Python tests use provider stubs and mock HTTP transports. They cover the
 ## Verification boundaries
 
 See the [implementation verification report](../docs/productivity-ai-verification.md) for the actual results and remaining live-provider/deployment limits. No documentation checklist should be interpreted as a passed live acceptance test.
+
+### Backend failures and database references
+
+`category=backend` means the assistant's callback to AkadVerse failed; it does not mean Gemini rejected the request. Logs now include safe `action`, HTTP `status`, allowlisted `code` and `reference_id`, matching Next.js's error reference. DATABASE_UNAVAILABLE and DATABASE_TIMEOUT also receive explicit user-facing messages. Raw database/provider errors, credentials and callback tokens are never included. Mutations are not automatically retried; inspect saved operation results before repeating a change. See [backend incident and verification](../docs/productivity-ai-backend-failure.md).

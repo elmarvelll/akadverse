@@ -18,7 +18,7 @@ export async function explainStewart(userId: string, ctx: Awaited<ReturnType<typ
   } catch (error) {
     if (error instanceof AiServiceError && error.status === 422 && verified.length) {
       await elearningDb.stewartAttachment.updateMany({ where: { sessionId, attachmentId: { in: verified } }, data: { status: "failed" } });
-      throw new AttachmentError(422, "Stewart couldn't read an attachment; it may have expired. Reattach it and submit again.", "ATTACHMENT_REATTACH_REQUIRED");
+      throw new AttachmentError(422, "Stuwart couldn't read an attachment; it may have expired. Reattach it and submit again.", "ATTACHMENT_REATTACH_REQUIRED");
     }
     throw new ServiceError(503, grounded ? "Grounded explanation is temporarily unavailable. Please try again." : "Course explanation is temporarily unavailable. Please try again.");
   } finally {

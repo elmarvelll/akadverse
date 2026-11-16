@@ -18,13 +18,7 @@ export interface CheckoutSummaryItem {
   deliveryWindow: string;
 }
 
-export interface CheckoutSummary {
-  items: CheckoutSummaryItem[];
-  location: string;
-  subtotal: number;
-  serviceFee: number;
-  total: number;
-}
+export type CheckoutSummary = import("@/services/marketplace/checkout/get-checkout-summary").CheckoutSummary;
 
 export interface InitializeCheckoutResponse {
   reference: string;

@@ -1,4 +1,4 @@
-# Stewart / Concept Explainer integration engineering report
+# Stuwart / Concept Explainer integration engineering report
 
 > **10 November 2026 implementation update:** Documents and screenshots now share the Concept Explainer attachment/explain workflow, with persisted ownership and server-scoped sessions. See [the current attachment contract and rollout guide](stewart-attachments.md). Earlier direct-provider and unsupported-attachment descriptions below are historical.
 
@@ -13,9 +13,9 @@ Date: 2026-11-06. This report describes repository changes, not a production cer
 | GET /documents/{id}/status | Missing | Added validated client and lease-based reconciliation to existing worker |
 | GET /health | Missing AkadVerse integration | Added unauthenticated upstream health request; DAPU ingestion page shows selected diagnostics |
 | POST /api/webhooks/ai-ingest | Existing constant-time separate-secret validation and exact `{ok:true}` response | Preserved; unknown/deleted IDs acknowledged; duplicate callbacks leave terminal result intact |
-| POST /explain | Stewart called Claude instead | Text-only chat now calls Concept Explainer through existing authorized chat route |
+| POST /explain | Stuwart called Claude instead | Text-only chat now calls Concept Explainer through existing authorized chat route |
 | POST /explain-with-grounding | Missing | Multipart client added; existing chat route selects one endpoint |
-| Grounding selector | Missing | Per-thread in-memory accessible toggle in `StewartPanel.tsx`, disabled during requests |
+| Grounding selector | Missing | Per-thread in-memory accessible toggle in `StuwartPanel.tsx`, disabled during requests |
 | Ingestion cron | Authenticated route existed, absent from vercel.json | Daily fallback registered; external scheduler still required for prompt processing |
 | Student attachments | Existing signed, owner-bound, expiring Claude Files/vision pipeline | Preserved separately; not combined with Concept Explainer RAG |
 | Conversations | Per-thread React state and browser-supplied bounded history | Preserved; no persistent conversation database exists here |
@@ -90,9 +90,9 @@ The existing lastAttemptAt and nextAttemptAt fields store poll timing; no separa
 
 Verify production using scheduler delivery logs and response counts (`processed`, `reconciled`), task lastAttemptAt/nextAttemptAt/state transitions on the DAPU page, an actual upload followed by authenticated callback, and a missed-callback test that reaches terminal state through status polling. Never log scheduler Bearer secrets, signed download URLs or attachment content. Verify 401 for a wrong cron secret and failure when CRON_SECRET is absent.
 
-## Stewart student experience and attachments
+## Stuwart student experience and attachments
 
-Stewart is the Study Zone assistant beside a registered course's weekly material viewer. For example, a student in Week 3 can ask “Explain the Fourier transform with an example”; text-only mode searches that offering's Week 3 chunks and shows the returned lecturer references. Selecting a lecture in the viewer does not restrict the upstream search to that document. “Explain with Grounding” instead asks for externally grounded explanation sections and links.
+Stuwart is the Study Zone assistant beside a registered course's weekly material viewer. For example, a student in Week 3 can ask “Explain the Fourier transform with an example”; text-only mode searches that offering's Week 3 chunks and shows the returned lecturer references. Selecting a lecture in the viewer does not restrict the upstream search to that document. “Explain with Grounding” instead asks for externally grounded explanation sections and links.
 
 Existing attachments support PDF, Word/PowerPoint text extraction and decoded images (including screenshots) through the Claude Files/vision pipeline. Files use signed owner-bound expiring tokens, size/type/content validation, rate limits, removal controls and temporary provider storage. They are not inserted into lecturer RAG. A circuit screenshot can be explained by that existing vision assistant, but it is **not** combined with Concept Explainer lecturer retrieval. Grounding with attachments is explicitly rejected. The UI explains these boundaries. No screenshot-to-RAG endpoint was invented.
 
@@ -138,6 +138,6 @@ No staging, production, actual Gemini, actual Supabase or deployed cron success 
 
 Local reports of Prisma P1001 against both Core and E-Learning poolers, together with UND_ERR_CONNECT_TIMEOUT when signing Storage URLs, occur before an AI explanation is requested. A follow-up TCP probe reached both database ports, while Storage HTTPS exceeded a 10-second timeout; this indicates intermittent reachability rather than proof of a credential or schema problem.
 
-Stewart now skips lecturer display-name lookups in Core when resolving its authorized academic context. The Study Zone also avoids resolving those names twice. Student profile and approved-registration checks remain required. Connectivity/pool errors return a safe 503 in chat and document access; authorization and schema errors retain their distinct handling. Download URL signing has a 10-second per-attempt timeout and one retry for transport errors; missing objects and HTTP credential failures are not retried. These changes do not fix an unavailable database/network.
+Stuwart now skips lecturer display-name lookups in Core when resolving its authorized academic context. The Study Zone also avoids resolving those names twice. Student profile and approved-registration checks remain required. Connectivity/pool errors return a safe 503 in chat and document access; authorization and schema errors retain their distinct handling. Download URL signing has a 10-second per-attempt timeout and one retry for transport errors; missing objects and HTTP credential failures are not retried. These changes do not fix an unavailable database/network.
 
 Verification after these changes: 94/94 E-Learning tests passed against isolated local PostgreSQL and fake external providers. TypeScript and targeted ESLint passed. Tests cover no Core identity query on chat, 503 on academic database outages, signing recovery and bounded failed attempts. No production code deployment or environment changes were made for this connectivity fix.

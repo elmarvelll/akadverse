@@ -8,7 +8,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { installFakeProviders, paystack, resend } from "../helpers/fake-providers";
 import { businessCheckoutScenario, stockOf } from "../helpers/fixtures";
-import { createOrdersForCheckout } from "@/services/marketplace/checkout/create-orders-for-checkout";
+import { createOrdersForCheckout } from "../helpers/priced-checkout";
 import { handleWebhook } from "@/app/api/webhooks/paystack/route.controller";
 import { paymentResultResponse } from "@/app/api/marketplace/checkout/verify/route.controller";
 import { getPaystackMode, getPaystackPublicKey, getPaystackSecretKey, verifyTransaction, PaystackError } from "@/lib/external/paystack";

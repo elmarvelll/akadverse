@@ -1,0 +1,111 @@
+{
+  "migration": {
+    "name": "20261112120000_business_pricing",
+    "finishedAt": "2026-11-16T16:39:12.732Z",
+    "checksumMatches": true
+  },
+  "tables": [
+    "BusinessDeliveryPrice",
+    "BusinessPricingSettings",
+    "CheckoutFinancialSnapshot"
+  ],
+  "settings": {
+    "id": "default",
+    "serviceFeeKobo": 15000
+  },
+  "configuredDeliveryPrices": 0,
+  "financialSnapshots": 0,
+  "grantTarget": {
+    "rolcanlogin": false,
+    "rolsuper": false,
+    "rolcreaterole": false,
+    "rolcreatedb": false,
+    "rolreplication": false,
+    "rolbypassrls": false,
+    "memberships": 0
+  },
+  "explicitTableGrants": [
+    {
+      "table_schema": "marketplace",
+      "table_name": "BusinessDeliveryPrice",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "marketplace",
+      "table_name": "BusinessDeliveryPrice",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "marketplace",
+      "table_name": "BusinessDeliveryPrice",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "marketplace",
+      "table_name": "BusinessPricingSettings",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "marketplace",
+      "table_name": "BusinessPricingSettings",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "marketplace",
+      "table_name": "BusinessPricingSettings",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "marketplace",
+      "table_name": "CheckoutFinancialSnapshot",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "marketplace",
+      "table_name": "CheckoutFinancialSnapshot",
+      "privilege_type": "SELECT"
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "BusinessDeliveryPrice",
+      "kind": "c",
+      "count": 1
+    },
+    {
+      "table_name": "BusinessDeliveryPrice",
+      "kind": "f",
+      "count": 2
+    },
+    {
+      "table_name": "BusinessDeliveryPrice",
+      "kind": "p",
+      "count": 1
+    },
+    {
+      "table_name": "BusinessDeliveryPrice",
+      "kind": "u",
+      "count": 1
+    },
+    {
+      "table_name": "BusinessPricingSettings",
+      "kind": "c",
+      "count": 1
+    },
+    {
+      "table_name": "BusinessPricingSettings",
+      "kind": "p",
+      "count": 1
+    },
+    {
+      "table_name": "CheckoutFinancialSnapshot",
+      "kind": "c",
+      "count": 2
+    },
+    {
+      "table_name": "CheckoutFinancialSnapshot",
+      "kind": "p",
+      "count": 1
+    }
+  ]
+}

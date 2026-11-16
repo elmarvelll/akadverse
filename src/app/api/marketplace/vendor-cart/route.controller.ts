@@ -4,7 +4,7 @@
 // services/marketplace/vendor-cart/{get-vendor-cart-for-user,add-to-vendor-cart}.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { getVendorCartForUser } from "@/services/marketplace/vendor-cart/get-vendor-cart-for-user";
 import { addToVendorCart, type AddToVendorCartInput } from "@/services/marketplace/vendor-cart/add-to-vendor-cart";
 

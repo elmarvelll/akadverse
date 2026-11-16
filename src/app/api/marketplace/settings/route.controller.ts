@@ -4,7 +4,7 @@
 // services/marketplace/admin/shared/marketplace-settings.ts.
 
 import { NextResponse } from "next/server";
-import { runController, requireSession } from "@/lib/controller-helpers";
+import { runController, requireSession } from "@/lib/marketplace-controller-helpers";
 import { getMarketplaceSettings } from "@/services/marketplace/admin/shared/marketplace-settings";
 
 export async function getSettings(): Promise<NextResponse> {

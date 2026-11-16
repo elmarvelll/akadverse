@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/[id]/page.tsx
+// src/app/business/[id]/page.tsx
 //
 // The business dashboard's "Business Profile" tab (default route) — all
 // the business's profile data, editable in place via
@@ -102,7 +102,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -110,7 +110,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
   if (loadState === "not-found") {
     return (
       <div className="flex flex-col items-center text-center py-24">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">This business doesn&apos;t exist, or isn&apos;t yours.</p>
       </div>
     );
@@ -119,7 +119,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
   if (loadState === "error" || !business) {
     return (
       <div className="flex flex-col items-center text-center py-24">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">Couldn&apos;t load this business. Please try again.</p>
       </div>
     );
@@ -146,7 +146,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
           <button
             type="button"
             onClick={startEditing}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition shrink-0"
           >
             <Pencil size={14} />
             Edit profile
@@ -234,7 +234,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
                 onChange={updateField("name")}
                 required
                 disabled={saveStatus === "saving"}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
 
@@ -248,7 +248,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
                 onChange={updateField("industry")}
                 required
                 disabled={saveStatus === "saving"}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               >
                 {productCategories.map((category) => (
                   <option key={category.id} value={category.name}>
@@ -269,7 +269,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
                 required
                 disabled={saveStatus === "saving"}
                 rows={4}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none disabled:opacity-60"
+                className="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none disabled:opacity-60"
               />
             </div>
 
@@ -289,7 +289,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
                 value={form.location}
                 onChange={updateField("location")}
                 disabled={saveStatus === "saving"}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
 
@@ -303,7 +303,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
                 value={form.contactInfo}
                 onChange={updateField("contactInfo")}
                 disabled={saveStatus === "saving"}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </div>
 
@@ -318,7 +318,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
                   value={form.website}
                   onChange={updateField("website")}
                   disabled={saveStatus === "saving"}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                  className="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
                 />
               </div>
               <div>
@@ -331,7 +331,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
                   value={form.instagram}
                   onChange={updateField("instagram")}
                   disabled={saveStatus === "saving"}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                  className="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
                 />
               </div>
               <div>
@@ -344,7 +344,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
                   value={form.linkedin}
                   onChange={updateField("linkedin")}
                   disabled={saveStatus === "saving"}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                  className="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
                 />
               </div>
             </div>
@@ -359,7 +359,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
 
             <div className="pt-2 border-t border-gray-100">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Wallet size={16} className="text-gray-400" />
+                <Wallet size={16} className="text-gray-500" />
                 Payout bank details
               </h3>
               <BankDetailsFields
@@ -374,7 +374,7 @@ export default function BusinessProfilePage({ params }: { params: Promise<{ id: 
             <button
               type="submit"
               disabled={saveStatus === "saving"}
-              className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {saveStatus === "saving" && <Loader2 size={16} className="animate-spin" />}
               {saveStatus === "saving" ? "Saving…" : "Save changes"}

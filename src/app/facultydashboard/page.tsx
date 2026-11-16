@@ -5,7 +5,7 @@
 // a card grid of available workspaces rather than dropping straight into
 // one. Faculty has no Marketplace access (Marketplace is students-only —
 // AGENTS.md §9), so there's no Marketplace/Productivity Layer card here,
-// only what's actually relevant: Main Menu, E-Learning, AI Studio.
+// only the available E-Learning workspace.
 //
 // This used to be a bare "Coming soon" placeholder with no link anywhere
 // to the real E-Learning Faculty portal built at /e-learning/faculty/... —
@@ -18,7 +18,7 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { House, BookOpen, Bot, Loader2 } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
 import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar";
 
 // Reusing the student portal's navbar deliberately — it's just branding +
@@ -27,15 +27,6 @@ import DashboardNavbar from "@/app/components/dashboard/student/DashboardNavbar"
 // noise to keep in sync for no behavioral difference.
 
 const workspaces = [
-  {
-    id: 1,
-    title: "Main Menu",
-    description: "Access campus tools and the faculty dashboard.",
-    icon: House,
-    color: "text-purple-500",
-    bgColor: "bg-purple-50",
-    path: "/facultydashboard/main-menu",
-  },
   {
     id: 2,
     title: "E-Learning",
@@ -47,15 +38,6 @@ const workspaces = [
     // database — see prisma/elearning/schema.prisma), not a page under
     // facultydashboard/** — E-Learning is a separate academic domain.
     path: "/e-learning/faculty/dashboard",
-  },
-  {
-    id: 3,
-    title: "AI Studio",
-    description: "Your AI-powered academic assistant for lecture prep, research, and course material support.",
-    icon: Bot,
-    color: "text-pink-500",
-    bgColor: "bg-pink-50",
-    path: "/facultydashboard/ai-studio",
   },
 ];
 

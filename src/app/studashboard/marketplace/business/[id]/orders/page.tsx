@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/[id]/orders/page.tsx
+// src/app/business/[id]/orders/page.tsx
 //
 // The business dashboard's Orders tab — the seller order system's five
 // sections (Pending / Accepted-Processing / Ready for Pickup / Completed /
@@ -70,7 +70,7 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
 
   useEffect(() => {
     // Locally-defined wrapper — same convention as
-    // src/app/studashboard/marketplace/_components/useCart.ts.
+    // src/app/_components/useCart.ts.
     const run = async () => {
       await load();
     };
@@ -103,7 +103,7 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
 
   const payFine = async (fineId: string) => {
     // A full Paystack popup flow lives in the checkout page
-    // (src/app/studashboard/marketplace/checkout/page.tsx) — this reuses
+    // (src/app/checkout/page.tsx) — this reuses
     // the same initialize/verify pattern at a smaller scale. Kept inline
     // rather than factored into a shared hook given it's the only other
     // Paystack payment flow in the app right now.
@@ -161,7 +161,7 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
               type="button"
               onClick={() => setActiveSection(section.key)}
               className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
-                activeSection === section.key ? "bg-blue-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                activeSection === section.key ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
               }`}
             >
               {section.label} {count > 0 && `(${count})`}
@@ -174,20 +174,20 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
 
       {loadState === "loading" && (
         <div className="flex justify-center py-24">
-          <Loader2 size={28} className="animate-spin text-gray-400" />
+          <Loader2 size={28} className="animate-spin text-gray-500" />
         </div>
       )}
 
       {loadState === "error" && (
         <div className="flex flex-col items-center text-center py-24">
-          <AlertCircle size={28} className="text-gray-400 mb-3" />
+          <AlertCircle size={28} className="text-gray-500 mb-3" />
           <p className="text-gray-500">Couldn&apos;t load orders. Please try again.</p>
         </div>
       )}
 
       {loadState === "loaded" && sectionOrders.length === 0 && (
         <div className="flex flex-col items-center text-center py-24 bg-white rounded-2xl border border-gray-100">
-          <ShoppingBag size={28} className="text-gray-300 mb-3" />
+          <ShoppingBag size={28} className="text-gray-400 mb-3" />
           <p className="text-gray-500">Nothing here yet.</p>
         </div>
       )}
@@ -212,13 +212,13 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
                 <div className="text-xs text-gray-500 mb-3 space-y-0.5">
                   <p>
                     Estimated delivery:{" "}
-                    {new Date(order.estimatedDeliveryAt).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                    {new Date(order.estimatedDeliveryAt).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "Africa/Lagos" })}
                     {order.deliveryWindowStart && order.deliveryWindowEnd && (
                       <>
                         {" · "}
-                        {new Date(order.deliveryWindowStart).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                        {new Date(order.deliveryWindowStart).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Africa/Lagos" })}
                         {" – "}
-                        {new Date(order.deliveryWindowEnd).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                        {new Date(order.deliveryWindowEnd).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Africa/Lagos" })}
                       </>
                     )}
                   </p>
@@ -237,7 +237,7 @@ export default function BusinessOrdersPage({ params }: { params: Promise<{ id: s
                     <span className="min-w-0 truncate">
                       {item.quantity} x {item.productName}
                     </span>
-                    <span className="text-gray-400 shrink-0">{item.deliveryStatus ?? (item.rejectedAt ? "Rejected" : "—")}</span>
+                    <span className="text-gray-500 shrink-0">{item.deliveryStatus ?? (item.rejectedAt ? "Rejected" : "—")}</span>
                   </li>
                 ))}
               </ul>

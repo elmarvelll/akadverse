@@ -7,6 +7,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, HelpCircle, Loader2, PhoneOff, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import LessonEditor from "./LessonEditor";
 import LiveStage from "./LiveStage";
 import { useClassroomState } from "./useClassroomState";
 import { callAction } from "./callAction";
@@ -72,6 +73,7 @@ export default function TeacherRoom({ sessionId, courseLabel, backHref }: { sess
         />
 
         <aside className="space-y-4 @3xl:w-80 @3xl:shrink-0">
+          <LessonEditor sessionId={sessionId} onSaved={refresh} />
           <section className="rounded-2xl border border-gray-200 bg-white p-4">
             <h2 className="text-sm font-bold text-gray-900">Do you understand?</h2>
             <p className="mt-0.5 text-xs text-gray-700">Pops up for every student. They answer Yes or No.</p>

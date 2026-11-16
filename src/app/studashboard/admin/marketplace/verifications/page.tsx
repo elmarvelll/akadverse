@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/verifications/page.tsx
+// src/app/admin/verifications/page.tsx
 //
 // Businesses awaiting verification — reuses
 // services/marketplace/admin/list-businesses-for-admin.ts with
@@ -81,7 +81,7 @@ export default function AdminVerificationsPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -89,7 +89,7 @@ export default function AdminVerificationsPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load businesses."}</p>
       </div>
     );
@@ -101,7 +101,7 @@ export default function AdminVerificationsPage() {
       <p className="text-sm text-gray-500 mb-6">Businesses awaiting admin verification.</p>
 
       {result && result.items.length === 0 ? (
-        <p className="text-sm text-gray-400">No businesses awaiting verification.</p>
+        <p className="text-sm text-gray-500">No businesses awaiting verification.</p>
       ) : (
         result && (
           <>

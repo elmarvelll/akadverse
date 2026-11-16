@@ -82,7 +82,7 @@ function AvailableDateChips({ value, onChange, disabled, dates }: Required<Pick<
                   ? "bg-purple-600 border-purple-600 text-white"
                   : d.selectable
                     ? "border-gray-200 text-gray-700 hover:bg-gray-50"
-                    : "border-gray-100 bg-gray-50 text-gray-400"
+                    : "border-gray-100 bg-gray-50 text-gray-500"
               }`}
             >
               <span className="block">{label}</span>
@@ -146,7 +146,7 @@ function FreeDatePicker({ value, onChange, disabled }: DeliveryDatePickerProps) 
           disabled={disabled}
           onClick={() => setCustomOpen(true)}
           className={`px-4 py-2 rounded-xl text-sm font-medium border transition disabled:opacity-50 ${
-            customOpen ? "bg-purple-600 border-purple-600 text-white" : "border-gray-200 text-gray-700 hover:bg-gray-50"
+            customOpen ? "bg-purple-600 border-purple-600 text-white" : "border-gray-300 text-gray-700 hover:bg-gray-50"
           }`}
         >
           Choose custom date
@@ -162,7 +162,7 @@ function FreeDatePicker({ value, onChange, disabled }: DeliveryDatePickerProps) 
           onChange={(e) => {
             if (e.target.value) onChange(e.target.value);
           }}
-          className="mt-2 px-3 py-2 border border-gray-200 rounded-xl text-sm disabled:opacity-50"
+          className="mt-2 px-3 py-2 border border-gray-400 bg-white rounded-xl text-sm text-gray-900 disabled:opacity-50"
         />
       )}
     </div>

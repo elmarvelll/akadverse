@@ -1,6 +1,6 @@
 // services/e-learning/ai-ingest/client.ts
 //
-// The shared server-only Concept Explainer adapter: course ingestion, Stewart explanations and temporary files.
+// The shared server-only Concept Explainer adapter: course ingestion, Stuwart explanations and temporary files.
 // Contracts: docs/elearning/systems/{ai-ingestion-contract,stewart-attachments}.md.
 //
 // Configuration (server only):

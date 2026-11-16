@@ -4,8 +4,8 @@
 // services/marketplace/admin/approve-business.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { approveBusiness } from "@/services/marketplace/admin/approve-business";
 
 export async function approve(businessId: string): Promise<NextResponse> {

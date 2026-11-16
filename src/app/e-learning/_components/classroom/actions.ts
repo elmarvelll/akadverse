@@ -50,3 +50,10 @@ export async function toggleVoteAction(sessionId: string, questionId: string) {
 export async function respondToPollAction(sessionId: string, pollId: string, answer: "YES" | "NO") {
   return guard("student", (id) => respondToPoll(id, sessionId, pollId, answer));
 }
+
+export async function lessonOptionsAction(sessionId: string) {
+  return guard("faculty", async (id) => ({ options: await (await import("@/services/e-learning/classroom/lesson")).lessonOptions(id, sessionId) }));
+}
+export async function setLessonAction(sessionId: string, input: { topic: string; week: number; documentId: string; version: number }) {
+  return guard("faculty", (id) => import("@/services/e-learning/classroom/lesson").then(m => m.setLesson(id, sessionId, input)));
+}

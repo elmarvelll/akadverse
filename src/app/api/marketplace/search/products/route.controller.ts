@@ -4,7 +4,7 @@
 // services/marketplace/product/search-products.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { searchProducts as searchProductsAction } from "@/services/marketplace/product/search-products";
 
 export async function searchProducts(request: NextRequest): Promise<NextResponse> {

@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/_components/GetVerifiedSection.tsx
+// src/app/business/_components/GetVerifiedSection.tsx
 //
 // The business dashboard's verification panel — shown on the Profile tab
 // (business/[id]/page.tsx). Distinct from the business-approval gate
@@ -55,7 +55,7 @@ export default function GetVerifiedSection({ business, onRequested }: GetVerifie
   return (
     <section className="bg-white rounded-2xl border border-gray-100 p-6">
       <h2 className="font-semibold text-gray-900 flex items-center gap-2 mb-1.5">
-        <BadgeCheck size={17} className="text-gray-400" />
+        <BadgeCheck size={17} className="text-gray-500" />
         Verification
       </h2>
 

@@ -13,6 +13,14 @@ type FailureMode = "timeout" | "http500" | "html" | "garbage" | null;
 
 export const paystack = {
   transactions: new Map<string, PaystackTxn>(),
+  // Bank accounts Paystack can resolve: `${bankCode}:${accountNumber}` -> account holder name.
+  accounts: new Map<string, string>(),
+  // Transfers API (payouts): every recipient created and transfer sent, in order.
+  recipients: [] as { code: string; name: string; accountNumber: string; bankCode: string }[],
+  transfers: [] as { reference: string; amount: number; recipient: string; reason: string }[],
+  // What /transfer answers: "success", "pending" (Paystack still settling), or "fail" (HTTP error).
+  transferMode: "success" as "success" | "pending" | "fail",
+
   verifyCalls: [] as string[],
   failure: null as FailureMode,
   set(reference: string, txn: PaystackTxn) {
@@ -23,6 +31,10 @@ export const paystack = {
   },
   reset() {
     this.transactions.clear();
+    this.accounts.clear();
+    this.recipients = [];
+    this.transfers = [];
+    this.transferMode = "success";
     this.verifyCalls = [];
     this.failure = null;
   },
@@ -83,6 +95,26 @@ export function installFakeProviders() {
       const txn = paystack.transactions.get(reference);
       if (!txn) return json({ status: false, message: "Transaction reference not found" }, 400);
       return json({ status: true, data: { status: txn.status, amount: txn.amount, currency: txn.currency ?? "NGN", reference: txn.reference ?? reference, paid_at: null } });
+    }
+
+    if (url === "https://api.paystack.co/transferrecipient") {
+      const body = JSON.parse(String(init?.body ?? "{}"));
+      const code = `RCP_${paystack.recipients.length + 1}`;
+      paystack.recipients.push({ code, name: body.name, accountNumber: body.account_number, bankCode: body.bank_code });
+      return json({ status: true, data: { recipient_code: code } });
+    }
+    if (url === "https://api.paystack.co/transfer") {
+      const body = JSON.parse(String(init?.body ?? "{}"));
+      if (paystack.transferMode === "fail") return json({ status: false, message: "Your balance is not enough to fulfil this request" }, 400);
+      paystack.transfers.push({ reference: body.reference, amount: body.amount, recipient: body.recipient, reason: body.reason });
+      return json({ status: true, data: { transfer_code: `TRF_${paystack.transfers.length}`, status: paystack.transferMode, reference: body.reference } });
+    }
+
+    if (url.startsWith("https://api.paystack.co/bank/resolve")) {
+      const params = new URL(url).searchParams;
+      const name = paystack.accounts.get(`${params.get("bank_code")}:${params.get("account_number")}`);
+      if (!name) return json({ status: false, message: "Could not resolve account name" }, 422);
+      return json({ status: true, data: { account_number: params.get("account_number"), account_name: name } });
     }
 
     if (url.startsWith("https://api.resend.com/emails")) {

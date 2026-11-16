@@ -32,7 +32,8 @@ export async function ensureCheckoutPayment(reference: string): Promise<Checkout
     ? await prisma.vendorDeliveryBooking.findFirst({ where: { paystackReference: reference }, select: { deliveryFee: true, serviceFee: true } })
     : null;
   const subtotal = orders.reduce((sum, o) => sum + o.totalAmount, 0);
-  const total = booking ? subtotal + booking.deliveryFee + booking.serviceFee : subtotal + subtotal * SERVICE_FEE_RATE;
+  const snapshot = await prisma.checkoutFinancialSnapshot.findUnique({where:{reference}});
+  const total = snapshot ? snapshot.totalKobo / 100 : booking ? subtotal + booking.deliveryFee + booking.serviceFee : subtotal + subtotal * SERVICE_FEE_RATE;
   const createdAt = orders.reduce((min, o) => (o.createdAt < min ? o.createdAt : min), orders[0].createdAt);
   const allPaid = orders.every((o) => o.paymentStatus === ORDER_PAYMENT_STATUS.PAID);
 

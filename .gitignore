@@ -80,3 +80,6 @@ Thumbs.db
 # Private curriculum/reset inventories and database backups
 .local/ccmas/
 .elearning-reset/
+
+# Generated runtime union; public migrations still use prisma/schema.prisma.
+/prisma/marketplace-runtime/schema.prisma

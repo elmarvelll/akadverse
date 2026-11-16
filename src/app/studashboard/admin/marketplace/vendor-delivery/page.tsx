@@ -1,9 +1,10 @@
-// src/app/studashboard/admin/marketplace/vendor-delivery/page.tsx
+// src/app/admin/vendor-delivery/page.tsx
 //
 // Admin → Vendor Delivery — the operational dashboard for School Vendor
 // deliveries: delivery-slot capacity/cutoff/prep-deadline editor, the
-// deliverer ROSTER (who's on duty per timeframe/date — spec §15-19,
-// completely independent of vendor order-fulfillment capacity, see
+// pointer to the recurring Delivery Roster (who's on duty per timeframe and
+// the delivery limit — Admin -> Delivery Roster, independent of vendor
+// order-fulfillment capacity, see
 // docs/marketplace/decisions/vendor-independent-architecture.md), and a
 // filterable list of vendor bookings/orders/buyers/fees. Actual pickup
 // assignment for ready orders reuses the existing Deliverers →
@@ -16,10 +17,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { isAxiosError } from "axios";
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Save, UserPlus, X } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle2, ExternalLink, Loader2, Save } from "lucide-react";
 import api from "@/lib/axios";
 import PaginationControls from "../_components/PaginationControls";
-import { formatArrivalTime, DELIVERER_ARRIVAL_LEAD_MINS } from "@/services/marketplace/vendor-delivery/deliverer-arrival";
 
 interface VendorSlot {
   id: string;
@@ -127,12 +127,12 @@ function SlotCapacityEditor() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 size={22} className="animate-spin text-gray-400" />
+        <Loader2 size={22} className="animate-spin text-gray-500" />
       </div>
     );
   }
   if (loadState === "error") {
-    return <p className="text-sm text-gray-400 py-4">Couldn&apos;t load delivery slots.</p>;
+    return <p className="text-sm text-gray-500 py-4">Couldn&apos;t load delivery slots.</p>;
   }
 
   return (
@@ -152,7 +152,7 @@ function SlotCapacityEditor() {
           <div key={slot.id} className="flex flex-wrap items-center gap-3 bg-white rounded-2xl border border-gray-100 p-4">
             <div className="min-w-[140px]">
               <p className="font-medium text-gray-900 text-sm">{slot.label}</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {slot.windowStart} – {slot.windowEnd}
               </p>
             </div>
@@ -166,11 +166,11 @@ function SlotCapacityEditor() {
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, [slot.id]: { ...values, delivererCapacity: Math.max(0, Math.trunc(Number(e.target.value) || 0)) } }))
                 }
-                className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs"
+                className="w-16 px-2 py-1 border border-gray-400 bg-white rounded-lg text-xs text-gray-900"
               />
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-gray-500">
-              Cutoff (min)
+            <label className="flex items-center gap-1.5 text-xs text-gray-500" title="Orders close at least 120 minutes before the slot starts; a smaller number here has no effect.">
+              Cutoff (min, ≥120)
               <input
                 type="number"
                 min={0}
@@ -179,7 +179,7 @@ function SlotCapacityEditor() {
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, [slot.id]: { ...values, bookingCutoffMins: Math.max(0, Math.trunc(Number(e.target.value) || 0)) } }))
                 }
-                className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs"
+                className="w-16 px-2 py-1 border border-gray-400 bg-white rounded-lg text-xs text-gray-900"
               />
             </label>
             <label className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -192,7 +192,7 @@ function SlotCapacityEditor() {
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, [slot.id]: { ...values, vendorPrepDeadlineMins: Math.max(0, Math.trunc(Number(e.target.value) || 0)) } }))
                 }
-                className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs"
+                className="w-16 px-2 py-1 border border-gray-400 bg-white rounded-lg text-xs text-gray-900"
               />
             </label>
             {dirty && (
@@ -224,284 +224,6 @@ function SlotCapacityEditor() {
           </div>
         );
       })}
-    </div>
-  );
-}
-
-interface RosterAssignment {
-  id: string;
-  delivererId: string;
-  delivererName: string;
-  status: string;
-  arrivedAt: string | null;
-}
-
-interface RosterSlotRow {
-  slotId: string;
-  slotLabel: string;
-  windowStart: string;
-  windowEnd: string;
-  capacity: number;
-  assignments: RosterAssignment[];
-}
-
-interface ApprovedDeliverer {
-  id: string;
-  firstName: string;
-  lastName: string;
-  status: string;
-  preferredAvailability: string | null;
-}
-
-interface UpcomingNeedRow {
-  date: string;
-  slotId: string;
-  slotLabel: string;
-  windowStart: string;
-  filled: number;
-  capacity: number;
-  needsAssignment: boolean;
-}
-
-const upcomingDateFormatter = new Intl.DateTimeFormat("en-NG", { weekday: "short", month: "short", day: "numeric" });
-
-// Spec §16: a concrete, visible signal of which upcoming delivery dates
-// still need deliverer assignments (admin must finalize these the day
-// before) vs. which are already fully covered — not just a prose reminder.
-function UpcomingAssignmentNeeds({ onJumpToDate }: { onJumpToDate: (date: string) => void }) {
-  const [rows, setRows] = useState<UpcomingNeedRow[]>([]);
-  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
-
-  useEffect(() => {
-    const run = async () => {
-      setLoadState("loading");
-      try {
-        const res = await api.get<{ rows: UpcomingNeedRow[] }>("/marketplace/admin/vendor-delivery/roster/upcoming");
-        setRows(res.data.rows);
-        setLoadState("loaded");
-      } catch {
-        setLoadState("error");
-      }
-    };
-    run();
-  }, []);
-
-  if (loadState === "loading") {
-    return (
-      <div className="flex justify-center py-6">
-        <Loader2 size={20} className="animate-spin text-gray-400" />
-      </div>
-    );
-  }
-  if (loadState === "error") return <p className="text-sm text-gray-400 py-3">Couldn&apos;t load upcoming assignment needs.</p>;
-
-  const byDate = new Map<string, UpcomingNeedRow[]>();
-  for (const row of rows) {
-    if (!byDate.has(row.date)) byDate.set(row.date, []);
-    byDate.get(row.date)!.push(row);
-  }
-  const dates = Array.from(byDate.keys()).sort();
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {dates.map((date) => {
-        const dateRows = byDate.get(date)!;
-        const needsAssignment = dateRows.some((r) => r.needsAssignment);
-        return (
-          <button
-            key={date}
-            type="button"
-            onClick={() => onJumpToDate(date)}
-            className={`px-3 py-2 rounded-xl text-xs font-medium border transition text-left ${
-              needsAssignment ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100" : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-            }`}
-          >
-            <p className="font-semibold">{upcomingDateFormatter.format(new Date(`${date}T00:00:00Z`))}</p>
-            <p>{needsAssignment ? "Needs assignment" : "Fully assigned"}</p>
-          </button>
-        );
-      })}
-      {dates.length === 0 && <p className="text-sm text-gray-400">No active delivery slots configured.</p>}
-    </div>
-  );
-}
-
-function todayDateInputValue(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function RosterSection() {
-  const [date, setDate] = useState(todayDateInputValue());
-  const [roster, setRoster] = useState<RosterSlotRow[]>([]);
-  const [deliverers, setDeliverers] = useState<ApprovedDeliverer[]>([]);
-  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
-  const [assigningSlotId, setAssigningSlotId] = useState<string | null>(null);
-  const [selectedDelivererId, setSelectedDelivererId] = useState<string>("");
-  const [actionError, setActionError] = useState("");
-  const [busyAssignmentId, setBusyAssignmentId] = useState<string | null>(null);
-
-  const load = async (targetDate: string) => {
-    setLoadState("loading");
-    try {
-      const [rosterRes, deliverersRes] = await Promise.all([
-        api.get<{ roster: RosterSlotRow[] }>("/marketplace/admin/vendor-delivery/roster", { params: { date: targetDate } }),
-        api.get<{ deliverers: ApprovedDeliverer[] }>("/marketplace/admin/deliverers"),
-      ]);
-      setRoster(rosterRes.data.roster);
-      setDeliverers(deliverersRes.data.deliverers.filter((d) => d.status === "APPROVED"));
-      setLoadState("loaded");
-    } catch {
-      setLoadState("error");
-    }
-  };
-
-  useEffect(() => {
-    const run = async () => {
-      await load(date);
-    };
-    run();
-  }, [date]);
-
-  const assign = async (slotId: string) => {
-    if (!selectedDelivererId) return;
-    setActionError("");
-    try {
-      await api.post("/marketplace/admin/vendor-delivery/roster", { date, slotId, delivererId: selectedDelivererId });
-      setAssigningSlotId(null);
-      setSelectedDelivererId("");
-      await load(date);
-    } catch (err) {
-      setActionError((isAxiosError<{ error?: string }>(err) && err.response?.data?.error) || "Couldn't assign deliverer.");
-    }
-  };
-
-  const cancelAssignment = async (assignmentId: string) => {
-    setBusyAssignmentId(assignmentId);
-    try {
-      await api.delete(`/marketplace/admin/vendor-delivery/roster/${assignmentId}`);
-      await load(date);
-    } finally {
-      setBusyAssignmentId(null);
-    }
-  };
-
-  return (
-    <div>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Upcoming assignment needs</p>
-      <div className="mb-4">
-        <UpcomingAssignmentNeeds onJumpToDate={setDate} />
-      </div>
-
-      <div className="flex items-center gap-3 mb-3">
-        <label className="text-xs text-gray-500 flex items-center gap-1.5">
-          Date
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
-          />
-        </label>
-      </div>
-
-      {actionError && <div className="mb-3 text-sm p-2.5 rounded-lg text-red-700 bg-red-100">{actionError}</div>}
-
-      {loadState === "loading" && (
-        <div className="flex justify-center py-8">
-          <Loader2 size={22} className="animate-spin text-gray-400" />
-        </div>
-      )}
-      {loadState === "error" && <p className="text-sm text-gray-400 py-4">Couldn&apos;t load the roster.</p>}
-
-      {loadState === "loaded" && (
-        <div className="space-y-2">
-          {roster.map((slot) => {
-            const filled = slot.assignments.length;
-            const available = Math.max(0, slot.capacity - filled);
-            return (
-              <div key={slot.slotId} className="bg-white rounded-2xl border border-gray-100 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">{slot.slotLabel}</p>
-                    <p className="text-xs text-gray-400">
-                      Arrive by {formatArrivalTime(slot.windowStart)} ({DELIVERER_ARRIVAL_LEAD_MINS} min early) · {filled}/{slot.capacity} filled ·{" "}
-                      {available} open
-                    </p>
-                  </div>
-                  {assigningSlotId === slot.slotId ? (
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={selectedDelivererId}
-                        onChange={(e) => setSelectedDelivererId(e.target.value)}
-                        className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs"
-                      >
-                        <option value="">Select deliverer…</option>
-                        {deliverers.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.firstName} {d.lastName}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => assign(slot.slotId)}
-                        disabled={!selectedDelivererId}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition disabled:opacity-50"
-                      >
-                        Assign
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAssigningSlotId(null)}
-                        className="text-gray-400 hover:text-gray-700 transition"
-                        aria-label="Cancel"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={available === 0}
-                      onClick={() => setAssigningSlotId(slot.slotId)}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
-                    >
-                      <UserPlus size={13} />
-                      Assign deliverer
-                    </button>
-                  )}
-                </div>
-                {slot.assignments.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {slot.assignments.map((a) => (
-                      <span key={a.id} className="flex items-center gap-1.5 text-xs bg-gray-50 rounded-full px-2.5 py-1">
-                        {a.delivererName}
-                        <span
-                          className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                            a.status === "NO_SHOW" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
-                          }`}
-                        >
-                          {a.status}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={busyAssignmentId === a.id}
-                          onClick={() => cancelAssignment(a.id)}
-                          className="text-gray-300 hover:text-red-500 transition disabled:opacity-50"
-                          aria-label={`Remove ${a.delivererName}`}
-                        >
-                          <X size={12} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {roster.length === 0 && <p className="text-sm text-gray-400">No active delivery slots configured.</p>}
-        </div>
-      )}
     </div>
   );
 }
@@ -562,8 +284,17 @@ export default function AdminVendorDeliveryPage() {
       </div>
 
       <h2 className="font-semibold text-gray-900 mb-3">Deliverer roster</h2>
-      <div className="mb-8">
-        <RosterSection />
+      <div className="mb-8 bg-white rounded-2xl border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-gray-600">
+          Who works each timeframe, every week, and the maximum deliveries per timeframe now live in the recurring Delivery Roster. One-off
+          changes for a single date are made in its date view; date-only assignments made here before still count.
+        </p>
+        <Link
+          href="/studashboard/admin/marketplace/delivery-roster?operation=VENDOR"
+          className="shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition"
+        >
+          <CalendarDays size={14} /> Open Delivery Roster
+        </Link>
       </div>
 
       <h2 className="font-semibold text-gray-900 mb-3">Bookings</h2>
@@ -587,15 +318,15 @@ export default function AdminVendorDeliveryPage() {
 
       {loadState === "forbidden" || loadState === "error" ? (
         <div className="flex flex-col items-center text-center py-24 px-4">
-          <AlertCircle size={28} className="text-gray-400 mb-3" />
+          <AlertCircle size={28} className="text-gray-500 mb-3" />
           <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load bookings."}</p>
         </div>
       ) : loadState === "loading" ? (
         <div className="flex justify-center py-16">
-          <Loader2 size={24} className="animate-spin text-gray-400" />
+          <Loader2 size={24} className="animate-spin text-gray-500" />
         </div>
       ) : result && result.items.length === 0 ? (
-        <p className="text-sm text-gray-400">No vendor bookings yet.</p>
+        <p className="text-sm text-gray-500">No vendor bookings yet.</p>
       ) : (
         result && (
           <>

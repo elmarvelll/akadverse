@@ -4,8 +4,8 @@
 // services/marketplace/admin/list-reports.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { listReports } from "@/services/marketplace/admin/list-reports";
 
 export async function listAllReports(request: NextRequest): Promise<NextResponse> {

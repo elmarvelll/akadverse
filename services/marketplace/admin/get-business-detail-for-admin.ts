@@ -2,7 +2,7 @@
 //
 // One business's full detail for the admin Businesses/Verifications tabs
 // and the new admin Business Profile page
-// (src/app/studashboard/admin/marketplace/businesses/[businessId]/page.tsx)
+// (src/app/admin/businesses/[businessId]/page.tsx)
 // — every field the business submitted at registration/edit (see
 // src/types/business.ts's BusinessFormValues), plus admin-only state
 // (approval/verification/block status, counts) and the business's
@@ -21,6 +21,7 @@ export async function getBusinessDetailForAdmin(businessId: string) {
     where: { id: businessId },
     select: {
       id: true,
+      type: true,
       name: true,
       industry: true,
       description: true,

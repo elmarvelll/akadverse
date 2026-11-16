@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/_components/AdminMainMenu.tsx
+// src/app/admin/_components/AdminMainMenu.tsx
 //
 // The admin-only equivalent of a normal nav menu — every tab here is
 // server-side gated by requireAdmin() on its own API calls regardless of
@@ -20,10 +20,7 @@ const TABS = [
   { href: "/studashboard/admin/marketplace/businesses", label: "Businesses" },
   { href: "/studashboard/admin/marketplace/products", label: "Products" },
   { href: "/studashboard/admin/marketplace/reports", label: "Reports" },
-  // School Vendor delivery operations — see
-  // docs/marketplace/systems/vendor-delivery-system.md. An admin
-  // capability/tab, not a new global role (spec §38).
-  { href: "/studashboard/admin/marketplace/vendor-delivery", label: "Vendor Delivery" },
+  { href: "/studashboard/admin/marketplace/deliveries", label: "Deliveries" },
 ];
 
 export default function AdminMainMenu() {
@@ -32,17 +29,17 @@ export default function AdminMainMenu() {
   return (
     <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
       {TABS.map((tab) => {
-        // Overview's own href ("/admin") must only match exactly — every
+        // Overview's own href ("/studashboard/admin/marketplace") must only match exactly — every
         // other tab's href is also a prefix of its own nested/dynamic
         // routes (e.g. a future /admin/businesses/[id]), so those match on
         // startsWith.
-        const active = tab.label === "Overview" ? pathname === tab.href : pathname.startsWith(tab.href);
+        const active = tab.label === "Overview" ? pathname === tab.href : pathname.startsWith(tab.href) || (tab.label === "Deliveries" && ["/studashboard/admin/marketplace/delivery-roster", "/studashboard/admin/marketplace/vendor-delivery", "/studashboard/admin/marketplace/delivery-operations", "/studashboard/admin/marketplace/deliverers", "/studashboard/admin/marketplace/dropoffs"].some((prefix) => pathname.startsWith(prefix)));
         return (
           <Link
             key={tab.href}
             href={tab.href}
             className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
-              active ? "bg-blue-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+              active ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
             }`}
           >
             {tab.label}

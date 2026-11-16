@@ -1,10 +1,10 @@
-// src/app/studashboard/marketplace/_components/MarketplaceFooter.tsx
+// src/app/_components/MarketplaceFooter.tsx
 //
 // Footer link cycles through the deliverer application lifecycle — see
 // services/marketplace/deliverer/deliverer.service.ts and docs/marketplace/systems/deliverer-system.md:
-//   not applied  -> "Become a Deliverer"      -> /studashboard/marketplace/deliverer/apply
+//   not applied  -> "Become a Deliverer"      -> /deliverer/apply
 //   pending      -> "Deliverer Application Pending" (no link)
-//   approved     -> "Delivery Dashboard"       -> /studashboard/marketplace/deliverer
+//   approved     -> "Delivery Dashboard"       -> /deliverer
 //   rejected     -> "Become a Deliverer" again (a rejected applicant isn't
 //                    permanently blocked from reapplying — see
 //                    docs/marketplace/decisions/rejected-deliverer-can-reapply.md)
@@ -18,6 +18,8 @@ import { Mail } from "lucide-react";
 import api from "@/lib/axios";
 
 type DelivererFooterKind = "not_applied" | "pending" | "approved" | "rejected" | "suspended";
+
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "";
 
 export default function MarketplaceFooter() {
   const [state, setState] = useState<DelivererFooterKind>("not_applied");
@@ -49,10 +51,13 @@ export default function MarketplaceFooter() {
           <Link href="/studashboard/marketplace/vendor/apply" className="hover:text-gray-900 transition">
             Become a Vendor
           </Link>
-          <a href="mailto:marvelousifezue31@gmail.com" className="flex items-center gap-1.5 hover:text-gray-900 transition">
-            <Mail size={14} />
-            marvelousifezue31@gmail.com
-          </a>
+          {/* Support address comes from configuration (NEXT_PUBLIC_SUPPORT_EMAIL); AkadVerse hardcoded a personal address here. */}
+          {SUPPORT_EMAIL && (
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="flex items-center gap-1.5 hover:text-gray-900 transition">
+              <Mail size={14} />
+              {SUPPORT_EMAIL}
+            </a>
+          )}
         </div>
       </div>
     </footer>
@@ -62,7 +67,7 @@ export default function MarketplaceFooter() {
 function DelivererLink({ state }: { state: DelivererFooterKind }) {
   switch (state) {
     case "pending":
-      return <span className="text-gray-400">Deliverer Application Pending</span>;
+      return <span className="text-gray-500">Deliverer Application Pending</span>;
     case "approved":
       return (
         <Link href="/studashboard/marketplace/deliverer" className="hover:text-gray-900 transition">
@@ -70,7 +75,7 @@ function DelivererLink({ state }: { state: DelivererFooterKind }) {
         </Link>
       );
     case "suspended":
-      return <span className="text-gray-400">Deliverer Access Suspended</span>;
+      return <span className="text-gray-500">Deliverer Access Suspended</span>;
     case "not_applied":
     case "rejected":
     default:

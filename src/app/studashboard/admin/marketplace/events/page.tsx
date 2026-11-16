@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/events/page.tsx
+// src/app/admin/events/page.tsx
 //
 // Admin Events tab: the cross-order OrderEvent feed, most recent first —
 // business name and seller name shown directly (not just IDs), per spec.
@@ -56,7 +56,7 @@ export default function AdminEventsPage() {
   if (loadState === "loading") {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -64,7 +64,7 @@ export default function AdminEventsPage() {
   if (loadState === "forbidden" || loadState === "error") {
     return (
       <div className="flex flex-col items-center text-center py-24 px-4">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">{loadState === "forbidden" ? "Admin access required." : "Couldn't load events."}</p>
       </div>
     );
@@ -75,7 +75,7 @@ export default function AdminEventsPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Events</h1>
 
       {result && result.items.length === 0 ? (
-        <p className="text-sm text-gray-400">No events found.</p>
+        <p className="text-sm text-gray-500">No events found.</p>
       ) : (
         result && (
           <>
@@ -83,7 +83,7 @@ export default function AdminEventsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <tr className="border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                       <th className="px-4 py-3">Order</th>
                       <th className="px-4 py-3">Event</th>
                       <th className="px-4 py-3">Actor</th>

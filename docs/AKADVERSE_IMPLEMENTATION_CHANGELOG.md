@@ -35,11 +35,11 @@ features requested.
   awaiting-payment bookings per date; customers are only offered dates that can actually be booked. Sellers get a
   prominent drop-off panel. Vendor orders list newest first. The navbar no longer covers "Back to Marketplace".
 - **E-Learning.** Weeks with several documents get a dropdown in the Study Zone, and the lecturer upload form no
-  longer nudges every upload back to Week 1. Stewart, previously a canned mock, now has a real backend: a student can
+  longer nudges every upload back to Week 1. Stuwart, previously a canned mock, now has a real backend: a student can
   attach a PDF/Word/PowerPoint/text file and ask about it, including follow-up questions.
 
 Systems touched: Marketplace checkout, orders, vendor delivery, admin, notifications/email, Marketplace page layout;
-E-Learning course materials UI, Study Zone, a new Stewart API; two additive database migrations; a new automated test
+E-Learning course materials UI, Study Zone, a new Stuwart API; two additive database migrations; a new automated test
 suite (the repository had none).
 
 What this does **not** establish is listed in section J — most importantly: no real Paystack transaction, real email,
@@ -65,7 +65,7 @@ defect is visible in the code itself; "Hypothesis" means it is consistent with t
 | Email | Resend (`services/marketplace/notifications/email.service.ts`), fire-and-forget, no persistence/retry |
 | In-app notifications | `Notification` table + SSE (`notification.service.ts`) |
 | Files | Cloudinary (marketplace images); Supabase Storage private bucket (course materials) |
-| AI | **None.** Study Zone's "Stewart" is an explicit mock (`stewart.ts`): no provider, no key in `.env`, no extraction/RAG |
+| AI | **None.** Study Zone's "Stuwart" is an explicit mock (`stewart.ts`): no provider, no key in `.env`, no extraction/RAG |
 | Tests | **No test framework or test files exist.** `package.json` has no `test` script |
 | Crons | Vercel Cron; `vercel.json` registers only two **daily** jobs (history shows the hourly ones were removed in `1f34fa1`, consistent with a Hobby-plan limit) |
 
@@ -139,7 +139,7 @@ defect is visible in the code itself; "Hypothesis" means it is consistent with t
 
 #### 11. AI Study Zone document upload
 
-- **Confirmed:** Stewart is a mock — there is no AI provider, API key, extraction pipeline, RAG, or vector store. A real model integration is therefore a new dependency, not an extension (decision recorded in section G).
+- **Confirmed:** Stuwart is a mock — there is no AI provider, API key, extraction pipeline, RAG, or vector store. A real model integration is therefore a new dependency, not an extension (decision recorded in section G).
 - **Found:** the browser already has zero-dependency DOCX/PPTX readers (`study-zone/_components/office/*`) built on a small ZIP reader that only needs `DecompressionStream`, which Node 24 also provides.
 
 ---
@@ -229,13 +229,13 @@ Paths are repository-relative. "New" = created in this work.
 | File | Change |
 |---|---|
 | `src/app/e-learning/student/study-zone/_components/study-selection.ts` (new) | `initialWeek`, `resolveSelection`, `documentOptionLabels` |
-| `…/study-zone/_components/StudyWorkspace.tsx` | Document `<select>` per week (replaces pill buttons), refresh control, "no longer available" notice, passes ids to Stewart |
+| `…/study-zone/_components/StudyWorkspace.tsx` | Document `<select>` per week (replaces pill buttons), refresh control, "no longer available" notice, passes ids to Stuwart |
 | `…/study-zone/_components/WeekTabs.tsx` | "+N more" on a week with several documents |
 | `src/app/e-learning/faculty/my-subjects/[offeringId]/UploadMaterial.tsx`, `page.tsx` | Week is kept between uploads; shows how many documents the week has; per-week "Add (another) document" link (`?week=N`) |
 | `src/lib/stewart/config.ts` (new) | Supported types and limits, shared client/server |
 | `services/e-learning/student/stewart/{client,extract-text,attachment-token,upload-attachment,chat,rate-limit}.ts` (new) | See section G |
 | `src/app/api/e-learning/stewart/{shared.ts,attachments/route.ts,chat/route.ts}` (new) | See section E |
-| `…/study-zone/_components/stewart.ts`, `StewartPanel.tsx` | Mock replaced by a real client; upload control, attachment chip, states |
+| `…/study-zone/_components/stewart.ts`, `StuwartPanel.tsx` | Mock replaced by a real client; upload control, attachment chip, states |
 | `package.json`, `package-lock.json` | Dependency `@anthropic-ai/sdk` `^0.133.0` |
 
 ### C.6 Tests and tooling
@@ -442,9 +442,9 @@ will now show up as `EmailDelivery.status = FAILED` with the provider's reason i
   to the first document with a notice; the refresh button re-reads the list without resetting the week or the chat.
   The existing PDF/PowerPoint/Word viewers are reused unchanged, including their loading and error-with-retry states.
 
-### G.2 Stewart document upload
+### G.2 Stuwart document upload
 
-Stewart had no backend, so one was added. Provider: the Claude API through `@anthropic-ai/sdk`, model
+Stuwart had no backend, so one was added. Provider: the Claude API through `@anthropic-ai/sdk`, model
 `claude-opus-5-5` by default (configurable).
 
 ```text
@@ -468,14 +468,14 @@ question ──▶ POST /stewart/chat { courseId, weekNumber, documentId, messag
   4,000 characters per student message; answers at 4,096 output tokens.
 - **Access control:** students only; the course is re-checked on every request; another student's token is rejected;
   the browser never receives a file id, storage URL, or key; the Supabase service-role key is not involved.
-- **Untrusted content:** the system prompt states attached text is study material, not instructions. Stewart has no
+- **Untrusted content:** the system prompt states attached text is study material, not instructions. Stuwart has no
   tools and no other data in context, so injected text has nothing to act on.
 - **Failure handling:** each of unsupported type, too large, wrong contents, no readable text, damaged archive,
   provider error, rate limit, expired attachment, and "not configured" returns a specific message; nothing is stored
   when validation or extraction fails.
 - **Limits and limitations:** 4 MB (the upload passes through a serverless function); one attachment per chat
   session; extraction skips images, charts, headers/footers, footnotes; a scanned-image Word/PowerPoint file is
-  reported as unreadable; Stewart does **not** read the course document open in the viewer unless the student
+  reported as unreadable; Stuwart does **not** read the course document open in the viewer unless the student
   attaches it; conversations are not persisted; replies are not streamed; rate limiting is in-memory per instance.
 - **Data handling to be aware of:** attached documents are sent to and stored by the AI provider for up to 6 hours
   (deleted earlier when the student removes them or leaves the page, best-effort).
@@ -515,7 +515,7 @@ Supabase Storage, and the Claude API are fakes** in every automated test.
 What the real-browser run measured, at 375 / 768 / 1280 px on 12 Marketplace pages: the "Back to Marketplace" link is
 entirely below the navbar and is the topmost element at its own position, and the page has no horizontal overflow
 (72 checks); plus the drop-off panel, vendor schedule, newest-first order list, date chips, document dropdown and
-switching, and the Stewart upload control (14 checks). It found one defect in new code — a 2px overflow from the
+switching, and the Stuwart upload control (14 checks). It found one defect in new code — a 2px overflow from the
 drop-off button on a phone — which was fixed and re-verified.
 
 One harmless log line appears during `npm test` (`[email-outbox] delivery of … threw … Response from the Engine was
@@ -542,8 +542,8 @@ Names only. No value from `.env` was read into this document or changed.
 | `RESEND_API_KEY`, `MARKETPLACE_EMAIL_FROM`, `ADMIN_EMAIL` | Existing | Unchanged |
 | `SUPPORT_CONTACT` | **New, optional** | Email or https URL shown in the blocked email; falls back to `ADMIN_EMAIL` |
 | `APP_BASE_URL` | **New, optional** | Origin for links in emails; falls back to `NEXTAUTH_URL` |
-| `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | Existing | Also signs Stewart attachment handles / builds email links |
-| `ANTHROPIC_API_KEY` | **New, required for Stewart** | Without it Stewart answers "isn't set up yet" (503); everything else works |
+| `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | Existing | Also signs Stuwart attachment handles / builds email links |
+| `ANTHROPIC_API_KEY` | **New, required for Stuwart** | Without it Stuwart answers "isn't set up yet" (503); everything else works |
 | `STEWART_MODEL`, `STEWART_EFFORT`, `STEWART_REFUSAL_FALLBACK` | New, optional | Model id (default `claude-opus-5-5`), `low`/`medium`/`high` (default `low`), `off` to disable the refusal fallback |
 | `AI_SERVICE_URL`, `AI_SERVICE_API_KEY` | **New (2026-10-16), optional** | The AI ingestion microservice. When both are set, course materials are sent for chunking and embedding on upload and removed on delete. When unset, nothing is sent. See [`docs/elearning/systems/ai-ingestion-contract.md`](elearning/systems/ai-ingestion-contract.md). Requires `npm run db:elearning:push` (new `CourseMaterial.aiIngest*` columns). |
 | `AI_SERVICE_CALLBACK_SECRET` | **New (2026-10-16)**, required with the above | Bearer secret the microservice sends to `POST /api/webhooks/ai-ingest` |
@@ -552,7 +552,7 @@ Names only. No value from `.env` was read into this document or changed.
 
 1. Back up the Marketplace database.
 2. `npx prisma migrate deploy` (required, before the code).
-3. Set `ANTHROPIC_API_KEY` if Stewart should work; optionally `SUPPORT_CONTACT`.
+3. Set `ANTHROPIC_API_KEY` if Stuwart should work; optionally `SUPPORT_CONTACT`.
 4. Deploy. `npm install` picks up `@anthropic-ai/sdk`.
 5. In the Paystack dashboard confirm the webhook URL is `https://<domain>/api/webhooks/paystack` for the mode in use.
 6. Optional but recommended: schedule `GET /api/cron/checkout-reconcile` and `GET /api/cron/email-retry` every
@@ -571,7 +571,7 @@ Names only. No value from `.env` was read into this document or changed.
 - The production 502. The code paths that produced it are fixed and tested, and the key-mode mismatch is a strong
   explanation, but there were no production logs to confirm it.
 - Every external integration: Paystack, Resend, Supabase Storage, and the Claude API were faked in tests. In
-  particular the Stewart request (model id, `fallbacks: "default"` with its beta header, Files API upload with
+  particular the Stuwart request (model id, `fallbacks: "default"` with its beta header, Files API upload with
   expiry) type-checks against SDK 0.133.0 but has never been sent to the real API. If the API rejects the fallback
   parameter, set `STEWART_REFUSAL_FALLBACK=off`.
 - Migrations are unapplied outside the local test database.
@@ -586,7 +586,7 @@ Names only. No value from `.env` was read into this document or changed.
   orders) and can still edit products.
 - Legacy pending orders are assumed to have had stock deducted at initialize (true for all code since the Postgres
   migration), so releasing them restores stock.
-- Stewart uses the Claude API. There was no existing provider to reuse.
+- Stuwart uses the Claude API. There was no existing provider to reuse.
 
 **Incomplete or limited**
 
@@ -594,9 +594,9 @@ Names only. No value from `.env` was read into this document or changed.
   codebase still has no real Paystack refund call (pre-existing gap) — a paid-but-unfulfillable checkout must be
   refunded manually in the Paystack dashboard.
 - Reservation expiry and email retry depend on traffic unless the cron routes are scheduled.
-- Stewart's rate limit is per server instance; it does not cap total spend. Attached documents are stored with the
+- Stuwart's rate limit is per server instance; it does not cap total spend. Attached documents are stored with the
   provider for up to 6 hours — check this against your data-handling policy before enabling.
-- Stewart cannot read the course document open in the viewer; the student must attach it.
+- Stuwart cannot read the course document open in the viewer; the student must attach it.
 - Per-date capacity is a vendor feature only (section E.4).
 - The admin Vendor Delivery bookings list still shows `PENDING_PAYMENT`/`CANCELLED` bookings (labelled with their
   status, and filterable) — kept as the reconciliation view.
@@ -666,6 +666,6 @@ Status key: **T** implemented and tested · **V** implemented, not fully verifie
   approval notifications linking to the Business route; navbar offset and content padding on the same element.
 - Verified by: 126 automated tests against a real local Postgres with faked providers, an 86-check real-browser run,
   a clean type check, lint at the baseline, and a passing production build.
-- Before this is live you need to: apply the two migrations, set `ANTHROPIC_API_KEY` if Stewart should answer,
+- Before this is live you need to: apply the two migrations, set `ANTHROPIC_API_KEY` if Stuwart should answer,
   confirm the Paystack webhook URL, and make one real test-mode payment and one cancelled payment to confirm the
   behaviour against Paystack itself.

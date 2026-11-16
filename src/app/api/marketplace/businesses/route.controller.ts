@@ -4,7 +4,7 @@
 // services/marketplace/business/{list-user-businesses,create-business}.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { listUserBusinesses } from "@/services/marketplace/business/list-user-businesses";
 import { createBusiness as createBusinessAction } from "@/services/marketplace/business/create-business";
 import type { BusinessFormValues } from "@/types/business";

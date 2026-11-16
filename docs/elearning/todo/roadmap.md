@@ -12,7 +12,7 @@ Last verified 2026-09-14. Phase numbers match §44.
 | 4 — Level Adviser | ✅ Done | Registrations view, Approvals (approve/reject), department+level scoped. |
 | 5 — HOD | ✅ Done | Lecturer/Level-Adviser assignment (+ history), registration + result-upload approvals, results by level/course/student. |
 | 5b — Course documents | ✅ Done | Lecturer upload → Supabase Storage, secure signed access; see [`../systems/course-materials-system.md`](../systems/course-materials-system.md). |
-| Study Zone (frontend) | ✅ Done | Course picker, week tabs, document viewer (PDF in the browser's viewer; PPTX slides and DOCX pages rendered in-panel from the files themselves, no new dependencies), collapsible sidebar, Stewart chat UI. **Stewart is a mock** — AI integration and saved conversations are not built. See [`../systems/study-zone-system.md`](../systems/study-zone-system.md). |
+| Study Zone (frontend) | ✅ Done | Course picker, week tabs, document viewer (PDF in the browser's viewer; PPTX slides and DOCX pages rendered in-panel from the files themselves, no new dependencies), collapsible sidebar, Stuwart chat UI. **Stuwart is a mock** — AI integration and saved conversations are not built. See [`../systems/study-zone-system.md`](../systems/study-zone-system.md). |
 | 6 — DAPU | ✅ Done | Session/semester admin, 5 time-frame types, timetable review/approve, course catalog. |
 | Service layer | ✅ Done | All logic moved to `services/e-learning/<tier>/`; see [`../services.md`](../services.md). Open item: `dapu/offerings.ts` is unused and needs a keep/delete decision. |
 | 7 — Dean/VC | 🚫 Deliberately not started | See [`../decisions/dean-vc-not-implemented.md`](../decisions/dean-vc-not-implemented.md) — waiting on explicit requirements, per §29/§44. |

@@ -4,7 +4,7 @@
 // services/marketplace/product/{list-business-products,create-product}.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { requireOwnedBusinessOnly } from "@/services/marketplace/business/business-ownership.service";
 import { listBusinessProducts } from "@/services/marketplace/product/list-business-products";
 import { createProduct as createProductAction } from "@/services/marketplace/product/create-product";

@@ -1,7 +1,7 @@
 // src/app/api/marketplace/notifications/stream/route.ts
 //
 // GET -> one Server-Sent-Events connection for the signed-in user. This is
-// the ONLY SSE endpoint in the app — src/app/studashboard/marketplace/_components/NotificationProvider.tsx
+// the ONLY SSE endpoint in the app — src/app/_components/NotificationProvider.tsx
 // opens exactly one EventSource to it per session and shares the result
 // with every marketplace component (bell, dropdown, etc) via context.
 //
@@ -28,8 +28,8 @@
 // which run on the edge runtime.
 
 import { NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getActiveSession } from "@/lib/marketplace-session";
+import { serviceErrorResponse } from "@/lib/controller-helpers";
 import { prisma } from "@/lib/prisma";
 import { subscribe } from "@/services/marketplace/notifications/sse-broadcaster";
 
@@ -66,7 +66,9 @@ interface NotificationPayload {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  let session;
+  try { session = await getActiveSession(); }
+  catch (error) { return serviceErrorResponse(error); }
   if (!session?.user?.id) {
     return new Response("Not signed in.", { status: 401 });
   }

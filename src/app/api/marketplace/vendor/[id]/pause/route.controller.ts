@@ -4,7 +4,7 @@
 // services/marketplace/vendor/pause-vendor.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
 import { pauseVendor, unpauseVendor } from "@/services/marketplace/vendor/pause-vendor";
 
 export async function pauseVendorHandler(request: NextRequest, businessId: string): Promise<NextResponse> {

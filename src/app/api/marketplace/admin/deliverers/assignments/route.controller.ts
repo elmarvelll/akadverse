@@ -4,8 +4,8 @@
 // services/marketplace/delivery/list-deliverer-assignments.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { listDelivererAssignments as listDelivererAssignmentsAction } from "@/services/marketplace/delivery/list-deliverer-assignments";
 
 export async function listDelivererAssignments(): Promise<NextResponse> {

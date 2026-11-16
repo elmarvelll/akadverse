@@ -14,7 +14,7 @@ export interface ProductBrowseDetail {
   stock: number;
   secureUrl: string | null;
   // Gallery images beyond the primary — see
-  // src/app/studashboard/marketplace/_components/ProductDetailModal.tsx's
+  // src/app/_components/ProductDetailModal.tsx's
   // thumbnail strip. Empty when the product only has the single legacy
   // image.
   images: { secureUrl: string; position: number }[];
@@ -43,4 +43,14 @@ export interface FeaturedBusiness {
   industry: string;
   secureUrl: string | null;
   productCount: number;
+}
+
+// GET /api/marketplace/vendor/featured — the "School Vendors" lists on Home and Explore.
+export interface FeaturedVendor {
+  id: string;
+  name: string;
+  vendorCategory: string | null;
+  secureUrl: string | null;
+  location: string | null;
+  itemCount: number;
 }

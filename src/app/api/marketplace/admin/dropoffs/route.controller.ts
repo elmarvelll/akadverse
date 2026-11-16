@@ -4,8 +4,8 @@
 // services/marketplace/delivery/list-pending-dropoffs.ts.
 
 import { NextResponse } from "next/server";
-import { runController } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { listPendingDropoffs as listPendingDropoffsAction } from "@/services/marketplace/delivery/list-pending-dropoffs";
 
 export async function listPendingDropoffs(): Promise<NextResponse> {

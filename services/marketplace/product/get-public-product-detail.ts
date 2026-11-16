@@ -7,6 +7,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "@/lib/service-error";
+import { ServiceError } from "@/lib/service-error";
 import { getEstimatedDeliveryForBusiness, formatEstimatedDelivery } from "@/services/marketplace/delivery/estimated-delivery.service";
 import { productVariantSelect, toVariantSummary } from "@/services/marketplace/product/shared/product-variants";
 import { productImageSelect, toImageRows } from "@/services/marketplace/product/shared/product-images";
@@ -55,7 +56,10 @@ export async function getPublicProductDetail(productId: string) {
   const isVendor = business.type === "SCHOOL_VENDOR";
   const { date, window } = isVendor
     ? { date: "", window: "Choose a delivery slot at checkout" }
-    : formatEstimatedDelivery(await getEstimatedDeliveryForBusiness(product.businessId));
+    : await getEstimatedDeliveryForBusiness(product.businessId).then(formatEstimatedDelivery).catch((err) => {
+        if (err instanceof ServiceError && err.status === 409) return { date: "No delivery slot available", window: "Please check again later" };
+        throw err;
+      });
 
   return {
     ...rest,

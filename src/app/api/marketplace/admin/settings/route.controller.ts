@@ -4,8 +4,8 @@
 // services/marketplace/admin/shared/marketplace-settings.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody } from "@/lib/controller-helpers";
-import { requireAdmin } from "@/lib/admin";
+import { runController, readJsonBody } from "@/lib/marketplace-controller-helpers";
+import { requireAdmin } from "@/lib/marketplace-admin";
 import { getMarketplaceSettings, updateMarketplaceSettings } from "@/services/marketplace/admin/shared/marketplace-settings";
 
 interface UpdateSettingsBody {

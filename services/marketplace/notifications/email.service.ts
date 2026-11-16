@@ -225,6 +225,70 @@ export function buyerDeliveryOtpEmail(params: { orderId: string; otp: string; ex
   };
 }
 
+// Vendor Market: the student's handover code for one delivery booking, sent
+// once after payment is verified (services/marketplace/vendor-delivery/
+// handover/handover-code.ts). Sent directly, never through the outbox, so the
+// code is not persisted in EmailDelivery; the subject carries no digits.
+export function studentVendorDeliveryCodeEmail(params: { code: string; deliveryDate: string; slotLabel: string; reissued?: boolean }) {
+  return {
+    type: "student_vendor_delivery_code",
+    subject: params.reissued ? "Your new delivery code" : "Your order is confirmed — delivery code inside",
+    html: layout(params.reissued ? "Your new delivery code" : "Order confirmed", `
+      <p>Your Vendor Market order will be delivered on <strong>${escapeHtml(params.deliveryDate)}</strong>, <strong>${escapeHtml(params.slotLabel)}</strong>.</p>
+      <p>Your delivery code is:</p>
+      <p style="font-size:28px; font-weight:700; letter-spacing:4px;">${escapeHtml(params.code)}</p>
+      <p><strong>Only give this code to the deliverer after you have received and checked your order.</strong> The deliverer can see only part of it and needs all six digits from you.</p>
+      ${params.reissued ? "<p>Any earlier code for this delivery no longer works.</p>" : ""}
+      <p>You can also see it any time in <a href="${appUrl("/studashboard/marketplace/orders")}">My Orders</a>.</p>
+    `),
+  };
+}
+
+export interface DeliveryEmailRecipient {
+  orderId: string;
+  fullName: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+function recipientSection(recipients: DeliveryEmailRecipient[]): string {
+  return `<h2>Recipient &amp; Delivery Location</h2>${recipients.map((r) => `
+    <p><strong>Order:</strong> ${escapeHtml(r.orderId)}<br>
+    <strong>Recipient:</strong> ${escapeHtml(r.fullName)}<br>
+    <strong>Delivery address / location details:</strong> ${escapeHtml(r.address || "Not provided — contact the customer before delivery")}<br>
+    <strong>Phone:</strong> ${escapeHtml(r.phone || "Not provided")}<br>
+    <strong>Email:</strong> ${escapeHtml(r.email || "Not provided")}</p>`).join("")}`;
+}
+
+// Pre-slot briefing for an assigned deliverer (services/marketplace/
+// vendor-delivery/slot-briefing.ts). Counts and pickup points only — no
+// student contact details or codes; those are in the authenticated manifest.
+export function delivererSlotBriefingEmail(params: {
+  delivererName: string;
+  deliveryDate: string;
+  slotLabel: string;
+  arriveBy: string;
+  meetingPoint: string | null;
+  studentDeliveries: number;
+  vendorPickups: { name: string; location: string | null }[];
+  recipients: DeliveryEmailRecipient[];
+}) {
+  const pickups = params.vendorPickups.map((v) => `<li>${escapeHtml(v.name)}${v.location ? ` — ${escapeHtml(v.location)}` : ""}</li>`).join("");
+  return {
+    type: "deliverer_slot_briefing",
+    subject: `Your deliveries for ${params.slotLabel}`,
+    html: layout("Upcoming delivery slot", `
+      <p>Hi ${escapeHtml(params.delivererName)}, you're assigned to <strong>${escapeHtml(params.deliveryDate)}, ${escapeHtml(params.slotLabel)}</strong>.</p>
+      <p><strong>${params.studentDeliveries}</strong> student deliver${params.studentDeliveries === 1 ? "y" : "ies"}, from <strong>${params.vendorPickups.length}</strong> vendor pickup${params.vendorPickups.length === 1 ? "" : "s"}:</p>
+      <ul>${pickups}</ul>
+      ${recipientSection(params.recipients)}
+      <p>Be at <strong>${escapeHtml(params.meetingPoint ?? "the meeting point")}</strong> by <strong>${escapeHtml(params.arriveBy)}</strong>. Collect each order from its vendor — there's nothing to confirm at the vendor. When you hand an order to the student, enter the six-digit code they give you on your Delivery Dashboard (it's saved on your phone and sent automatically if you're offline). Confirm every delivery by the end of the day.</p>
+      <p>Your delivery card — addresses, items and the partial delivery codes — is in your <a href="${appUrl("/studashboard/marketplace/deliverer")}">deliverer dashboard</a>.</p>
+    `),
+  };
+}
+
 // Seller -> Coordinator drop-off OTP — see
 // services/marketplace/order/initiate-order-dropoff.ts. Sent immediately
 // on issuance (not via a reminder cron) since the 30-minute window is too
@@ -246,12 +310,13 @@ export function sellerDropoffOtpEmail(params: { businessName: string; orderId: s
 // services/marketplace/delivery/assign-delivery.ts. Deliberately never
 // includes the pickupOtp digits themselves: the deliverer must receive the
 // code verbally from the coordinator in person, not read it in-app.
-export function delivererPickupAssignedEmail(params: { delivererName: string; businessName: string; deadline: string }) {
+export function delivererPickupAssignedEmail(params: { delivererName: string; businessName: string; deadline: string; recipients?: DeliveryEmailRecipient[] }) {
   return {
     type: "deliverer_pickup_assigned",
     subject: "New pickup assigned",
     html: layout("New pickup assigned", `
       <p>Hi ${params.delivererName}, you've been assigned to pick up an order from <strong>${params.businessName}</strong>.</p>
+      ${recipientSection(params.recipients ?? [])}
       <p>Ask the Delivery Coordinator for your pickup code when you arrive.</p>
       <p>This pickup must be confirmed by <strong>${params.deadline}</strong>.</p>
     `),
@@ -437,6 +502,28 @@ export function businessBlockedEmail(params: { businessName: string; reason: str
       <p><strong>Reason:</strong> ${escapeHtml(params.reason)}</p>
       <p>While it is blocked, your storefront and products are hidden from buyers and you cannot receive new orders. Orders that were already paid for are not affected — please continue to fulfil them. Your products, order history, and payout records are kept.</p>
       <p>${support ? `If you believe this is a mistake or would like clarification, contact support at ${support}.` : "If you believe this is a mistake or would like clarification, please contact AkadVerse support."}</p>
+    `),
+  };
+}
+
+// Sent once to a user when an admin blocks their ACCOUNT (services/marketplace/admin/block-user.ts, via the outbox).
+// Carries only the reason the admin entered — no admin identity or internal notes — and points to support; there is
+// no formal appeal process, so none is described.
+export function accountBlockedEmail(params: { firstName: string; reason: string; supportContact: string | null }) {
+  const support = params.supportContact
+    ? /^https?:\/\//i.test(params.supportContact)
+      ? `<a href="${escapeHtml(params.supportContact)}">${escapeHtml(params.supportContact)}</a>`
+      : `<a href="mailto:${escapeHtml(params.supportContact)}">${escapeHtml(params.supportContact)}</a>`
+    : null;
+  return {
+    type: "account_blocked",
+    subject: "Your AkadVerse Marketplace account has been blocked",
+    html: layout("Account blocked", `
+      <p>Hi ${escapeHtml(params.firstName)},</p>
+      <p>Your AkadVerse Marketplace access has been blocked by an administrator. Your AkadVerse sign-in and access to other areas are unchanged.</p>
+      <p><strong>Reason:</strong> ${escapeHtml(params.reason)}</p>
+      <p>While it is blocked you can't buy or sell in the Marketplace. Your account data and order history are kept.</p>
+      <p>${support ? `If you believe this is a mistake or would like clarification, contact support at ${support}.` : "If you believe this is a mistake or would like clarification, please contact AkadVerse Marketplace support."}</p>
     `),
   };
 }

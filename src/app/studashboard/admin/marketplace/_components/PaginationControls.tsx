@@ -1,4 +1,4 @@
-// src/app/studashboard/admin/marketplace/_components/PaginationControls.tsx
+// src/app/admin/_components/PaginationControls.tsx
 //
 // Shared prev/next pager for every admin list (users, businesses,
 // disputes, events, fines, reports) — offset-based pagination is new to
@@ -25,7 +25,7 @@ export default function PaginationControls({ page, totalPages, total, onPageChan
           type="button"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold disabled:opacity-40 hover:bg-gray-50 transition"
+          className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold disabled:opacity-40 hover:bg-gray-50 transition"
         >
           Previous
         </button>
@@ -33,7 +33,7 @@ export default function PaginationControls({ page, totalPages, total, onPageChan
           type="button"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-          className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold disabled:opacity-40 hover:bg-gray-50 transition"
+          className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold disabled:opacity-40 hover:bg-gray-50 transition"
         >
           Next
         </button>

@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/_components/BusinessApprovalGate.tsx
+// src/app/business/_components/BusinessApprovalGate.tsx
 //
 // Wraps every tab of the business dashboard (Profile/Products/Orders/
 // Analytics — see ../[id]/layout.tsx). A business that isn't APPROVED yet
@@ -68,7 +68,7 @@ export default function BusinessApprovalGate({ id, children }: { id: string; chi
   if (state === "loading") {
     return (
       <div className="flex-1 flex justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
+        <Loader2 size={28} className="animate-spin text-gray-500" />
       </div>
     );
   }
@@ -76,7 +76,7 @@ export default function BusinessApprovalGate({ id, children }: { id: string; chi
   if (state === "not-found" || state === "error") {
     return (
       <div className="flex-1 flex flex-col items-center text-center py-24">
-        <AlertCircle size={28} className="text-gray-400 mb-3" />
+        <AlertCircle size={28} className="text-gray-500 mb-3" />
         <p className="text-gray-500">
           {state === "not-found" ? "This business doesn't exist, or isn't yours." : "Couldn't load this business. Please try again."}
         </p>
@@ -87,7 +87,7 @@ export default function BusinessApprovalGate({ id, children }: { id: string; chi
   if (state === "pending") {
     return (
       <div className="flex-1 max-w-lg mx-auto text-center py-24 px-4">
-        <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-5">
+        <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center mx-auto mb-5">
           <Clock size={26} />
         </div>
         <h1 className="text-xl font-bold text-gray-900 mb-2">{business?.name} is pending review</h1>

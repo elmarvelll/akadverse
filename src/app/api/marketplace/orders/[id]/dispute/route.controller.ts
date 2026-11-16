@@ -4,7 +4,7 @@
 // See services/marketplace/order/dispute-order.ts.
 
 import { NextRequest, NextResponse } from "next/server";
-import { runController, readJsonBody, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, readJsonBody, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { badRequest } from "@/lib/service-error";
 import { disputeOrder } from "@/services/marketplace/order/dispute-order";
 

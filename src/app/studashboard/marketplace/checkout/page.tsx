@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/checkout/page.tsx
+// src/app/checkout/page.tsx
 //
 // Order preview (items, editable delivery location, price breakdown) +
 // "Proceed to Payment", which opens a Paystack popup
@@ -15,7 +15,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { isAxiosError } from "axios";
@@ -25,7 +25,7 @@ import { confirmPayment, openPaystackCheckout, reportCancelled } from "./_compon
 import type { CheckoutSummary, InitializeCheckoutResponse } from "@/types/checkout";
 import MarketplacePageShell from "@/app/studashboard/marketplace/_components/MarketplacePageShell";
 
-const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 });
+const nairaFormatter = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 2 });
 
 type PageStatus = "loading" | "ready" | "empty" | "error" | "paying" | "verifying" | "success" | "payment-error";
 
@@ -35,6 +35,8 @@ export default function CheckoutPage() {
   const [location, setLocation] = useState("");
   const [error, setError] = useState("");
   // Neutral (non-error) feedback, e.g. after the buyer closes the payment popup.
+  const requestVersion = useRef(0);
+  const [pricingLoading, setPricingLoading] = useState(false);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -58,6 +60,15 @@ export default function CheckoutPage() {
     };
   }, []);
 
+  const selections = Object.fromEntries((summary?.businesses ?? []).filter(g=>g.selectedSlotId).map(g=>[g.businessId,g.selectedSlotId!]));
+  const refreshPricing = async (next = selections) => {
+    const version = ++requestVersion.current;
+    setPricingLoading(true);
+    try { const res = await api.get<CheckoutSummary>("/marketplace/checkout/summary", {params:{selections:JSON.stringify(next)}}); if(version===requestVersion.current){setSummary(res.data);setError("");} }
+    catch { if(version===requestVersion.current){setError("Delivery pricing is unavailable. Please retry.");setSummary(s=>s?{...s,available:false}:s);} }
+    finally {if(version===requestVersion.current)setPricingLoading(false);}
+  };
+
   const handleProceedToPayment = async () => {
     if (!location.trim()) {
       setError("Please add a delivery location.");
@@ -69,7 +80,7 @@ export default function CheckoutPage() {
     setStatus("paying");
 
     try {
-      const res = await api.post<InitializeCheckoutResponse>("/marketplace/checkout/initialize", { location });
+      const res = await api.post<InitializeCheckoutResponse>("/marketplace/checkout/initialize", { location, selections, quoteToken: summary?.quoteToken });
       const init = res.data;
 
       await openPaystackCheckout(init, (outcome) => {
@@ -80,6 +91,10 @@ export default function CheckoutPage() {
       const message =
         (isAxiosError<{ error?: string }>(err) && err.response?.data?.error) ||
         (err instanceof Error ? err.message : "Couldn't start payment. Please try again.");
+      if (isAxiosError(err) && err.response?.status === 409) {
+        await refreshPricing();
+        setNotice("Checkout changed. Review the refreshed total, then click Proceed to Payment to acknowledge it.");
+      }
       setError(message);
       setStatus("ready");
     }
@@ -124,20 +139,20 @@ export default function CheckoutPage() {
 
         {status === "loading" && (
           <div className="flex justify-center py-24">
-            <Loader2 size={28} className="animate-spin text-gray-400" />
+            <Loader2 size={28} className="animate-spin text-gray-500" />
           </div>
         )}
 
         {status === "error" && (
           <div className="flex flex-col items-center text-center py-24">
-            <AlertCircle size={28} className="text-gray-400 mb-3" />
+            <AlertCircle size={28} className="text-gray-500 mb-3" />
             <p className="text-gray-500">Couldn&apos;t load your checkout. Please try again.</p>
           </div>
         )}
 
         {status === "empty" && (
           <div className="flex flex-col items-center text-center py-24 bg-white rounded-2xl border border-gray-100">
-            <ShoppingBag size={28} className="text-gray-300 mb-3" />
+            <ShoppingBag size={28} className="text-gray-400 mb-3" />
             <p className="text-gray-500 mb-4">Your cart is empty.</p>
             <Link href="/studashboard/marketplace" className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition">
               Browse the marketplace
@@ -147,14 +162,14 @@ export default function CheckoutPage() {
 
         {status === "success" && (
           <div className="text-center bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-            <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto mb-5">
+            <div className="w-14 h-14 rounded-full bg-green-50 text-green-700 flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 size={28} />
             </div>
             <h1 className="text-xl font-bold text-gray-900 mb-2">Order placed!</h1>
             <p className="text-sm text-gray-500 mb-8">Your payment was confirmed and your order is on its way to the seller.</p>
             <Link
               href="/studashboard/marketplace"
-              className="block w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full transition"
+              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition"
             >
               Back to Marketplace
             </Link>
@@ -175,15 +190,15 @@ export default function CheckoutPage() {
                       {item.image ? (
                         <Image src={item.image} alt={item.productName} fill sizes="56px" className="object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px]">No image</div>
+                        <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px]">No image</div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{item.productName}</p>
                       <p className="text-xs text-gray-500">by {item.sellerName}</p>
-                      {item.variantName && <p className="text-xs text-gray-400">{item.variantName}</p>}
+                      {item.variantName && <p className="text-xs text-gray-500">{item.variantName}</p>}
                       <p className="text-xs text-gray-500 mt-0.5">Qty {item.quantity}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         Est. delivery: {item.estimatedDeliveryDate} · {item.deliveryWindow}
                       </p>
                     </div>
@@ -197,7 +212,7 @@ export default function CheckoutPage() {
 
             <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
               <label htmlFor="location" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <MapPin size={16} className="text-gray-400" />
+                <MapPin size={16} className="text-gray-500" />
                 Delivery location
               </label>
               <input
@@ -207,14 +222,24 @@ export default function CheckoutPage() {
                 onChange={(e) => setLocation(e.target.value)}
                 disabled={status === "paying" || status === "verifying"}
                 placeholder="e.g. Block C, Female Hostel"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
+                className="w-full px-4 py-3 border border-gray-400 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-60"
               />
             </section>
 
-            <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 space-y-2 text-sm">
+            <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 space-y-3">
+              <h2 className="font-semibold">Delivery ranges</h2>
+              {summary.businesses.map(g=><label className="block" key={g.businessId}>{g.businessName}<select aria-label={`Delivery range for ${g.businessName}`} className="block w-full border rounded-lg p-2" value={g.selectedSlotId??""} disabled={pricingLoading||status!=="ready"} onChange={e=>refreshPricing({...selections,[g.businessId]:e.target.value})}>
+              {!g.options.length&&<option value="">Delivery pricing unavailable</option>}{g.options.map(o=><option key={o.slotId} value={o.slotId}>{o.date.slice(0,10)} · {o.label} · ₦{(o.feeKobo/100).toLocaleString("en-NG")}</option>)}</select></label>)}
+              {!summary.available&&<p role="alert">Delivery pricing is unavailable for one or more businesses. Payment is disabled.</p>}
+              {pricingLoading&&<p role="status">Updating pricing…</p>}
+            </section>
+            <section aria-busy={pricingLoading} className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 space-y-2 text-sm">
               <div className="flex items-center justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span>₦{nairaFormatter.format(summary.subtotal)}</span>
+              </div>
+              <div className="flex items-center justify-between text-gray-600">
+                <span>Delivery fees</span><span>₦{nairaFormatter.format(summary.deliveryFee)}</span>
               </div>
               <div className="flex items-center justify-between text-gray-600">
                 <span>Service fee</span>
@@ -222,18 +247,18 @@ export default function CheckoutPage() {
               </div>
               <div className="flex items-center justify-between font-bold text-gray-900 pt-2 border-t border-gray-100">
                 <span>Total</span>
-                <span>₦{nairaFormatter.format(summary.total)}</span>
+                <span>{pricingLoading ? "Updating…" : !summary.available ? "Unavailable" : `₦${nairaFormatter.format(summary.total)}`}</span>
               </div>
             </section>
 
             {error && <div role="alert" className="text-sm p-3 rounded-lg text-red-700 bg-red-100 mb-4">{error}</div>}
-            {notice && !error && <div role="status" className="text-sm p-3 rounded-lg text-gray-700 bg-gray-100 mb-4">{notice}</div>}
+            {notice && <div role="status" className="text-sm p-3 rounded-lg text-gray-700 bg-gray-100 mb-4">{notice}</div>}
 
             <button
               type="button"
               onClick={handleProceedToPayment}
-              disabled={status === "paying" || status === "verifying"}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={pricingLoading || !summary.available || status === "paying" || status === "verifying"}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {(status === "paying" || status === "verifying") && <Loader2 size={18} className="animate-spin" />}
               {status === "verifying" ? "Confirming payment…" : status === "paying" ? "Opening payment…" : "Proceed to Payment"}

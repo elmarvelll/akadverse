@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/_components/SpotlightCard.tsx
+// src/app/_components/SpotlightCard.tsx
 //
 // Shared card for the "Top Businesses" and "Best Services" sections —
 // simpler than ProductCard/SkillCard since there's no price, just a name,
@@ -15,7 +15,7 @@ interface SpotlightCardProps {
   ordersFulfilled: number;
   // Defaults to "orders" (the original Top Businesses/Best Services
   // meaning) — School Vendors passes "items" since itemCount isn't an
-  // order count. See src/app/studashboard/marketplace/page.tsx.
+  // order count. See src/app/page.tsx.
   countLabel?: string;
 }
 
@@ -26,7 +26,7 @@ export default function SpotlightCard({ image, name, subtitle, ordersFulfilled, 
         {image ? (
           <Image src={image} alt={name} fill sizes="56px" className="object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px]">No image</div>
+          <div className="w-full h-full flex items-center justify-center text-gray-600 text-[10px]">No image</div>
         )}
       </div>
       <div className="min-w-0">

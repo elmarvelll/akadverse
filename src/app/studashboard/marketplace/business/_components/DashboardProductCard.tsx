@@ -1,4 +1,4 @@
-// src/app/studashboard/marketplace/business/_components/DashboardProductCard.tsx
+// src/app/business/_components/DashboardProductCard.tsx
 //
 // One product row on the Products tab's list — distinct from the
 // marketplace-facing ProductCard (../../_components/ProductCard.tsx),
@@ -41,7 +41,7 @@ export default function DashboardProductCard({ product, editHref, onDelete }: Da
           // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL, not worth a remotePatterns entry here
           <img src={product.secureUrl} alt={product.name} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No image</div>
+          <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">No image</div>
         )}
       </div>
       <div className="p-4 space-y-1">
@@ -56,7 +56,7 @@ export default function DashboardProductCard({ product, editHref, onDelete }: Da
         <div className="flex items-center gap-2 pt-3">
           <Link
             href={editHref}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
           >
             <Pencil size={13} />
             Update Inventory
@@ -67,7 +67,7 @@ export default function DashboardProductCard({ product, editHref, onDelete }: Da
               type="button"
               onClick={() => setConfirming(true)}
               aria-label="Delete product"
-              className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
             >
               <Trash2 size={14} />
             </button>
@@ -85,7 +85,7 @@ export default function DashboardProductCard({ product, editHref, onDelete }: Da
                 type="button"
                 onClick={() => setConfirming(false)}
                 disabled={deleting}
-                className="px-2.5 py-2 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition disabled:opacity-60"
+                className="px-2.5 py-2 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-gray-50 transition disabled:opacity-60"
               >
                 Cancel
               </button>

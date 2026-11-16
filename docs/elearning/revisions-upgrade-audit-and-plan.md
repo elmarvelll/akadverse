@@ -4,7 +4,7 @@
 
 ## Discovery and confirmed scope
 
-Searched the working tree, route tree, navigation, services, schemas and all 27 available local/remote branch references. There is no standalone Revisions route, Course mode, Random mode, persisted revision session or navigation entry. The only existing revision UI is `src/app/e-learning/student/study-zone/_components/RevisionPracticePanel.tsx`, inside `StewartPanel.tsx`. The user confirmed: **build the first standalone page here**. It will be `/e-learning/student/revisions`, alongside Study Zone in `src/app/e-learning/_components/nav-config.ts`. This is the first standalone module, not a parallel question bank.
+Searched the working tree, route tree, navigation, services, schemas and all 27 available local/remote branch references. There is no standalone Revisions route, Course mode, Random mode, persisted revision session or navigation entry. The only existing revision UI is `src/app/e-learning/student/study-zone/_components/RevisionPracticePanel.tsx`, inside `StuwartPanel.tsx`. The user confirmed: **build the first standalone page here**. It will be `/e-learning/student/revisions`, alongside Study Zone in `src/app/e-learning/_components/nav-config.ts`. This is the first standalone module, not a parallel question bank.
 
 The user delegated the compatible coverage choice. Retain the existing server-verified passed independent practice event as legacy coverage evidence. A generated explanation, open document, or AI-generated question never establishes coverage. This is an explicit compatibility interpretation; existing practice evidence is not a delivered teaching-action/lesson-run record. Versioned delivered lesson contracts remain an AI coordination dependency.
 
@@ -75,7 +75,7 @@ Both modes use one selector: due first, configurable bounded new introductions, 
 
 Present MCQ, short answer and true/false distinctly. Save answer/evaluation before showing feedback; student chooses the four recall ratings independently of correctness. Reuse published `/evaluate-practice` without adding fields: evaluation criteria are optional in current OpenAPI. Use stored criteria when available; do not invent an AI schema field. Wrong/partial/review-needed results are saved as evidence; no forced FSRS rating.
 
-Append the review and update shared card state atomically with marking the session item reviewed and signalling context refresh. Stable request keys and versions prevent duplicate/stale reviews. Context rebuild occurs through the existing worker sweep, outside the review's success path. Evidence is referenced from items/evaluations/review logs. Prepared summaries report correctness/independence/recall counts and coverage; a single correct answer never grants mastery. A definitive mastery threshold is not currently an agreed product rule; do not publish an invented academic grade. Stewart reads the prepared bounded snapshot, not full revision history. Context failure must not stop review completion.
+Append the review and update shared card state atomically with marking the session item reviewed and signalling context refresh. Stable request keys and versions prevent duplicate/stale reviews. Context rebuild occurs through the existing worker sweep, outside the review's success path. Evidence is referenced from items/evaluations/review logs. Prepared summaries report correctness/independence/recall counts and coverage; a single correct answer never grants mastery. A definitive mastery threshold is not currently an agreed product rule; do not publish an invented academic grade. Stuwart reads the prepared bounded snapshot, not full revision history. Context failure must not stop review completion.
 
 ## Incremental implementation sequence and exact locations
 
@@ -84,7 +84,7 @@ Append the review and update shared card state atomically with marking the sessi
 3. Central policy/access/selector/session/evaluation modules inside existing `services/e-learning/revision-questions/`; extend existing student review transaction and worker.
 4. Extend `/api/e-learning/revision` with additive workspace actions/queries; preserve existing actions/responses. Add admin publication action without altering existing recovery contracts.
 5. Add the confirmed first standalone page at `/e-learning/student/revisions`, shared question/session UI, sidebar entry; preserve Study Zone practice; make its review shortcut lead to Revisions rather than pretending it is the standalone workspace.
-6. Tests: registration/coverage/source/status negatives, Course/Random pool boundaries, due priority, all types, persisted resume, evaluation/ratings, shared FSRS, duplicate/concurrent submissions, context failure independence and Stewart bounded summary.
+6. Tests: registration/coverage/source/status negatives, Course/Random pool boundaries, due priority, all types, persisted resume, evaluation/ratings, shared FSRS, duplicate/concurrent submissions, context failure independence and Stuwart bounded summary.
 7. Build/regression/secret checks, migration/release report with completed/partial/pending/external distinctions.
 
 ## Risks and coordination

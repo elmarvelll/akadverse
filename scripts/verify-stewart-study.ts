@@ -45,7 +45,7 @@ async function main() {
     const errors: string[] = []; page.on("pageerror", (e: Error) => { errors.push(e.message); console.error("Browser error:", e.message); });
     await page.goto(`http://127.0.0.1:${(server.address() as { port: number }).port}`);
     await page.getByRole("heading", { name: "Circuit notes", exact: true }).waitFor({ timeout: 10000 }).catch(async (error: Error) => { console.error(await page.locator("body").innerText()); throw error; });
-    const input = page.getByRole("textbox", { name: "Ask Stewart a question" });
+    const input = page.getByRole("textbox", { name: "Ask Stuwart a question" });
     await input.fill("Unsent question");
     const add = await page.getByRole("button", { name: "Add files", exact: true }).boundingBox(); const composer = await input.boundingBox();
     assert.ok(add.y + add.height <= composer.y);
@@ -57,7 +57,7 @@ async function main() {
     await page.mouse.move(before.x + 3, before.y + 100); await page.mouse.down(); await page.mouse.move(before.x + 100, before.y + 100); await page.mouse.up();
     assert.ok(Number(await divider.getAttribute("aria-valuenow")) > 50);
     await divider.focus(); await page.keyboard.press("Home"); assert.equal(await divider.getAttribute("aria-valuenow"), "30");
-    await input.fill("Explain voltage"); await page.getByRole("button", { name: "Send message to Stewart" }).click();
+    await input.fill("Explain voltage"); await page.getByRole("button", { name: "Send message to Stuwart" }).click();
     await page.getByText("follows Ohm's law.", { exact: false }).waitFor();
     await page.screenshot({ path: "/tmp/stewart-study-mode.png" });
     await page.getByRole("button", { name: "Leave Study Mode" }).click();
@@ -70,7 +70,7 @@ async function main() {
     await page.getByRole("button", { name: "Leave Study Mode" }).click(); assert.equal(await input.inputValue(), "Keep this draft");
     await page.setViewportSize({ width: 1400, height: 900 });
     const fixture = page.getByRole("region", { name: "Lecture fixture" });
-    await fixture.getByLabel("True", { exact: true }).check(); await fixture.getByRole("button", { name: "Discuss answer with Stewart" }).click();
+    await fixture.getByLabel("True", { exact: true }).check(); await fixture.getByRole("button", { name: "Discuss answer with Stuwart" }).click();
     assert.ok((await page.locator("#answer").innerText()).includes("My answer: True"));
     assert.equal(await fixture.locator("math mfrac").count(), 1); assert.equal(await fixture.getByRole("table").count(), 1);
     await page.getByLabel("Week 1 documents").selectOption("extra"); await page.getByRole("heading", { name: "Extra notes", exact: true }).waitFor();

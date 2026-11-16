@@ -1,0 +1,50 @@
+{
+  "appliedAt": "2026-11-16T17:39:33.309Z",
+  "target": {
+    "host": "aws-1-eu-west-1.pooler.supabase.com",
+    "port": "5432",
+    "database": "/postgres"
+  },
+  "migration": "20261116_classroom_stuwart.sql",
+  "before": {
+    "columns": [],
+    "constraints": []
+  },
+  "after": {
+    "columns": [
+      {
+        "column_name": "lessonDocumentId",
+        "data_type": "text",
+        "is_nullable": "YES",
+        "column_default": null
+      },
+      {
+        "column_name": "lessonTopic",
+        "data_type": "text",
+        "is_nullable": "YES",
+        "column_default": null
+      },
+      {
+        "column_name": "lessonVersion",
+        "data_type": "integer",
+        "is_nullable": "NO",
+        "column_default": "0"
+      },
+      {
+        "column_name": "lessonWeekNumber",
+        "data_type": "integer",
+        "is_nullable": "YES",
+        "column_default": null
+      }
+    ],
+    "constraints": [
+      {
+        "conname": "ClassroomSession_lessonWeek_check",
+        "definition": "CHECK (((\"lessonWeekNumber\" IS NULL) OR ((\"lessonWeekNumber\" >= 1) AND (\"lessonWeekNumber\" <= 366))))"
+      }
+    ]
+  },
+  "generatedClientRead": "passed",
+  "transaction": "committed",
+  "dataDeleted": false
+}

@@ -5,12 +5,13 @@
 // GET handler and services/marketplace/checkout/get-checkout-summary.ts /
 // create-orders-for-checkout.ts.
 
+import type { Db } from "@/services/marketplace/order/shared/db";
 import { prisma } from "@/lib/prisma";
 import type { CartLineItem } from "@/types/cart";
 import { cartItemSelect, toCartLineItem } from "./shared/cart-mappers";
 
-export async function getCartForUser(userId: string): Promise<CartLineItem[]> {
-  const items = await prisma.cartItem.findMany({
+export async function getCartForUser(userId: string, db: Db = prisma): Promise<CartLineItem[]> {
+  const items = await db.cartItem.findMany({
     // productId is now optional on CartItem so School Vendor "Side" lines
     // (sideId set, productId null — see prisma/schema.prisma) can share
     // the table; this Business cart reader must exclude them, both because

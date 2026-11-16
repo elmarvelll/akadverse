@@ -4,7 +4,7 @@
 // services/marketplace/deliverer/get-deliverer-state.ts.
 
 import { NextResponse } from "next/server";
-import { runController, requireSessionUserId } from "@/lib/controller-helpers";
+import { runController, requireSessionUserId } from "@/lib/marketplace-controller-helpers";
 import { getDelivererState } from "@/services/marketplace/deliverer/get-deliverer-state";
 
 export async function getStatus(): Promise<NextResponse> {
