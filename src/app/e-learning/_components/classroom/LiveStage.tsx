@@ -200,8 +200,8 @@ function Stage({ isTeacher }: { isTeacher: boolean }) {
   if (!screen) {
     return (
       <>
-        {/* Keep the camera in its captured orientation for both the lecturer and students. */}
-        <VideoTrack trackRef={camera!} className="absolute inset-0 h-full w-full object-contain" />
+        {/* Mirror the camera consistently in the lecturer and student views. */}
+        <VideoTrack trackRef={camera!} className="absolute inset-0 h-full w-full -scale-x-100 object-contain" />
         <NameLabel className="bottom-3 left-3">{cameraLabel}</NameLabel>
       </>
     );
@@ -356,7 +356,7 @@ function FloatingCamera({ trackRef, label }: { trackRef: TrackReference; label: 
         drag ? "cursor-grabbing" : `cursor-grab ${CORNER_CLASS[corner]}`
       }`}
     >
-      <VideoTrack trackRef={trackRef} className="pointer-events-none h-full w-full object-cover" />
+      <VideoTrack trackRef={trackRef} className="pointer-events-none h-full w-full -scale-x-100 object-cover" />
       <NameLabel className="bottom-1.5 left-1.5">{label}</NameLabel>
     </div>
   );
