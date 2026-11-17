@@ -37,3 +37,7 @@ it("keeps destructive edits and conflict overrides behind backend confirmation",
   assert.equal(needsConfirmation("save_event", { scheduling: { allowConflicts: true } }), true);
   assert.equal(needsConfirmation("save_habit", { habit_id: "existing" }), true);
 });
+
+it("requires confirmation for every Buddy System write", () => {
+  for (const name of ["create_buddy_group", "create_buddy_request", "apply_buddy", "accept_buddy_application", "decline_buddy_application", "close_buddy_listing"]) assert.equal(needsConfirmation(name, {}), true);
+});

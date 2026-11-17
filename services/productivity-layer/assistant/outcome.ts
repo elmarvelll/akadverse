@@ -6,6 +6,9 @@ const actions: Record<string, string> = {
   replan_habit: "Rescheduled habit", save_event: "Saved event", save_category: "Saved category",
   archive_event: "Updated event archive status", set_backup: "Saved backup slot",
   miss_event: "Recorded missed event", set_timezone: "Updated timezone",
+  create_buddy_group: "Created buddy group listing", create_buddy_request: "Created buddy request",
+  apply_buddy: "Submitted buddy application", accept_buddy_application: "Accepted buddy applicant",
+  decline_buddy_application: "Declined buddy applicant", close_buddy_listing: "Closed buddy listing",
 };
 
 /** Summarize durable backend facts only; never infer success from model text or arguments. */

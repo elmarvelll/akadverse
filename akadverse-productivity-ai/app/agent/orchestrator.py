@@ -48,7 +48,7 @@ async def orchestrate(backend, provider, max_calls: int = 10) -> dict:
     step = 0
     results = []
     seen_writes = set()
-    read_names = {'get_context', 'list_tasks', 'get_task', 'list_habits', 'habit_occurrences', 'list_schedule', 'official_classes', 'task_analytics', 'schedule_analytics'}
+    read_names = {'get_context', 'list_tasks', 'get_task', 'list_habits', 'habit_occurrences', 'list_schedule', 'official_classes', 'task_analytics', 'schedule_analytics', 'list_buddies', 'get_buddy'}
     for _ in range(max_calls + 1):
         async with phase_timing(reference, 'provider.generate', step):
             content = await provider.generate(contents)

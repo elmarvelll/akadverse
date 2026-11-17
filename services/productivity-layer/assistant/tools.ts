@@ -13,12 +13,14 @@ import type { Habit } from "@/features/productivity/habits/domain";
 import { validateTool } from "./schema";
 import { assertTurn, json, lockOwner, type Scope } from "./store";
 
+import { buddyWriteTools, buddySnapshot, readBuddyTool, executeBuddyMutation } from "./buddy";
+
 type Args = Record<string, unknown>;
 type Command = { operation: string; args: unknown[] };
 export const canonical = (value: unknown): string => JSON.stringify(sort(value));
 function sort(value: unknown): unknown { if (value instanceof Date) return value.toISOString(); return Array.isArray(value) ? value.map(sort) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, sort(item)])) : value; }
 const digest = (value: unknown) => createHash("sha256").update(canonical(value)).digest("hex");
-const readTools = new Set(["get_context", "list_tasks", "get_task", "list_habits", "habit_occurrences", "list_schedule", "official_classes", "task_analytics", "schedule_analytics"]);
+const readTools = new Set(["get_context", "list_tasks", "get_task", "list_habits", "habit_occurrences", "list_schedule", "official_classes", "task_analytics", "schedule_analytics", "list_buddies", "get_buddy"]);
 export const isReadTool = (name: string) => readTools.has(name);
 function checkedRange(args: Args, max = 42) {
   const range = { start: String(args.start), end: String(args.end) };
@@ -29,6 +31,7 @@ const run = (scope: Scope, operation: string, args: unknown[] = []) => executePr
 function bounded<T>(rows: T[], limit = 50) { return { rows: rows.slice(0, limit), total: rows.length, truncated: rows.length > limit }; }
 function compactTask(task: Task) { return { id: task.id, title: task.title, description: task.description?.slice(0, 2000), priority: task.priority, dueDate: task.dueDate, dueTime: task.dueTime, scheduledSlot: task.scheduledSlot, status: task.status, source: task.source, completedAt: task.completedAt, missedAt: task.missedAt }; }
 export async function readTool(scope: Scope, name: string, args: Args): Promise<unknown> {
+  if (name === "list_buddies" || name === "get_buddy") return readBuddyTool(scope.sub, name, args);
   if (name === "get_context") {
     const context = await run(scope, "context") as { student: { timezone: string }; serverTime: string };
     return { ...context, localNow: localNow(context.student.timezone) };
@@ -85,10 +88,12 @@ export async function commandFor(scope: Scope, name: string, a: Args): Promise<C
   }
 }
 export function needsConfirmation(name: string, args: Args) {
+  if (buddyWriteTools.has(name)) return true;
   if (["update_task", "delete_task", "archive_habit", "replan_habit", "archive_event", "set_backup", "miss_event", "set_timezone", "record_habit"].includes(name)) return true;
   return name === "save_habit" && !!args.habit_id || name === "save_category" && !!args.category_id || name === "save_event" && (!!args.event_id || !!(args.scheduling as Args | undefined)?.allowConflicts);
 }
 async function targetSnapshot(tx: Prisma.TransactionClient, ownerId: string, name: string, args: Args) {
+  if (buddyWriteTools.has(name)) return buddySnapshot(tx, ownerId, name, args);
   const where = { ownerId, id: String(args.task_id || args.habit_id || args.event_id || args.category_id || "") };
   const select = { id: true, data: true, updatedAt: true } as const;
   let row: unknown;
@@ -107,6 +112,10 @@ async function targetSnapshot(tx: Prisma.TransactionClient, ownerId: string, nam
   return row;
 }
 export function resultProjection(name: string, args: Args, result: unknown) {
+  if (buddyWriteTools.has(name)) {
+    const listing = result as { id: string; message: string };
+    return { saved: true, buddy: { id: listing.id }, message: listing.message };
+  }
   if (name === "delete_task") return { saved: true, deleted: true };
   if (["record_habit", "archive_habit"].includes(name)) return { saved: true, habit: { id: args.habit_id }, applied: args };
   if (name === "replan_habit") return { saved: true, event: { id: args.event_id, slot: args.slot } };
@@ -164,7 +173,6 @@ export async function executeTool(scope: Scope, step: number, name: string, rawA
 type Execution = Awaited<ReturnType<typeof prisma.productivityAIToolExecution.findUniqueOrThrow>>;
 export async function performMutation(scope: Scope, execution: Execution, args: Args, pendingId?: string) {
   try {
-    const command = await commandFor(scope, execution.toolName, args);
     const hooks: ProductivityExecutionHooks = {
       async authorize(tx, replay) {
         await assertTurn(tx, scope);
@@ -189,7 +197,12 @@ export async function performMutation(scope: Scope, execution: Execution, args: 
         if (pendingId) await tx.productivityAIPendingAction.update({ where: { id: pendingId }, data: { status: "confirmed", resolvedAt: new Date() } });
       },
     };
-    await executeProductivityAs(scope.sub, { ...command, requestId: execution.operationKey }, hooks);
+    if (buddyWriteTools.has(execution.toolName)) {
+      await executeBuddyMutation(scope.sub, execution.toolName, args, execution.operationKey, digest([execution.toolName, args]), hooks);
+    } else {
+      const command = await commandFor(scope, execution.toolName, args);
+      await executeProductivityAs(scope.sub, { ...command, requestId: execution.operationKey }, hooks);
+    }
     const saved = await prisma.productivityAIToolExecution.findUniqueOrThrow({ where: { id: execution.id } });
     return { status: "completed", result: saved.result, execution_id: saved.id };
   } catch (error) { return recordFailure(execution.id, error); }

@@ -15,7 +15,7 @@ type View = { conversation: Conversation; messages: { id: string; sequence: numb
 const root = "/api/productivity/assistant";
 const labels: Record<string, string> = { awaiting_confirmation: "Awaiting your confirmation", completed: "Confirmed", failed: "Not completed", unknown: "Outcome unconfirmed", pending: "Not yet confirmed", cancelled: "Cancelled", processing: "Processing", interrupted: "Interrupted", awaiting_clarification: "More information needed" };
 function refreshWorkspace() {
-  const tags = ["initial", "context", "today", "tasks", "schedule", "habits", "official"];
+  const tags = ["initial", "context", "today", "tasks", "schedule", "habits", "official", "buddy"];
   invalidateWorkspace(tags);
   window.dispatchEvent(new CustomEvent("productivity:invalidated", { detail: tags }));
 }
@@ -149,7 +149,7 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
       {deleteReview && <div className="assistant-proposal" role="group" aria-label="Confirm conversation deletion"><strong>Delete this conversation and its messages?</strong><p>Saved tasks, habits, and events will stay in your workspace. Unconfirmed proposals in this chat will be removed.</p><div className="assistant-actions"><button type="button" disabled={busy} onClick={() => void removeConversation()}>Delete conversation</button><button type="button" disabled={busy} onClick={() => setDeleteReview(false)}>Keep conversation</button></div></div>}
       {moreConversations && <button type="button" disabled={busy} onClick={() => void olderConversations()}>Load older conversations</button>}
       <div className="assistant-messages" ref={messageLogRef} tabIndex={0} aria-label="Conversation messages" aria-busy={busy}>
-        {(!view || !view.messages.length) && <div className="assistant-welcome"><PipAvatar/><h2>Hi{studentName ? `, ${studentName.split(" ")[0]}` : " there"}! <span aria-hidden>👋</span></h2><p>I’m PIP. Tell me what you’d like to get done. I can help with your tasks, habits and schedule.</p><small>Plans become changes only when your workspace confirms they’re saved.</small>{!view && <button type="button" disabled={busy} onClick={() => void newConversation()}>Start a conversation</button>}</div>}
+        {(!view || !view.messages.length) && <div className="assistant-welcome"><PipAvatar/><h2>Hi{studentName ? `, ${studentName.split(" ")[0]}` : " there"}! <span aria-hidden>👋</span></h2><p>I’m PIP. Tell me what you’d like to get done. I can help with your tasks, habits, schedule and study buddies.</p><small>Plans become changes only when your workspace confirms they’re saved.</small>{!view && <button type="button" disabled={busy} onClick={() => void newConversation()}>Start a conversation</button>}</div>}
         {view?.hasOlder && <button type="button" disabled={busy} onClick={() => void older()}>Load earlier messages</button>}
         {view?.messages.map(message => <article key={message.id} className={`assistant-message assistant-message-${message.role}`}><strong>{message.role === "user" ? "You" : <><PipAvatar/> PIP</>}</strong>{message.role === "user" ? <p>{message.content}</p> : <PipMarkdown text={message.content}/>}{message.status !== "completed" && <small>{labels[message.status] || message.status}</small>}</article>)}
         {view?.pending.map(pending => <article className="assistant-proposal" key={pending.id}><strong>Review proposed action</strong><p>{proposalLabel(pending.preview.tool, pending.preview.arguments)}</p><Proposal args={pending.preview.arguments} current={pending.preview.current}/><p><small>{pending.expired ? "This proposal expired. Cancel it and request a new one." : `Expires ${new Date(pending.expiresAt).toLocaleTimeString()}`}</small></p><div className="assistant-actions"><button type="button" disabled={busy || pending.expired || hasProcessing} onClick={() => void decide(pending, true)}>Confirm</button><button type="button" disabled={busy || hasProcessing} onClick={() => void decide(pending, false)}>Cancel</button></div></article>)}
@@ -160,7 +160,7 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
       {scrollPaused && <button type="button" className="assistant-latest" onClick={() => scrollLatest(true)}>Jump to latest</button>}
       <div aria-live="polite" className="assistant-error">{error && <p role="alert">{error} <button type="button" disabled={busy} onClick={() => void reload()}>Reload</button></p>}</div>
       <form className="assistant-composer" onSubmit={event => { event.preventDefault(); void send(); }}>
-        <label className="sr-only" htmlFor="assistant-draft">Message PIP</label><textarea id="assistant-draft" ref={input} rows={3} maxLength={4000} disabled={busy || !view || hasProcessing} value={draft} onChange={event => speech.edit(event.target.value)} placeholder={view ? "Ask PIP about your tasks, habits or schedule…" : "Start or choose a conversation"}/>
+        <label className="sr-only" htmlFor="assistant-draft">Message PIP</label><textarea id="assistant-draft" ref={input} rows={3} maxLength={4000} disabled={busy || !view || hasProcessing} value={draft} onChange={event => speech.edit(event.target.value)} placeholder={view ? "Ask PIP about tasks, habits, schedules or study buddies…" : "Start or choose a conversation"}/>
         <div className="assistant-composer-actions"><VoiceInputControls speech={speech} disabled={busy || !view || !!hasProcessing}/><small>{draft.length}/4,000</small><button type="submit" disabled={busy || !view || !draft.trim() || speech.active || hasProcessing}><Send size={16} aria-hidden/> Send</button></div><VoiceInputStatus speech={speech} recipient="PIP"/>
       </form>
     </section>}
@@ -168,16 +168,19 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
 }
 function Proposal({ args, current }: { args: Record<string, unknown>; current?: unknown }) {
   const input = args.input && typeof args.input === "object" ? args.input as Record<string, unknown> : args.changes && typeof args.changes === "object" ? args.changes as Record<string, unknown> : args;
-  const names: Record<string, string> = { title: "Title", name: "Name", description: "Description", priority: "Priority", dueDate: "Deadline date", dueTime: "Deadline time", type: "Habit type", frequency: "Frequency", weekdays: "Weekdays (0 = Sunday)", time: "Time", end: "End time", startDate: "Starts", endDate: "Ends", mustComplete: "Must complete", archived: "Archive", restore: "Restore", outcome: "Outcome", original_date: "Original date", timezone: "Timezone", academic: "Academic category", clearSchedule: "Remove allocated working time" };
+  const names: Record<string, string> = { title: "Title", name: "Name", description: "Description", priority: "Priority", dueDate: "Deadline date", dueTime: "Deadline time", type: "Habit type", frequency: "Frequency", weekdays: "Weekdays (0 = Sunday)", time: "Time", end: "End time", startDate: "Starts", endDate: "Ends", mustComplete: "Must complete", archived: "Archive", restore: "Restore", outcome: "Outcome", original_date: "Original date", timezone: "Timezone", academic: "Academic category", clearSchedule: "Remove allocated working time", invitation_url: "Group invitation link", contact_details: "Contact details to share", max_members: "Maximum members (including you)", listing_id: "Buddy listing", application_id: "Application" };
   const slot = (input.scheduledSlot || input.slot || args.slot) as { date?: string; start?: string; end?: string; timezone?: string } | undefined;
   const target = current && typeof current === "object" ? current as Record<string, unknown> : {};
   const record = (target.record || target) as Record<string, unknown>;
   const data = record.data as { title?: string; name?: string; revisions?: { name?: string }[] } | undefined;
-  const targetName = data?.title || data?.name || data?.revisions?.at(-1)?.name;
-  return <dl>{targetName && <div><dt>Record</dt><dd>{targetName}</dd></div>}{Object.entries(input).filter(([key]) => names[key]).map(([key, value]) => <div key={key}><dt>{names[key]}</dt><dd>{typeof value === "boolean" ? value ? "Yes" : "No" : Array.isArray(value) ? value.join(", ") : String(value)}</dd></div>)}{slot && <div><dt>Scheduled slot</dt><dd>{slot.date} · {slot.start}–{slot.end} · {slot.timezone}</dd></div>}{!!(args.scheduling as { allowConflicts?: boolean } | undefined)?.allowConflicts && <div><dt>Time conflict</dt><dd>This proposal explicitly keeps an overlapping time.</dd></div>}</dl>;
+  const targetName = data?.title || data?.name || data?.revisions?.at(-1)?.name || (typeof record.title === "string" ? record.title : undefined);
+  const application = record.application as { user?: { firstName: string; lastName: string } } | undefined;
+  return <dl>{application?.user && <div><dt>Applicant</dt><dd>{application.user.firstName} {application.user.lastName}</dd></div>}{targetName && <div><dt>Record</dt><dd>{targetName}</dd></div>}{Object.entries(input).filter(([key]) => names[key]).map(([key, value]) => <div key={key}><dt>{names[key]}</dt><dd>{typeof value === "boolean" ? value ? "Yes" : "No" : Array.isArray(value) ? value.join(", ") : String(value)}</dd></div>)}{slot && <div><dt>Scheduled slot</dt><dd>{slot.date} · {slot.start}–{slot.end} · {slot.timezone}</dd></div>}{!!(args.scheduling as { allowConflicts?: boolean } | undefined)?.allowConflicts && <div><dt>Time conflict</dt><dd>This proposal explicitly keeps an overlapping time.</dd></div>}</dl>;
 }
 function RecordLink({ result }: { result: Record<string, unknown> | null }) {
   if (!result) return null;
+  const buddy = result.buddy as { id?: string } | undefined;
+  if (buddy?.id) return <a href={`#buddy?listing=${encodeURIComponent(buddy.id)}`}>Open buddy listing</a>;
   const task = result.task as { id?: string; title?: string } | undefined, event = result.event as { id?: string; title?: string } | undefined, habit = result.habit as { id?: string } | undefined;
   const id = task?.id || event?.id || habit?.id;
   if (!id) return null;
@@ -186,6 +189,8 @@ function RecordLink({ result }: { result: Record<string, unknown> | null }) {
 }
 
 function proposalLabel(tool: string, args: Record<string, unknown>) {
+  const buddyLabels: Record<string, string> = { create_buddy_group: "Create a study group listing", create_buddy_request: "Create a buddy request", apply_buddy: "Apply to this buddy listing", accept_buddy_application: "Accept this applicant and share the listing’s private details", decline_buddy_application: "Decline this applicant", close_buddy_listing: "Close this buddy listing to new applications" };
+  if (buddyLabels[tool]) return buddyLabels[tool];
   if (tool === "delete_task") return "Delete this task";
   if (tool === "archive_event") return args.restore ? "Restore this event" : "Archive this event";
   if (tool === "archive_habit") return args.archived ? "Archive this habit" : "Restore this habit";

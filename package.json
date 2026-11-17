@@ -44,7 +44,7 @@
     "test:ccmas:extract": "python3 -m unittest discover -s tests/ccmas -v",
     "test:elearning:reset": "node tests/ccmas/reset-rehearsal.mjs",
     "ai:productivity:setup": "node scripts/setup-productivity-ai-local.mjs",
-    "test:productivity:ai": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/productivity-ai/security.test.ts tests/productivity-ai/outcome.test.ts tests/productivity-ai/rendering.test.tsx tests/speech/*.test.ts",
+    "test:productivity:ai": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/productivity-ai/security.test.ts tests/productivity-ai/buddy-tools.test.ts tests/productivity-ai/outcome.test.ts tests/productivity-ai/rendering.test.tsx tests/speech/*.test.ts",
     "test:productivity:ai:db": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/productivity-ai/persistence.db.test.ts",
     "test:productivity:ai:browser": "node scripts/verify-productivity-assistant.cjs",
     "test:learning-ai": "node --import tsx --experimental-test-module-mocks --test --test-concurrency=1 tests/learning-ai/foundations.test.ts tests/learning-ai/policy.test.ts tests/learning-ai/snapshot.test.ts tests/learning-ai/route.test.ts tests/learning-ai/admin.test.ts",
