@@ -9,7 +9,7 @@ function applications(row: Record<string, unknown>) { return row.applications as
 const tx = {
   async $queryRaw() { return []; },
   buddyListing: {
-    async create({ data }: { data: Record<string, unknown> }) { const row = { id: `listing-${state.listings.length + 1}`, ...data }; row.applications = data.kind === "GROUP" ? [{ id: "creator", userId: data.creatorId, status: "ACCEPTED" }] : [];
+    async create({ data }: { data: Record<string, unknown> }) { const row: Record<string, unknown> & { id: string } = { id: `listing-${state.listings.length + 1}`, ...data }; row.applications = data.kind === "GROUP" ? [{ id: "creator", userId: data.creatorId, status: "ACCEPTED" }] : [];
       state.listings.push(row); return { id: row.id }; },
     async findUnique({ where }: { where: { id: string } }) { return state.listings.find(row => row.id === where.id) ?? null; },
     async update({ where, data }: { where: { id: string }; data: Record<string, unknown> }) { const row = state.listings.find(row => row.id === where.id)!; Object.assign(row, data); return row; },
