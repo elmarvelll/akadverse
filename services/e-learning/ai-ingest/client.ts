@@ -1,6 +1,6 @@
 // services/e-learning/ai-ingest/client.ts
 //
-// The shared server-only Concept Explainer adapter: course ingestion, Stuwart explanations and temporary files.
+// The shared server-only Concept Explainer adapter: course ingestion, Stuart explanations and temporary files.
 // Contracts: docs/elearning/systems/{ai-ingestion-contract,stewart-attachments}.md.
 //
 // Configuration (server only):
@@ -130,14 +130,14 @@ export function safeSourceUrl(value: unknown): string | undefined {
   if (typeof value !== "string") return;
   try { const u = new URL(value); if (["https:", "http:"].includes(u.protocol) && !u.username && !u.password) return u.href; } catch {}
 }
-export async function requestExplanation(question: string, offeringId: string, week: number, grounded: boolean, context?: { sessionId: string; attachmentIds: string[]; history?: import("../student/stewart/chat").StewartTurn[] }): Promise<Explanation> {
+export async function requestExplanation(question: string, offeringId: string, week: number, grounded: boolean, context?: { sessionId: string; attachmentIds: string[]; studentContext?: Record<string, unknown>; history?: import("../student/stewart/chat").StewartTurn[] }): Promise<Explanation> {
   if (!nonempty(question) || question.length > 4000 || !offeringId || !Number.isSafeInteger(week) || week < 1) throw new AiServiceError("Invalid explanation context.", 422);
   if (context?.history?.length) {
     const { contextualQuestion } = await import("../student/stewart/chat");
     question = contextualQuestion(question, context.history);
   }
   const form = new FormData(); form.set("question", question);
-  const res = await send("POST", grounded ? "/explain-with-grounding" : "/explain", grounded ? form : { question, course_offering_id: offeringId, week, ...(context ? { session_id: context.sessionId, ...(context.attachmentIds.length ? { attachment_ids: context.attachmentIds } : {}) } : {}) }, 150_000);
+  const res = await send("POST", grounded ? "/explain-with-grounding" : "/explain", grounded ? form : { question, course_offering_id: offeringId, week, ...(context ? { session_id: context.sessionId, ...(context.studentContext ? { student_context: context.studentContext } : {}), ...(context.attachmentIds.length ? { attachment_ids: context.attachmentIds } : {}) } : {}) }, 150_000);
   if (!res.ok) throw new AiServiceError(`Explanation unavailable (HTTP ${res.status}).`, res.status);
   const b = await res.json().catch(() => null);
   const fields = ["concept", "simple_explanation", "analogy", "example", "worked_problem"];
@@ -202,4 +202,16 @@ export async function requestAttachmentMetadata(id: string): Promise<AiAttachmen
 export async function requestAttachmentDelete(id: string): Promise<void> {
   const res = await send("DELETE", `/attachments/${encodeURIComponent(id)}`);
   if (res.status !== 204 && res.status !== 404) throw new AiServiceError("Attachment cleanup failed.", res.status);
+}
+
+/** Stricter origin policy for the additive workflow; legacy configuration semantics stay unchanged. */
+export function isLearningAiConfigured(): boolean {
+  const cfg = config(); if (!cfg) return false;
+  const url = new URL(cfg.url);
+  return url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname));
+}
+/** Shared transport for the flag-gated learning foundation; legacy callers retain their behavior. */
+export async function requestLearningAi(path: "/next-action" | "/generate-hint" | "/explain" | "/analyse-material" | "/generate-example-tasks" | "/generate-practice" | "/evaluate-practice" | "/generate-revision-questions", body: unknown, timeoutMs: number): Promise<Response> {
+  if (!isLearningAiConfigured()) throw new AiServiceError("The learning AI service is not configured.", 503);
+  return send("POST", path, body, timeoutMs);
 }

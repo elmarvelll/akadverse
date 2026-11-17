@@ -45,6 +45,8 @@ enum Role {
 }
 
 model User {
+  buddyListings BuddyListing[]
+  buddyApplications BuddyApplication[]
   id                        String                  @id @default(uuid())
   firstName                 String
   lastName                  String
@@ -1950,4 +1952,49 @@ model ProductivityAIPendingAction {
 
   @@unique([executionId, ownerId])
   @@index([conversationId, status])
+}
+
+// Groups and individual requests share discovery and approval infrastructure.
+enum BuddyKind {
+  GROUP
+  REQUEST
+}
+enum BuddyStatus {
+  OPEN
+  FULL
+  MATCHED
+  CLOSED
+}
+enum BuddyApplicationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+model BuddyListing {
+  id String @id @default(uuid())
+  creatorId String
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  kind BuddyKind
+  title String @db.VarChar(160)
+  description String @db.VarChar(4000)
+  privateDetails String @db.VarChar(2000)
+  maxMembers Int?
+  status BuddyStatus @default(OPEN)
+  createdAt DateTime @default(now())
+  applications BuddyApplication[]
+  @@index([kind, status, createdAt])
+  @@index([creatorId, createdAt])
+}
+model BuddyApplication {
+  id String @id @default(uuid())
+  listingId String
+  listing BuddyListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status BuddyApplicationStatus @default(PENDING)
+  contactDetails String? @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  @@unique([listingId, userId])
+  @@index([userId, status, createdAt])
+  @@index([listingId, status])
 }

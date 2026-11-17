@@ -8,9 +8,10 @@ export function ProdButton({ variant = "primary", children, className = "", ...p
 export function StatusPill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "blue" | "green" | "red" | "amber" }) {
   return <span className={`prod-pill pill-${tone}`}>{children}</span>;
 }
-export type IconName = "today" | "calendar" | "task" | "habit" | "menu" | "arrow" | "education" | "clock" | "plus" | "pencil";
+export type IconName = "community" | "today" | "calendar" | "task" | "habit" | "menu" | "arrow" | "education" | "clock" | "plus" | "pencil";
 export function Icon({ name, className = "" }: { name: IconName; className?: string }) {
   const paths: Record<IconName, ReactNode> = {
+    community: <><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M21 21v-3a6 6 0 0 0-4-5"/></>,
     pencil: <><path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15l-1 6Z"/></>,
     today: <><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 11h18M8 15h2m4 0h2"/></>,

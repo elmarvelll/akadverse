@@ -1,8 +1,8 @@
 "use client";
 
-// One course's study workspace: week tabs on top of the document viewer, Stuwart beside it. The selected week and the
+// One course's study workspace: week tabs on top of the document viewer, Stuart beside it. The selected week and the
 // selected document (by stable id — see study-selection.ts) are the single piece of state everything else follows:
-// the tab highlight, the week's document dropdown, the one mounted viewer, and Stuwart's "Studying" context.
+// the tab highlight, the week's document dropdown, the one mounted viewer, and Stuart's "Studying" context.
 //
 // A week can hold several documents (main note, supplementary reading, worked examples…). Opening a week shows its
 // first document; the dropdown lists them all and switching loads exactly that document into the same viewer.
@@ -10,8 +10,8 @@
 // longer exists falls back to the week's first document (with a notice).
 //
 // Layout — sized from the space actually available, so it follows the sidebar's collapsed/expanded state:
-//  - Width: the root is a CSS container. Once IT is at least 56rem wide (not the viewport), document and Stuwart sit
-//    side by side, Stuwart fixed at 18rem (22rem from a 72rem container), so the document gets ~70-75%. Narrower,
+//  - Width: the root is a CSS container. Once IT is at least 56rem wide (not the viewport), document and Stuart sit
+//    side by side, Stuart fixed at 18rem (22rem from a 72rem container), so the document gets ~70-75%. Narrower,
 //    they stack, document first.
 //  - Height: the document fills the viewport below the course header: 100dvh minus the app header (4rem), <main>'s
 //    vertical padding (2rem, 3rem from `sm`), the course header (h-9) and the gap (0.75rem). The PDF scrolls inside
@@ -28,12 +28,13 @@ import WeekTabs, { WEEK_PANEL_ID, weekTabId } from "./WeekTabs";
 import DocumentViewer from "./DocumentViewer";
 import { StatusCard } from "./viewers/ViewerStates";
 import StuwartPanel from "./StuwartPanel";
+import LearningJourney from "./LearningJourney";
 import BackToStudyZone from "./BackToStudyZone";
 import { documentOptionLabels, initialWeek, resolveSelection, type ChosenDocuments } from "./study-selection";
 
 import styles from "./study-workspace.module.css";
 
-export default function StudyWorkspace({ course, weeks }: { course: StudyCourse; weeks: StudyWeek[] }) {
+export default function StudyWorkspace({ course, weeks, learningEnabled = false }: { course: StudyCourse; weeks: StudyWeek[]; learningEnabled?: boolean }) {
   const [studyMode, setStudyMode] = useState(false);
   const [mobilePanel, setMobilePanel] = useState("notes");
   const [notesWidth, setNotesWidth] = useState(50);
@@ -88,6 +89,7 @@ export default function StudyWorkspace({ course, weeks }: { course: StudyCourse;
 
   return (
     <div ref={rootRef} role={studyMode ? "dialog" : undefined} aria-modal={studyMode || undefined} aria-label={studyMode ? "Study Mode" : undefined} data-panel={mobilePanel} className={studyMode ? `${styles.study} @container` : "isolate @container space-y-3"}>
+      {learningEnabled && doc && !studyMode && <LearningJourney key={threadKey} courseId={course.id} documentId={doc.id} weekNumber={week.weekNumber} />}
       <div className={`${styles.workspaceHeading} flex min-h-12 shrink-0 items-center gap-3 py-1`}>
         {!studyMode && <BackToStudyZone />}
         <div className="min-w-0 flex-1">
@@ -100,7 +102,7 @@ export default function StudyWorkspace({ course, weeks }: { course: StudyCourse;
         </div>
         {studyMode ? <button ref={leaveRef} type="button" onClick={() => setStudyMode(false)} className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800">Leave Study Mode</button> : <button type="button" onClick={() => setStudyMode(true)} className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-800"><PanelsTopLeft size={16} aria-hidden />Study Mode</button>}
       </div>
-      {studyMode && <div className={styles.mobileTabs} aria-label="Study panels">{["notes", "stewart"].map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} onClick={() => setMobilePanel(panel)} className={`rounded-lg border px-4 py-2 text-sm font-semibold capitalize ${mobilePanel === panel ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white text-gray-800"}`}>{panel === "stewart" ? "Stuwart" : "Notes"}</button>)}</div>}
+      {studyMode && <div className={styles.mobileTabs} aria-label="Study panels">{["notes", "stewart"].map(panel => <button key={panel} type="button" aria-pressed={mobilePanel === panel} onClick={() => setMobilePanel(panel)} className={`rounded-lg border px-4 py-2 text-sm font-semibold capitalize ${mobilePanel === panel ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white text-gray-800"}`}>{panel === "stewart" ? "Stuart" : "Notes"}</button>)}</div>}
 
       <div ref={layoutRef} style={{ "--notes-width": `${notesWidth}fr`, "--chat-width": `${100 - notesWidth}fr` } as CSSProperties} className={`${styles.layout} grid grid-cols-1 gap-3 @4xl:grid-cols-[minmax(0,1fr)_18rem] @6xl:grid-cols-[minmax(0,1fr)_22rem]`}>
         <div className={`${styles.notes} flex h-[calc(100dvh-9rem)] min-h-[24rem] min-w-0 flex-col sm:h-[calc(100dvh-10rem)]`}>
@@ -152,7 +154,7 @@ export default function StudyWorkspace({ course, weeks }: { course: StudyCourse;
                 // Keyed by id: switching unmounts the previous viewer, so only one document is ever rendered.
                 <DocumentViewer onStudyMode={() => setStudyMode(true)} studyMode={studyMode} key={doc.id} doc={doc} captureRequest={captureRequest} onCapture={(file) => { if ((pendingFiles[composerKey]?.length ?? 0) + referenceCount >= STEWART_MAX_ATTACHMENTS) throw new Error(`Use at most ${STEWART_MAX_ATTACHMENTS} attachments.`); setPendingFiles((all) => ({ ...all, [composerKey]: [...(all[composerKey] ?? []), file] })); }} />
               ) : (
-                <StatusCard tone="neutral" title={`No material for Week ${week.weekNumber} yet`} body={chosenIsGone ? "The document you had open is no longer available, and this week has no other material." : "Select a week with material, or use Add files in Stuwart to attach your own study notes."}>
+                <StatusCard tone="neutral" title={`No material for Week ${week.weekNumber} yet`} body={chosenIsGone ? "The document you had open is no longer available, and this week has no other material." : "Select a week with material, or use Add files in Stuart to attach your own study notes."}>
                   <button
                     type="button"
                     onClick={refreshDocuments}
@@ -176,7 +178,7 @@ export default function StudyWorkspace({ course, weeks }: { course: StudyCourse;
           </div>
         </div>
 
-        <div role="separator" aria-label="Resize notes and Stuwart panels" aria-orientation="vertical" aria-valuemin={30} aria-valuemax={70} aria-valuenow={Math.round(notesWidth)} tabIndex={studyMode ? 0 : -1} className={styles.divider}
+        <div role="separator" aria-label="Resize notes and Stuart panels" aria-orientation="vertical" aria-valuemin={30} aria-valuemax={70} aria-valuenow={Math.round(notesWidth)} tabIndex={studyMode ? 0 : -1} className={styles.divider}
           onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); setNotesWidth(n => e.key === "Home" ? 30 : e.key === "End" ? 70 : Math.max(30, Math.min(70, n + (e.key === "ArrowLeft" ? -2 : 2)))); } }}
           onPointerDown={e => { if (e.button !== 0) return; dragging.current = true; e.currentTarget.setPointerCapture(e.pointerId); }}
           onPointerMove={e => { if (!dragging.current) return; const box = layoutRef.current?.getBoundingClientRect(); if (!box) return; const min = Math.max(30, 320 / box.width * 100); setNotesWidth(Math.max(min, Math.min(100 - min, (e.clientX - box.left) / box.width * 100))); }}

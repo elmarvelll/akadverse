@@ -35,6 +35,7 @@ export async function createPractice(studentId: string, input: Record<string, un
   const context = await studyContext(studentId, input), conceptId = boundedText(input.conceptId, "concept identifier", 200), key = boundedText(input.requestId, "request identifier", 200);
   const concept = await elearningDb.revisionConcept.findFirst({ where: { id: conceptId, materialId: context.materialId, active: true } });
   if (!concept) throw new RevisionWebhookError(404, "CONCEPT_UNAVAILABLE", "Select a concept from this material.");
+  if ((await import("../learning-ai/flags")).learningAiFlags().AI_V2_ENABLED && await elearningDb.learningPlanConcept.findFirst({ where: { conceptId } })) throw new RevisionWebhookError(409, "USE_LESSON", "Use the lesson activity to practice this concept.");
   const requestHash = hash([context.materialId, conceptId]);
   const existing = await elearningDb.revisionPracticeAttempt.findUnique({ where: { studentId_requestKey: { studentId, requestKey: key } } });
   if (existing) { if (existing.requestHash !== requestHash) throw new RevisionWebhookError(409, "REQUEST_CONFLICT", "This request identifier belongs to another practice activity."); return publicAttempt(existing); }
@@ -56,6 +57,7 @@ export async function evaluatePractice(studentId: string, input: Record<string, 
   const context = await studyContext(studentId, input), id = boundedText(input.attemptId, "practice identifier", 200);
   const attempt = await elearningDb.revisionPracticeAttempt.findFirst({ where: { id, studentId }, include: { concept: true, teachingEvent: true } });
   if (!attempt || attempt.concept.materialId !== context.materialId) throw new RevisionWebhookError(404, "PRACTICE_UNAVAILABLE", "This practice activity is unavailable.");
+  if ((await import("../learning-ai/flags")).learningAiFlags().AI_V2_ENABLED && await elearningDb.learningPlanConcept.findFirst({ where: { conceptId: attempt.conceptId } })) throw new RevisionWebhookError(409, "USE_LESSON", "Submit this answer through its lesson activity.");
   const answer = boundedText(input.answer, "answer"), reasoning = typeof input.reasoning === "string" && input.reasoning.length <= 4000 ? input.reasoning : "", answerHash = hash([answer, reasoning]);
   if (attempt.evaluation) {
     if (attempt.answerHash !== answerHash) throw new RevisionWebhookError(409, "ANSWER_ALREADY_EVALUATED", "This activity has already been evaluated. Start a new practice attempt to try again.");
@@ -114,6 +116,7 @@ export async function reviewRevisionCard(studentId: string, input: Record<string
     const scheduled = await scheduleRevisionReview(card.state, rating);
     await tx.revisionStudentCard.update({ where: { id }, data: { state: json(scheduled.card), dueAt: scheduled.card.dueAt, version: { increment: 1 } } });
     const log = await tx.revisionReviewLog.create({ data: { studentCardId: id, studentId, requestKey, requestHash, rating, previousState: card.state as Prisma.InputJsonValue, nextState: json(scheduled.card), schedulerLog: json(scheduled.revlog) } });
+    if (sessionItem && process.env.AI_V2_ENABLED === "true") await (await import("../learning-ai/review-evidence")).recordLearningRevision(tx, studentId, log.id, sessionItem.id);
     if (sessionItem) await tx.revisionSessionItem.update({ where: { id: sessionItem.id }, data: { status: "REVIEWED", reviewLogId: log.id } });
     return { state: scheduled.card, replay: false };
   }, { timeout: 15000 });

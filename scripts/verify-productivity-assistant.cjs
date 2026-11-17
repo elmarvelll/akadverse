@@ -38,13 +38,20 @@ async function main() {
     await evaluate('document.querySelector(".assistant-composer").requestSubmit()');
     await waitFor(() => evaluate('document.body.textContent.includes("Saved for student-A")'), 'confirmed message');
     assert.equal(await evaluate('assistantTest.requests.filter(row=>row.data?.action==="chat").length'),1);
+    assert.equal(await evaluate('!!document.querySelector(".pip-markdown h2") && !!document.querySelector(".pip-markdown ul strong")'),true,'semantic Markdown');
+    assert.equal(await evaluate('!!document.querySelector(".pip-markdown script") || !!document.querySelector(".pip-markdown a[href^=\\"javascript:\\"]")'),false,'safe Markdown');
+    assert.equal(await evaluate('document.querySelector(".assistant-launcher").textContent.includes("Ask PIP")'),true);
+    assert.equal(await evaluate('getComputedStyle(document.querySelector(".assistant-launcher"),"::before").animationDuration'), '2s');
+    assert.equal(await evaluate('!!document.querySelector(".pip-saved-card")'),true,'backend confirmed result card');
     await waitFor(() => evaluate('document.querySelector(".assistant-messages").getAttribute("aria-busy")==="false"'), 'send settles');
     await evaluate('assistantTest.setDraft("Keep this draft")');
     await waitFor(() => evaluate('document.querySelector(".assistant-composer-actions small").textContent.startsWith("15/")'), 'draft state commits');
     await evaluate('document.querySelector(".assistant-heading button").click()');
     await waitFor(() => evaluate('!document.querySelector(".assistant-panel")'), 'minimise');
+    assert.equal(await evaluate('document.activeElement?.classList.contains("assistant-launcher")'),true,'focus returns to launcher');
     await evaluate('document.querySelector(".assistant-launcher").click()');
     await waitFor(() => evaluate('document.querySelector("#assistant-draft")?.value==="Keep this draft"'), 'minimise preserves draft');
+    await waitFor(() => evaluate('document.activeElement?.id==="assistant-draft"'), 'focus waits for ready composer');
     await evaluate('assistantTest.setDraft("delete test task")');
     await evaluate('document.querySelector(".assistant-composer").requestSubmit()');
     await waitFor(() => evaluate('!!document.querySelector(".assistant-proposal")'), 'confirmation proposal');
@@ -52,6 +59,19 @@ async function main() {
     await evaluate('document.querySelector(".assistant-actions button:last-child").click()');
     await waitFor(() => evaluate('!document.querySelector(".assistant-proposal")'), 'cancel proposal');
     assert.equal(await evaluate('assistantTest.requests.filter(row=>row.data?.action==="decide").at(-1).data.confirm'),false);
+    const { mkdirSync } = require('node:fs');
+    mkdirSync('docs/productivity-upgrade/screenshots', { recursive: true });
+    for (const size of [{name:'desktop',width:1440,height:1000},{name:'tablet',width:820,height:1100},{name:'mobile',width:390,height:844}]) {
+      await send('Emulation.setDeviceMetricsOverride',{width:size.width,height:size.height,deviceScaleFactor:1,mobile:size.name==='mobile'});
+      const bounds = await evaluate('(()=>{const r=document.querySelector(".assistant-panel").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight})()');
+      assert.equal(bounds,true,`${size.name} panel bounds`);
+      const capture = await send('Page.captureScreenshot',{format:'png'});
+      writeFileSync(`docs/productivity-upgrade/screenshots/pip-${size.name}.png`,Buffer.from(capture.data,'base64'));
+    }
+    await evaluate('document.querySelector("button[aria-label=\\"Expand PIP\\"]").click()');
+    assert.equal(await evaluate('document.querySelector(".assistant-panel").classList.contains("is-expanded")'),true);
+    await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    assert.equal(await evaluate('getComputedStyle(document.querySelector(".assistant-launcher"),"::before").animationName'),'none');
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     const fits = await evaluate('(()=>{const r=document.querySelector(".assistant-panel").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight})()'); assert.equal(fits,true,'mobile panel fits viewport');
     await evaluate('document.querySelector("#open-dialog").click()');
@@ -64,7 +84,7 @@ async function main() {
     await waitFor(() => evaluate('!!document.querySelector(".assistant-welcome")'), 'new account empty context');
     assert.equal(await evaluate('document.body.textContent.includes("Saved for student-A")'),false);
     assert.equal(await evaluate('document.querySelector("#assistant-draft").value'), '');
-    const report = {passed:true,checks:['new conversation','single send','confirmed result','draft survives minimisation','exact target preview','cancellation','mobile bounds','native dialog precedence','account isolation']};
+    const report = {passed:true,checks:['new conversation','single send','confirmed result','draft survives minimisation','exact target preview','cancellation','mobile bounds','native dialog precedence','account isolation','Markdown formatting and safety','confirmed result cards','two-second ripple','expanded panel','desktop/tablet/mobile bounds','reduced motion','composer focus after async load','focus returns on close']};
     writeFileSync(join(tmpdir(),'productivity-ai-browser-results.json'),JSON.stringify(report,null,2)); console.log(JSON.stringify(report));
   } finally { socket?.close(); browser.kill(); await new Promise(resolve => server.close(resolve)); await delay(250); rmSync(profile,{recursive:true,force:true}); }
 }

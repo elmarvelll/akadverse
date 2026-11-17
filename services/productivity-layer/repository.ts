@@ -53,7 +53,7 @@ export async function loadData(tx: Prisma.TransactionClient, ownerId: string, cr
     // Retain every existing calendar conflict and required source relationship,
     // but do not load unrelated task histories just to create a personal event.
     const taskIds = schedule.events.flatMap(row => row.source.kind === "task" ? [row.source.taskId] : []);
-    const taskRows = taskIds.length ? await timed("data.linked-tasks", () => tx.productivityTask.findMany({ where: { ownerId, id: { in: taskIds } }, orderBy: { id: "asc" } })) : [];
+    const taskRows = await timed("data.linked-tasks", () => tx.productivityTask.findMany({ where: { ownerId, OR: [{ id: { in: taskIds } }, { deletedAt: null, data: { path: ["scheduledSlot", "date"], gte: "0001-01-01" } }] }, orderBy: { id: "asc" } }));
     const tasks = parseTaskDataset(JSON.stringify({ version: 2, tasks: taskRows.map(row => row.data) }));
     const habitIds = [...new Set([...schedule.events, ...tasks.tasks].flatMap(row => row.source.kind === "habit" ? [row.source.habitId] : []))];
     const habitRows = habitIds.length ? await timed("data.linked-habits", () => tx.productivityHabit.findMany({ where: { ownerId, id: { in: habitIds } }, orderBy: { id: "asc" } })) : [];

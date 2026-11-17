@@ -1,3 +1,5 @@
+import type { Task } from "../tasks/domain";
+import { inTimezone } from "./time";
 import { addDays, selectScheduleEvents, validDate, type Dataset, type Slot } from "./domain";
 export function scheduleDates(date: string, view: "day" | "week") {
   if (!validDate(date)) return [];
@@ -6,7 +8,7 @@ export function scheduleDates(date: string, view: "day" | "week") {
   const monday = addDays(date, -((weekday + 6) % 7));
   return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
 }
-export interface TimetableEntry { id: string; title: string; slot: Slot; kind: "personal" | "habit" | "academic"; category: string; priority?: string; venue?: string; outcome?: string }
+export interface TimetableEntry { id: string; taskId?: string; title: string; slot: Slot; kind: "personal" | "habit" | "academic" | "task"; category: string; priority?: string; venue?: string; outcome?: string }
 interface TimetableSegment extends TimetableEntry { displayDate: string; startMinute: number; endMinute: number }
 export interface PlacedEntry extends TimetableSegment { column: number; columns: number }
 export const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
@@ -59,4 +61,13 @@ export function placeTimetable(entries: readonly TimetableEntry[]): PlacedEntry[
     flush();
   }
   return result;
+}
+
+
+/** Calendar representation of source tasks; never creates another event or outcome. */
+export function taskTimetableEntries(tasks: readonly Task[], ownerId: string, timezone: string, dates: readonly string[]): TimetableEntry[] {
+  return tasks.filter(task => task.ownerId === ownerId && !task.deletedAt && !task.habitWithdrawn && task.scheduledSlot).flatMap(task => {
+    const slot = inTimezone(task.scheduledSlot!, timezone);
+    return slotTouchesDates(slot, dates) ? [{ id: `task:${task.id}`, taskId: task.id, title: task.title, slot, kind: task.source.kind === "habit" ? "habit" as const : "task" as const, category: task.source.kind === "habit" ? "Habit" : "Task", priority: task.priority, outcome: task.status === "pending" ? "unrecorded" : task.status }] : [];
+  });
 }

@@ -83,14 +83,15 @@ async function loadRange(user: User, context: Context, scope: ViewOptions, range
     await timed("view.user-lock", () => tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${user.id} FOR UPDATE`);
     if ((await tx.user.findUnique({ where: { id: user.id }, select: { role: true } }))?.role !== "student") throw forbidden();
     const today = localNow(context.student.timezone).date, bounds = dayBounds(today, context.student.timezone);
-    const [taskRows, todayRows, habits, categories, events] = await timed("view.range-reads", () => Promise.all([
+    const [taskRows, todayRows, habits, categories, events, scheduledTasks] = await timed("view.range-reads", () => Promise.all([
       tx.productivityTask.findMany({ where: { ownerId: user.id, dueDate: { gte: range.start, lte: range.end }, data: { path: ["source", "kind"], equals: "habit" } }, select: { data: true } }),
       tx.productivityTask.findMany({ where: { ownerId: user.id, ...(scope.taskId ? { OR: [{ id: scope.taskId }, { dueDate: today }] } : { OR: [{ dueDate: today }, { outcome: "unrecorded", OR: [{ dueDate: null }, { dueDate: { lte: today } }] }, { data: { path: ["completedAt"], gte: new Date(bounds.start).toISOString(), lt: new Date(bounds.end).toISOString() } }] }) }, select: { data: true }, orderBy: { createdAt: "desc" }, take: pageSize }),
       tx.productivityHabit.findMany({ where: { ownerId: user.id }, select: { data: true } }),
       tx.productivityCategory.findMany({ where: { ownerId: user.id }, select: { data: true } }),
       tx.productivityEvent.findMany({ where: { ownerId: user.id, OR: [{ scheduledDate: { gte: addDays(range.start, -3), lte: addDays(range.end, 3) } }, { data: { path: ["originalSlot", "date"], gte: range.start, lte: range.end } }, ...(scope.eventId ? [{ id: scope.eventId }] : [])] }, select: { data: true } }),
+      tx.productivityTask.findMany({ where: { ownerId: user.id, deletedAt: null, data: { path: ["scheduledSlot", "date"], gte: addDays(range.start, -3), lte: addDays(range.end, 3) } }, select: { data: true } }),
     ]));
-    const taskMap = new Map([...taskRows, ...todayRows].map(row => [(row.data as { id: string }).id, row.data]));
+    const taskMap = new Map([...taskRows, ...todayRows, ...scheduledTasks].map(row => [(row.data as { id: string }).id, row.data]));
     const schedule = parseDataset(JSON.stringify({ version: 1, schedules: categories.map(row => row.data), events: events.map(row => row.data) }));
     const linked = schedule.events.flatMap(event => event.source.kind === "task" && !taskMap.has(event.source.taskId) ? [event.source.taskId] : []);
     if (scope.taskId && !taskMap.has(scope.taskId)) linked.push(scope.taskId);

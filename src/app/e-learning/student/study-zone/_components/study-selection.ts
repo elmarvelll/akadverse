@@ -1,5 +1,5 @@
 // Which week and which document the Study Zone shows — the selection rules, kept as pure functions so they can be
-// tested without a browser and so the dropdown, the viewer and Stuwart can never disagree about "the current document".
+// tested without a browser and so the dropdown, the viewer and Stuart can never disagree about "the current document".
 //
 // Identity is always the document's stable id (the CourseMaterial id), never its title, file name or position:
 // two notes in a week may share a title or file name, and positions shift when a lecturer adds or removes one.

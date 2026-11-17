@@ -172,3 +172,25 @@ it("rejects expired callback admission before returning assistant context", asyn
   await prisma.productivityAIConversation.update({ where: { id: scope.cid }, data: { leaseExpiresAt: new Date(Date.now() - 1000) } });
   await assert.rejects(serviceCallback({ ...scope, iss: "test", aud: "test", exp: 9999999999, iat: 0, jti: "test" }, { action: "context" }), (error: unknown) => !!error && typeof error === "object" && "status" in error && error.status === 409);
 });
+
+it("creates and retrieves a calendar task through PIP and removes its allocation only after confirmation", async () => {
+  const scope = await start();
+  const date = localNow("Africa/Lagos").date;
+  const scheduledSlot = { date, start: "09:00", end: "10:30", timezone: "Africa/Lagos" };
+  const result = await executeTool(scope, 0, "create_task", { input: { title: "PIP scheduled reading", priority: "high", scheduledSlot } });
+  assert.equal(result.status, "completed");
+  assert.ok("result" in result);
+  const taskId = (result.result as { task: { id: string } }).task.id;
+  const calendar = await executeTool(scope, 1, "list_schedule", { start: date, end: date });
+  assert.ok("result" in calendar);
+  const tasks = (calendar.result as { tasks: { rows: { id: string; scheduledSlot: { start: string } }[] } }).tasks.rows;
+  assert.equal(tasks.find(row => row.id === taskId)?.scheduledSlot.start, "09:00");
+  const proposal = await executeTool(scope, 2, "update_task", { task_id: taskId, changes: { clearSchedule: true } });
+  assert.equal(proposal.status, "awaiting_confirmation");
+  assert.ok(((await prisma.productivityTask.findUniqueOrThrow({ where: { id: taskId } })).data as { scheduledSlot?: unknown }).scheduledSlot);
+  const pending = await prisma.productivityAIPendingAction.findFirstOrThrow({ where: { ownerId: a, conversationId: scope.cid, status: "pending" } });
+  await finishTurn(scope, "Review schedule removal", "awaiting_confirmation");
+  await decide(a, scope.cid, randomUUID(), pending.id, true);
+  assert.equal(((await prisma.productivityTask.findUniqueOrThrow({ where: { id: taskId } })).data as { scheduledSlot?: unknown }).scheduledSlot, undefined);
+  assert.equal(await prisma.productivityEvent.count({ where: { ownerId: a, linkedTaskId: taskId } }), 0);
+});

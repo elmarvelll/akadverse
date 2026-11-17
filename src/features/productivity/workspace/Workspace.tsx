@@ -4,6 +4,7 @@ import { prepareWorkspace, prepareOfficialRange, loadWorkspaceView, peekStudent 
 import { localNow } from "../schedule/domain";
 import { scheduleDates, timetableSourceDates } from "../schedule/timetable";
 import { productivityErrorMessage } from "../errors";
+import { BuddySystem } from "../buddy/BuddySystem";
 import { TodayView } from "../today/TodayView";
 import { TaskManager } from "../tasks/TaskManager";
 import { ScheduleManager } from "../schedule/ScheduleManager";
@@ -15,6 +16,7 @@ import { SectionActivity } from "./queries";
 
 // Core code belongs to this route. Only visited views mount; analytics stays lazy.
 const sections = ["today", "tasks", "schedule", "habits"] as const;
+const renderedSections = [...sections, "buddy"] as const;
 function subscribe(listener: () => void) {
   window.addEventListener("hashchange", listener); window.addEventListener("popstate", listener);
   return () => { window.removeEventListener("hashchange", listener); window.removeEventListener("popstate", listener); };
@@ -80,8 +82,8 @@ export function Workspace({ enabled = true }: { enabled?: boolean }) {
     <span hidden data-productivity-preparation={preparation.complete ? preparation.error || preparation.taskError ? "partial" : "ready" : "loading"} />
     {preparation.error && <p className="error" role="alert">{preparation.error} <button onClick={() => { setPreparation(previous => ({ ...previous, complete: false })); setRetry(value => value + 1); }}>Retry shared preparation</button></p>}
     {preparation.taskError && <p className="error" role="alert">To-do history could not be prepared. {preparation.taskError} <button disabled={retryingTasks} onClick={() => void retryTasks()}>{retryingTasks ? "Retrying task pages..." : "Retry task pages"}</button></p>}
-    {!enabled || !preparation.core ? <main className="loading" role="status"><h1>{enabled ? "Preparing your workspace" : "Loading your account"}</h1><p>Your initial activities are loading. Navigation remains available.</p></main> : sections.filter(section => visited.has(section) || location.section === section).map(section => <SectionActivity.Provider key={section} value={location.section === section}><div hidden={location.section !== section} style={location.section !== section ? { display: "none" } : undefined} inert={location.section !== section}>
-      {section === "today" ? <TodayView /> : section === "tasks" ? <TaskManager initialTaskId={location.section === section ? location.taskId : undefined} /> : section === "habits" ? <HabitTracker initialHabitId={location.section === section ? location.habitId : undefined} initialDate={location.section === section ? location.occurrenceDate : undefined} initialEdit={location.section === section ? location.editHabit : undefined} /> : <ScheduleManager initialEventId={location.section === section ? location.eventId : undefined} initialDate={location.section === section ? location.scheduleDate : undefined} />}
+    {!enabled || !preparation.core ? <main className="loading" role="status"><h1>{enabled ? "Preparing your workspace" : "Loading your account"}</h1><p>Your initial activities are loading. Navigation remains available.</p></main> : renderedSections.filter(section => visited.has(section) || location.section === section).map(section => <SectionActivity.Provider key={section} value={location.section === section}><div hidden={location.section !== section} style={location.section !== section ? { display: "none" } : undefined} inert={location.section !== section}>
+      {section === "buddy" ? <BuddySystem active={location.section === "buddy"} initialId={location.section === "buddy" ? location.buddyId : undefined} /> : section === "today" ? <TodayView /> : section === "tasks" ? <TaskManager initialTaskId={location.section === section ? location.taskId : undefined} /> : section === "habits" ? <HabitTracker initialHabitId={location.section === section ? location.habitId : undefined} initialDate={location.section === section ? location.occurrenceDate : undefined} initialEdit={location.section === section ? location.editHabit : undefined} /> : <ScheduleManager initialEventId={location.section === section ? location.eventId : undefined} initialDate={location.section === section ? location.scheduleDate : undefined} />}
     </div></SectionActivity.Provider>)}
   </WorkspaceShell></WorkspaceNavigation.Provider>;
 }

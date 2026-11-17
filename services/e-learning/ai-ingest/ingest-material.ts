@@ -94,6 +94,7 @@ export async function recordIngestCallback(cb: IngestCallback): Promise<boolean>
       aiChunkCount: cb.status === "ingested" ? cb.chunk_count : null,
       aiIngestError: error, aiIngestUpdatedAt: new Date(),
     } });
+    if (cb.status === "ingested" && process.env.AI_V2_ENABLED === "true" && process.env.AI_INGEST_PIPELINE_ENABLED === "true") await (await import("../learning-ai/plans")).queueIngestedLearningPlan(tx, task.materialId);
     return true;
   });
 }

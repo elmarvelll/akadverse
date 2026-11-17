@@ -1,0 +1,414 @@
+{
+  "source": "https://akadverse-concept-explainer-production.up.railway.app/openapi.json",
+  "captured_at": "2026-11-16T23:04:11.981281+00:00",
+  "full_document_sha256": "aa16d261f7e5bb23895324b81d10f9c44dc81ea1191a4ef66f630afca359db40",
+  "info": {
+    "title": "AkadVerse Concept Explainer API",
+    "description": "Study assistant with durable PDF, DOCX, and PPTX ingestion. Course material retrieval is available via /explain. Also supports web-grounded explanations via /explain-with-grounding.",
+    "version": "1.2"
+  },
+  "paths": {
+    "/next-action": {
+      "post": {
+        "tags": [
+          "Orchestrator"
+        ],
+        "summary": "Next Action Endpoint",
+        "operationId": "next_action_endpoint_next_action_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NextActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SharedSecretBearer": []
+          }
+        ]
+      }
+    },
+    "/generate-hint": {
+      "post": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Generate Hint Endpoint",
+        "operationId": "generate_hint_endpoint_generate_hint_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateHintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateHintResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SharedSecretBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NextActionRequest": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "1"
+          },
+          "operation": {
+            "type": "string",
+            "const": "NEXT_ACTION",
+            "title": "Operation",
+            "default": "NEXT_ACTION"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/TriggerType"
+          },
+          "student_context": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Student Context"
+          },
+          "current": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Current"
+          },
+          "latest_evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Latest Evidence"
+          },
+          "allowed_actions": {
+            "items": {
+              "$ref": "#/components/schemas/ActionType"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Allowed Actions"
+          },
+          "policy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Policy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "trigger",
+          "student_context",
+          "current",
+          "allowed_actions"
+        ],
+        "title": "NextActionRequest"
+      },
+      "NextActionResponse": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "1"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Decision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "signals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Signals"
+          },
+          "usage": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Usage"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version",
+            "default": ""
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "status"
+        ],
+        "title": "NextActionResponse"
+      },
+      "Decision": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ActionType"
+          },
+          "target_concept_id": {
+            "type": "string",
+            "title": "Target Concept Id"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "target_concept_id",
+          "reason_code",
+          "rationale",
+          "confidence"
+        ],
+        "title": "Decision"
+      },
+      "ActionType": {
+        "type": "string",
+        "enum": [
+          "EXPLAIN_CONCEPT",
+          "REINFORCE_CONCEPT",
+          "SHOW_GUIDED_EXAMPLE",
+          "GIVE_HINT",
+          "GENERATE_PRACTICE",
+          "ADDRESS_MISCONCEPTION",
+          "REASONING_EXERCISE",
+          "TRANSFER_TASK",
+          "TEACH_PREREQUISITE",
+          "ADVANCE_TO_NEXT_CONCEPT",
+          "COMPLETE_LESSON",
+          "CONTINUE_CONVERSATION",
+          "RECAP",
+          "FLAG_FOR_REVIEW"
+        ],
+        "title": "ActionType"
+      },
+      "TriggerType": {
+        "type": "string",
+        "enum": [
+          "CONCEPT_OPENED",
+          "EXPLANATION_DELIVERED",
+          "STUDENT_ASKED",
+          "HINT_REQUESTED",
+          "GUIDED_COMPLETED",
+          "ATTEMPT_EVALUATED",
+          "PRACTICE_COMPLETED",
+          "LESSON_COMPLETED",
+          "REVISION_REVIEW_COMPLETED",
+          "RETURN_VISIT",
+          "LESSON_STARTED"
+        ],
+        "title": "TriggerType"
+      },
+      "GenerateHintRequest": {
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Concept Id"
+          },
+          "concept_description": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Concept Description"
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question"
+          },
+          "expected_answer": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Expected Answer"
+          },
+          "evaluation_criteria": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evaluation Criteria"
+          },
+          "student_attempt": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Student Attempt"
+          },
+          "target_level": {
+            "type": "integer",
+            "maximum": 6,
+            "minimum": 1,
+            "title": "Target Level"
+          },
+          "previous_hints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Previous Hints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "concept_id",
+          "concept_description",
+          "question",
+          "expected_answer",
+          "student_attempt",
+          "target_level"
+        ],
+        "title": "GenerateHintRequest"
+      },
+      "GenerateHintResponse": {
+        "properties": {
+          "level_given": {
+            "type": "integer",
+            "title": "Level Given"
+          },
+          "hint_type": {
+            "type": "string",
+            "enum": [
+              "L1_METACOGNITIVE",
+              "L2_DIRECTIONAL",
+              "L3_CONCEPT_REMINDER",
+              "L4_ANALOGOUS_EXAMPLE",
+              "L5_PARTIAL_SOLUTION",
+              "L6_FULL_SOLUTION",
+              "NO_HINT"
+            ],
+            "title": "Hint Type"
+          },
+          "hint_content": {
+            "type": "string",
+            "title": "Hint Content"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "needs_review": {
+            "type": "boolean",
+            "title": "Needs Review"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level_given",
+          "hint_type",
+          "hint_content",
+          "rationale",
+          "needs_review"
+        ],
+        "title": "GenerateHintResponse"
+      }
+    },
+    "securitySchemes": {
+      "SharedSecretBearer": {
+        "type": "http",
+        "description": "Enter your AI_SERVICE_API_KEY value without the Bearer prefix.",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

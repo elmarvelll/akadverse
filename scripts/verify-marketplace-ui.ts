@@ -7,7 +7,7 @@
 //   - Vendor dashboard: the delivery schedule section and newest-first order list render.
 //   - Vendor checkout: the delivery-date chips render from the server's availability.
 //   - Study Zone: a week with several documents shows the dropdown; choosing another document swaps the viewer;
-//     the Stuwart upload control is present beside the message box.
+//     the Stuart upload control is present beside the message box.
 //
 // It refuses to run unless both database URLs are local. It creates its own uniquely-named records and signs in by
 // minting a NextAuth session cookie with NEXTAUTH_SECRET (start the server with the SAME throwaway secret).
@@ -198,7 +198,7 @@ async function main() {
     text = await page.evaluate(() => document.body.innerText);
     ok("study zone: week tab says there are more documents", text.includes("+2 more"));
     const upload = await page.$eval('button[aria-label="Attach a document"]', (el: Element) => ({ w: el.getBoundingClientRect().width, nextIsInput: Boolean(el.parentElement?.querySelector("textarea#stewart-input")) }));
-    ok("study zone: Stuwart has an upload control beside the message box", upload.w >= 36 && upload.nextIsInput);
+    ok("study zone: Stuart has an upload control beside the message box", upload.w >= 36 && upload.nextIsInput);
     const accept = await page.$eval("#stewart-file", (el: Element) => (el as HTMLInputElement).accept);
     ok("study zone: upload accepts the supported document types", accept === ".pdf,.docx,.pptx,.txt,.md", accept);
     if (shots) await page.screenshot({ path: `${shots}/study-zone.png` });

@@ -74,7 +74,7 @@ export async function removeAttachment(userId: string, sessionId: string, id: un
     const row = await tx.stewartAttachment.findUnique({ where: { attachmentId: id } });
     if (!row) return null;
     if (row.userId !== userId || row.sessionId !== sessionId) throw new AttachmentError(403, "Attachment access denied.", "ATTACHMENT_FORBIDDEN");
-    if (row.inUseUntil && row.inUseUntil > new Date()) throw new AttachmentError(409, "Wait for Stuwart's answer before removing this attachment.", "ATTACHMENT_BUSY");
+    if (row.inUseUntil && row.inUseUntil > new Date()) throw new AttachmentError(409, "Wait for Stuart's answer before removing this attachment.", "ATTACHMENT_BUSY");
     if (row.status === "deleted") return null;
     return tx.stewartAttachment.update({ where: { id: row.id }, data: { status: "deleting" } });
   });

@@ -8,7 +8,8 @@ import { canonicalQuestion, scopeKey, hash, normalizedVector, JUDGE_MODEL, EMBED
 import { embedQuestions, judgePairs, type JudgePair, type Judgment } from "./providers";
 import { commitRevisionDelivery, type RevisionClaim } from "./idempotency";
 import { initialRevisionCard } from "./scheduler";
-import { sourceFingerprint, sourceSnapshot, workspaceEnabled } from "./eligibility";
+import { sourceFingerprint, sourceSnapshot, workspaceEnabled, revisionCourses } from "./eligibility";
+const usesGovernance = (event: { context: unknown }) => workspaceEnabled() || (!!event.context && typeof event.context === "object" && typeof (event.context as Record<string, unknown>)._learningPlanId === "string");
 const json = (value: unknown): Prisma.InputJsonValue => JSON.parse(JSON.stringify(value));
 export async function validateTeachingDelivery(payload: RevisionPayload) {
   const event = await elearningDb.revisionTeachingEvent.findUnique({ where: { id: payload.teaching_event_id }, include: { concept: { include: { material: true } }, practiceAttempt: true, generation: true } });
@@ -16,6 +17,13 @@ export async function validateTeachingDelivery(payload: RevisionPayload) {
   const user = await prisma.user.findUnique({ where: { id: payload.student_id }, select: { role: true } });
   if (user?.role !== "student") throw new RevisionWebhookError(400, "STUDENT_UNAVAILABLE", "The teaching event's student account is unavailable.");
   const expected = event.context as Record<string, unknown>;
+  if (typeof expected._learningPlanId === "string") {
+    const [coverage, plan, courses] = await Promise.all([
+      elearningDb.learningCoverage.findUnique({ where: { studentId_planId_conceptId: { studentId: event.studentId, planId: expected._learningPlanId, conceptId: event.conceptId } } }),
+      elearningDb.learningPlan.findUnique({ where: { id: expected._learningPlanId }, include: { version: true } }), revisionCourses(event.studentId),
+    ]);
+    if (!coverage || !plan || plan.status !== "READY" || plan.version.fingerprint !== sourceFingerprint(event.concept.material) || !courses.some(c => c.offeringId === coverage.offeringId)) throw new RevisionWebhookError(409, "LEARNING_COVERAGE_REQUIRED", "This revision delivery no longer has eligible course coverage.");
+  }
   for (const [key, value] of Object.entries(payload.context)) if (expected[key] !== value) throw new RevisionWebhookError(400, "CONCEPT_CONTEXT_MISMATCH", "The submission context does not match the trusted teaching event.");
   if (payload.taught_summary !== event.taughtSummary || Date.parse(payload.occurred_at) < +event.passedAt - 30000 || Date.parse(payload.occurred_at) > Date.now() + 30000) throw new RevisionWebhookError(400, "TEACHING_EVENT_MISMATCH", "The submission does not match the taught summary or event timing.");
   if (!event.generation) throw new RevisionWebhookError(400, "GENERATION_NOT_REQUESTED", "No generation was requested for this teaching event.");
@@ -34,7 +42,7 @@ async function scopeSnapshot(scope: string, tx: Pick<Prisma.TransactionClient, "
 }
 export async function prepareRevisionBatch(payload: RevisionPayload, event: TrustedEvent, providers: RevisionProviders = defaults, signal = AbortSignal.timeout(8500)) {
   const expected = event.context as Record<string, unknown>;
-  if (workspaceEnabled() && (!event.concept.active || event.concept.material.aiIngestStatus !== "INGESTED" || (expected._sourceFingerprint ? expected._sourceFingerprint !== sourceFingerprint(event.concept.material) : event.passedAt < event.concept.material.updatedAt))) throw new RevisionWebhookError(409, "SOURCE_CHANGED", "The teaching material changed; this event requires review.");
+  if (usesGovernance(event) && (!event.concept.active || event.concept.material.aiIngestStatus !== "INGESTED" || (expected._sourceFingerprint ? expected._sourceFingerprint !== sourceFingerprint(event.concept.material) : event.passedAt < event.concept.material.updatedAt))) throw new RevisionWebhookError(409, "SOURCE_CHANGED", "The teaching material changed; this event requires review.");
   const texts = payload.questions.map(q => canonicalQuestion(payload, q, event.concept.learningObjective));
   const snapshots = new Map<string, string>(), plans: Plan[] = [], pairs: JudgePair[] = [];
   const uniqueNew = new Map<string, string>();
@@ -104,17 +112,23 @@ export async function persistRevisionBatch(payload: RevisionPayload, event: Trus
   let committedCards = 0;
   const response = await commitRevisionDelivery(claim, async tx => {
     await tx.$executeRaw`SET LOCAL search_path = public, extensions`;
+    const learningContext = event.context as Record<string, unknown>;
+    if (typeof learningContext._learningPlanId === "string") {
+      const material = await tx.courseMaterial.findUniqueOrThrow({ where: { id: event.concept.materialId } });
+      const coverage = await tx.learningCoverage.findUnique({ where: { studentId_planId_conceptId: { studentId: event.studentId, planId: learningContext._learningPlanId, conceptId: event.conceptId } } });
+      if (!coverage || material.aiIngestStatus !== "INGESTED" || sourceFingerprint(material) !== learningContext._sourceFingerprint) throw new RevisionWebhookError(409, "SOURCE_CHANGED", "Learning coverage changed before this delivery committed.");
+    }
     for (const scope of [...snapshots.keys()].sort()) {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${scope}, 0))::text`;
       if (await scopeSnapshot(scope, tx) !== snapshots.get(scope)) throw new RevisionWebhookError(503, "CANDIDATES_CHANGED", "The question bank changed during preparation. Retry the same delivery.", 1);
     }
     if (newQuestions.length) {
       await tx.revisionQuestion.createMany({ data: newQuestions });
-      if (workspaceEnabled()) await tx.revisionQuestionGovernance.createMany({ data: newQuestions.map(q => ({ questionId: q.id!, publicationStatus: "PUBLISHED", sourceFingerprint: sourceFingerprint(event.concept.material), sourceSnapshot: json(sourceSnapshot(event.concept.material)) })) });
+      if (usesGovernance(event)) await tx.revisionQuestionGovernance.createMany({ data: newQuestions.map(q => ({ questionId: q.id!, publicationStatus: "PUBLISHED", sourceFingerprint: sourceFingerprint(event.concept.material), sourceSnapshot: json(sourceSnapshot(event.concept.material)) })) });
       await tx.$executeRaw`INSERT INTO "RevisionQuestionEmbedding" ("questionId", "model", "version", "dimensions", "vector") SELECT x."questionId", ${EMBEDDING_MODEL}, ${EMBEDDING_VERSION}, ${EMBEDDING_DIMENSIONS}, x."vector"::vector FROM jsonb_to_recordset(${JSON.stringify(embeddings)}::jsonb) AS x("questionId" text, "vector" text)`;
     }
     let resolvedIds = ids.filter((id): id is string => !!id);
-    if (workspaceEnabled() && resolvedIds.length) {
+    if (usesGovernance(event) && resolvedIds.length) {
       await tx.$queryRaw`SELECT "questionId" FROM "RevisionQuestionGovernance" WHERE "questionId" IN (SELECT jsonb_array_elements_text(${JSON.stringify(resolvedIds)}::jsonb)) ORDER BY "questionId" FOR SHARE`;
       const policies = await tx.revisionQuestionGovernance.findMany({ where: { questionId: { in: resolvedIds } }, include: { question: { include: { concept: { include: { material: true } } } } } });
       const available = new Set(policies.filter(p => p.publicationStatus === "PUBLISHED" && p.question.concept.active && p.question.concept.material.aiIngestStatus === "INGESTED" && p.sourceFingerprint === sourceFingerprint(p.question.concept.material)).map(p => p.questionId));

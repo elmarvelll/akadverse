@@ -107,7 +107,11 @@ async function executeForUser(user: Awaited<ReturnType<typeof requireProductivit
       const before = await timed("data.load", () => loadData(tx, user.id, create)), data = structuredClone(before);
       const identity = { async getCurrentStudent() { return student; } };
       const academicCache = {};
-      const academics = { getClassSessions: (_: string, date: string) => timed("academic.conflict-check", () => officialClasses(user.id, date, student.timezone, academicCache)) };
+      // This transaction already pins a Core connection. Conflict checks must
+      // not borrow another Core connection to resolve lecturer display names.
+      const academics = {
+        getExtraCommitments: () => data.tasks.tasks.filter(task => task.ownerId === user.id && !task.deletedAt && !task.habitWithdrawn && task.scheduledSlot).map(task => ({ id: `task:${task.id}`, title: task.title, slot: task.scheduledSlot! })),
+        getClassSessions: (_: string, date: string) => timed("academic.conflict-check", () => officialClasses(user.id, date, student.timezone, academicCache, { includeLecturerNames: false })) };
       const displayEvent = (e: PersonalEvent) => ({ ...e, slot: inTimezone(e.slot, student.timezone), backup: e.backup ? inTimezone(e.backup, student.timezone) : undefined });
       const taskRepo = { async load() { return structuredClone(data.tasks); }, async save(value: typeof data.tasks) { data.tasks = structuredClone(value); } };
       const habitRepo = { async load() { return structuredClone(data.habits); }, async save(value: typeof data.habits) { data.habits = structuredClone(value); } };

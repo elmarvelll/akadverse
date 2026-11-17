@@ -247,7 +247,7 @@ export default function StuwartPanel({ context, threadKey, studyingLabel, classN
         previous.filter((a) => originals.current.has(a.attachment_id)).forEach(discardAttachment);
         onFilesChange((current) => [...current, ...recovered.filter((file) => !current.includes(file))]);
       }
-      const message = error instanceof Error ? error.message : "Stuwart couldn't answer. Please retry.";
+      const message = error instanceof Error ? error.message : "Stuart couldn't answer. Please retry.";
       setDrafts((all) => ({ ...all, [view]: question }));
       setThreads((all) => ({ ...all, [view]: [...(all[view] ?? []).filter((m) => !m.local).map((m) => m.requestId === request.requestId && m.role === "student" ? { ...m, status: "FAILED" as const } : m), { id: `${request.requestId}-error`, role: "stewart", local: true, text: message }] }));
     } finally {
@@ -295,14 +295,14 @@ export default function StuwartPanel({ context, threadKey, studyingLabel, classN
   }
 
   return (
-    <section aria-label="Stuwart, AI study assistant" className={`flex min-h-0 min-w-0 flex-col rounded-2xl border border-gray-200 bg-white ${className}`}>
+    <section aria-label="Stuart, AI study assistant" className={`flex min-h-0 min-w-0 flex-col rounded-2xl border border-gray-200 bg-white ${className}`}>
       <header className="border-b border-gray-100 px-4 py-3">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white" aria-hidden>
             <Sparkles size={18} />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold text-gray-900">Stuwart</h2>
+            <h2 className="text-base font-bold text-gray-900">Stuart</h2>
             <p className="text-xs text-gray-700">AI Study Assistant</p>
           </div>
         </div>
@@ -333,14 +333,14 @@ export default function StuwartPanel({ context, threadKey, studyingLabel, classN
       </div>
       {messageCursors[key] && <button type="button" onClick={olderMessages} disabled={!!loadingConversation} className="py-2 text-xs underline">Load older messages</button>}
       <div className="relative flex min-h-0 flex-1 flex-col">
-      <ol ref={logRef} role="log" aria-label="Conversation with Stuwart" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <ol ref={logRef} role="log" aria-label="Conversation with Stuart" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.map((m) => (
           <li key={m.id} className={`flex ${m.role === "student" ? "justify-end" : "justify-start"}`}>
             <div className={m.role === "student" ? "min-w-0 max-w-[95%] break-words rounded-xl bg-blue-600 px-3.5 py-2.5 text-sm text-white" : "w-full min-w-0 break-words text-sm text-slate-800"}>
-              <span className="sr-only">{m.role === "student" ? "You" : "Stuwart"}: </span>
+              <span className="sr-only">{m.role === "student" ? "You" : "Stuart"}: </span>
               {m.role === "stewart" && !m.local ? <StewartResponse text={m.text} sources={m.sources} attachmentFiles={previewFiles} educational={m.educational} onAnswer={send} disabled={!!pendingKey || uploading || !!loadingConversation} /> : <span className="whitespace-pre-wrap">{m.text}</span>}
               {m.role === "student" && m.status === "FAILED" && <div className="mt-2 text-xs"><span>Response unavailable. </span><button type="button" disabled={!!pendingKey || uploading || !!loadingConversation} onClick={() => send(m.text, m.requestId, m.grounded)} className="font-semibold underline">Retry response</button></div>}
-              {m.role === "student" && m.status === "PENDING" && !typing && <p role="status" className="mt-2 text-xs">Waiting for Stuwart’s response…</p>}
+              {m.role === "student" && m.status === "PENDING" && !typing && <p role="status" className="mt-2 text-xs">Waiting for Stuart’s response…</p>}
               {m.attachments && <ul aria-label="Message attachments" className="mt-2 space-y-1">{m.attachments.map((a, index) => <li key={index} className="flex items-center gap-2">{a.file && <FilePreview file={a.file} />}<span className="text-xs">{a.name}</span></li>)}</ul>}
 
             </div>
@@ -349,7 +349,7 @@ export default function StuwartPanel({ context, threadKey, studyingLabel, classN
         {typing && (
           <li className="flex justify-start">
             <div className="flex items-center gap-2 py-3 text-sm text-slate-500">
-              <Loader2 size={14} className="animate-spin" aria-hidden /> {ready ? "Stuwart is reading and thinking…" : "Stuwart is thinking…"}
+              <Loader2 size={14} className="animate-spin" aria-hidden /> {ready ? "Stuart is reading and thinking…" : "Stuart is thinking…"}
             </div>
           </li>
         )}
@@ -415,7 +415,7 @@ export default function StuwartPanel({ context, threadKey, studyingLabel, classN
             {uploading ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Paperclip size={16} aria-hidden />}<span className="text-xs">Add files</span>
           </button>
           <div className="basis-full" />
-          <label htmlFor="stewart-input" className="sr-only">Ask Stuwart a question</label>
+          <label htmlFor="stewart-input" className="sr-only">Ask Stuart a question</label>
           <div className="relative min-w-0 flex-1">
           <textarea
             ref={transcriptFollow.ref}
@@ -431,7 +431,7 @@ export default function StuwartPanel({ context, threadKey, studyingLabel, classN
                 send(draft);
               }
             }}
-            placeholder={ready ? "Ask about the attached document…" : "Ask Stuwart…"}
+            placeholder={ready ? "Ask about the attached document…" : "Ask Stuart…"}
             aria-invalid={tooLong}
             aria-describedby="stewart-hint stewart-voice-status"
             className="block w-full max-h-32 min-h-[2.5rem] min-w-0 resize-none rounded-xl border px-3 py-2 pr-10 text-sm"
@@ -442,19 +442,19 @@ export default function StuwartPanel({ context, threadKey, studyingLabel, classN
           <button
             type="submit"
             disabled={(!draft.trim() && !files.length) || speech.active || !!pendingKey || uploading || tooLong || !!loadingConversation}
-            aria-label="Send message to Stuwart"
+            aria-label="Send message to Stuart"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
             <SendHorizontal size={16} aria-hidden />
           </button>
         </form>
-        <div id="stewart-voice-status"><VoiceInputStatus speech={speech} recipient="Stuwart" /></div>
+        <div id="stewart-voice-status"><VoiceInputStatus speech={speech} recipient="Stuart" /></div>
         <p id="stewart-hint" className={`mt-2 text-[11px] ${tooLong ? "text-red-800" : "text-gray-600"}`}>
           {tooLong
             ? `That message is too long (${draft.length.toLocaleString("en")} of ${STEWART_MAX_MESSAGE_CHARS.toLocaleString("en")} characters).`
             : uploading
               ? "You can send your question once the document has finished uploading."
-              : "Stuwart can make mistakes — check important answers against your course material."}
+              : "Stuart can make mistakes — check important answers against your course material."}
         </p>
       </div>
     </section>

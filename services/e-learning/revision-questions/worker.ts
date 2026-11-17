@@ -28,7 +28,7 @@ export async function flushRevisionAlerts() {
   }
   return delivered;
 }
-export async function claimRevisionWork() {
+export async function claimRevisionWork(options: { analysisOnly?: boolean; learningOnly?: boolean } = {}) {
   return elearningDb.$transaction(async tx => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(72419039)::text`;
     const now = new Date();
@@ -47,17 +47,27 @@ export async function claimRevisionWork() {
       await tx.revisionAdminAlert.upsert({ where: { dedupeKey: `analysis:${row.id}` }, update: {}, create: { dedupeKey: `analysis:${row.id}`, category: "ANALYSIS_UNCERTAIN", correlationId: row.id } });
     }
     // Quarantined uncertain requests keep their slot. No remote cancellation contract exists.
-    const occupied = await tx.revisionGenerationJob.count({ where: { claimToken: { not: null } } }) + await tx.revisionConceptAnalysisJob.count({ where: { claimToken: { not: null } } });
+    const { learningAiFlags } = await import("../learning-ai/flags");
+    const learningFlags = learningAiFlags();
+    const learningOccupied = learningFlags.AI_V2_ENABLED ? await tx.learningLessonAction.count({ where: { leaseToken: { not: null } } }) : 0;
+    const occupied = learningOccupied + await tx.revisionGenerationJob.count({ where: { claimToken: { not: null } } }) + await tx.revisionConceptAnalysisJob.count({ where: { claimToken: { not: null } } });
     if (occupied >= 2) return null;
-    const generation = await tx.revisionGenerationJob.findFirst({ where: { status: "PENDING", nextAttemptAt: { lte: now } }, orderBy: { createdAt: "asc" } });
+    const generation = options.analysisOnly || (options.learningOnly && !(learningFlags.AI_V2_ENABLED && learningFlags.REVISION_PIPELINE_ENABLED)) ? null : await tx.revisionGenerationJob.findFirst({ where: { status: "PENDING", nextAttemptAt: { lte: now }, learningV2: options.learningOnly ? true : learningFlags.AI_V2_ENABLED && learningFlags.REVISION_PIPELINE_ENABLED ? undefined : false }, orderBy: { createdAt: "asc" } });
     if (generation) return { type: "generation" as const, job: await tx.revisionGenerationJob.update({ where: { id: generation.id }, data: { status: "PROCESSING", claimToken: randomUUID(), leaseUntil: new Date(Date.now() + 150000), attempts: { increment: 1 }, startedAt: now, lastAttemptAt: now } }) };
-    const analysis = await tx.revisionConceptAnalysisJob.findFirst({ where: { status: "PENDING", nextAttemptAt: { lte: now } }, orderBy: { createdAt: "asc" } });
+    const analysis = options.learningOnly && !(learningFlags.AI_V2_ENABLED && learningFlags.AI_INGEST_PIPELINE_ENABLED) ? null : await tx.revisionConceptAnalysisJob.findFirst({ where: { status: "PENDING", nextAttemptAt: { lte: now }, learningV2: options.learningOnly ? true : learningFlags.AI_V2_ENABLED && learningFlags.AI_INGEST_PIPELINE_ENABLED ? undefined : false }, orderBy: { createdAt: "asc" } });
     if (analysis) return { type: "analysis" as const, job: await tx.revisionConceptAnalysisJob.update({ where: { id: analysis.id }, data: { status: "PROCESSING", claimToken: randomUUID(), leaseUntil: new Date(Date.now() + 150000), attempts: { increment: 1 } } }) };
     return null;
   });
 }
 export async function processConceptAnalysis(job: RevisionConceptAnalysisJob) {
   try {
+    const { learningAiFlags } = await import("../learning-ai/flags");
+    const flags = learningAiFlags();
+    if (job.learningV2 && !(flags.AI_V2_ENABLED && flags.AI_INGEST_PIPELINE_ENABLED)) { await elearningDb.revisionConceptAnalysisJob.updateMany({ where: { id: job.id, claimToken: job.claimToken }, data: { status: "PENDING", claimToken: null, leaseUntil: null } }); return; }
+    if (job.learningV2) {
+      const { analyseLearningPlan } = await import("../learning-ai/plans");
+      await analyseLearningPlan(job); return;
+    }
     const material = await elearningDb.courseMaterial.findUniqueOrThrow({ where: { id: job.materialId }, include: { courseOffering: { include: { curriculumCourse: { include: { course: true, curriculum: true } } } } } });
     if (material.aiIngestStatus !== "INGESTED") throw new RevisionWebhookError(409, "MATERIAL_NOT_INGESTED", "Material ingestion is not complete.");
     const result = validateAnalysis(await learningRequest("/analyse-material", { document_id: material.id, max_concepts: 12 }), material.id);
@@ -81,6 +91,10 @@ export async function processConceptAnalysis(job: RevisionConceptAnalysisJob) {
   }
 }
 export async function processRevisionGeneration(job: RevisionGenerationJob) {
+  const flags = (await import("../learning-ai/flags")).learningAiFlags();
+  if (job.learningV2 && !(flags.AI_V2_ENABLED && flags.REVISION_PIPELINE_ENABLED)) {
+    await elearningDb.revisionGenerationJob.updateMany({ where: { id: job.id, claimToken: job.claimToken, submittedAt: null }, data: { status: "PENDING", claimToken: null, leaseUntil: null } }); return;
+  }
   const event = await elearningDb.revisionTeachingEvent.findUniqueOrThrow({ where: { id: job.teachingEventId }, include: { concept: true } });
   const context = event.context as Record<string, string>;
   revisionLog("generation_started", { correlationId: job.id, teachingEventId: event.id, conceptId: event.conceptId });
@@ -95,7 +109,10 @@ export async function processRevisionGeneration(job: RevisionGenerationJob) {
     const dispatch = await elearningDb.revisionGenerationJob.updateMany({ where: { id: job.id, claimToken: job.claimToken, status: "PROCESSING", submittedAt: null, leaseUntil: { gt: new Date() } }, data: { submittedAt: new Date() } });
     if (!dispatch.count) return; // An expired/replaced worker cannot start a remote request.
     submitted = true;
-    const result = await learningRequest("/generate-revision-questions", { teaching_event_id: event.id, student_id: event.studentId, concept_id: context.concept_id, concept_description: context.concept_title, taught_summary: event.taughtSummary, subject: context.subject, curriculum: context.curriculum, level: context.level, topic: context.topic, language: context.language, max_questions: 3, question_types: ["mcq", "short_answer", "true_false"] }, 120000);
+    const payload = { teaching_event_id: event.id, student_id: event.studentId, concept_id: context.concept_id, concept_description: context.concept_title, taught_summary: event.taughtSummary, subject: context.subject, curriculum: context.curriculum, level: context.level, topic: context.topic, language: context.language, max_questions: context._learningPlanId ? 1 : 3, question_types: ["mcq", "short_answer", "true_false"] };
+    const result = context._learningPlanId
+      ? (await (await import("../learning-ai/client")).callAi("GENERATE_REVISION_QUESTIONS", payload, { requestId: job.id, studentId: event.studentId, courseId: context._learningCourseId })).body
+      : await learningRequest("/generate-revision-questions", payload, 120000);
     if (result?.teaching_event_id !== event.id || !Number.isInteger(result.generated_count) || result.generated_count < 0 || result.generated_count > 5 || typeof result.webhook_attempted !== "boolean" || !["processed", "accepted_async", "failed_permanent", "failed_transient", "not_attempted"].includes(result.webhook_status) || typeof result.needs_review !== "boolean" || !Array.isArray(result.webhook_results)) throw new RevisionWebhookError(502, "GENERATION_CONTRACT_INVALID", "Generation response failed validation.");
     const committed = await elearningDb.revisionWebhookIdempotency.findUnique({ where: { idempotencyKey: `teach_${event.id}` } });
     if (result.webhook_status !== "processed" || !result.webhook_attempted || committed?.status !== "COMPLETED") throw new RevisionWebhookError(503, "GENERATION_NOT_COMMITTED", "No complete synchronous webhook receipt was confirmed.");
@@ -120,7 +137,7 @@ export async function processRevisionGeneration(job: RevisionGenerationJob) {
   }
 }
 export async function runRevisionSweep() {
-  if (process.env.REVISION_GENERATION_ENABLED !== "true") return { disabled: true, processed: 0 };
+  if (process.env.REVISION_GENERATION_ENABLED !== "true" && !(process.env.AI_V2_ENABLED === "true" && process.env.REVISION_PIPELINE_ENABLED === "true")) return { disabled: true, processed: 0 };
   let processed = 0; const end = Date.now() + 240000;
   while (Date.now() + 125000 < end && processed < 3) {
     const work = await claimRevisionWork(); if (!work) break;
