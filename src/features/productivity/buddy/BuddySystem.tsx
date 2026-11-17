@@ -82,6 +82,15 @@ export function BuddySystem({ active, initialId }: { active: boolean; initialId?
   const view = tab === "my" ? myView : tab === "activity" ? activityView : tab;
   useEffect(() => { const timer = setTimeout(() => { setQuery(search.trim()); setPage(1); }, 300); return () => clearTimeout(timer); }, [search]);
   const refresh = useCallback(() => setRevision(value => value + 1), []);
+  useEffect(() => {
+    if (!active) return;
+    const invalidated = (event: Event) => {
+      const tags = (event as CustomEvent<unknown>).detail;
+      if (Array.isArray(tags) && tags.includes("buddy")) refresh();
+    };
+    window.addEventListener("productivity:invalidated", invalidated);
+    return () => window.removeEventListener("productivity:invalidated", invalidated);
+  }, [active, refresh]);
   useEffect(() => { if (!active) return; const focus = () => refresh(); window.addEventListener("focus", focus); return () => window.removeEventListener("focus", focus); }, [active, refresh]);
   useEffect(() => {
     if (!active || creating) return;

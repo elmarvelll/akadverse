@@ -942,5 +942,218 @@
       ],
       "additionalProperties": false
     }
+  },
+  {
+    "name": "list_buddies",
+    "description": "Browse Buddy System groups, requests, your listings, joined groups or applications. Paginated; use search to find titles before choosing IDs.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "view": {
+          "type": "string",
+          "enum": [
+            "discover",
+            "groups",
+            "requests",
+            "manage",
+            "joined",
+            "created-requests",
+            "applied-requests",
+            "group-applications",
+            "activity"
+          ]
+        },
+        "search": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_buddy",
+    "description": "Read a Buddy listing and applications visible to you. Private contact/invitation details are available only to its creator or accepted members. Never share them with other listings. Use application_page to inspect further applicants when applicationsTruncated is true.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "listing_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "application_page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "Page of visible applicants, 50 per page; defaults to 1."
+        }
+      },
+      "required": [
+        "listing_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "create_buddy_group",
+    "description": "Propose a study group. Requires title, description and a user-supplied HTTPS WhatsApp/Telegram invitation URL. max_members includes creator; omit for unlimited. Requires confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "invitation_url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "max_members": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "invitation_url"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "create_buddy_request",
+    "description": "Propose a buddy matching request with user-supplied contact details shared with the accepted match. Ask for missing information; requires confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "contact_details": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "contact_details"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "apply_buddy",
+    "description": "Propose applying to a group or buddy request after reading its current details. Buddy requests require your user-supplied contact_details. Cannot apply to your own listing; requires confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "listing_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "contact_details": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "listing_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "accept_buddy_application",
+    "description": "Propose accepting one pending applicant on your own listing. Read get_buddy for the exact application ID. Shares private details with that applicant and notifies them; requires confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "listing_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "listing_id",
+        "application_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "decline_buddy_application",
+    "description": "Propose declining one pending applicant on your own listing. Read get_buddy first; notifies applicant; requires confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "listing_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "listing_id",
+        "application_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "close_buddy_listing",
+    "description": "Propose closing your own buddy request or group to new applications. Requires confirmation. Does not delete a group or remove existing members.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "listing_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "listing_id"
+      ],
+      "additionalProperties": false
+    }
   }
 ]
