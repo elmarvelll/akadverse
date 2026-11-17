@@ -6,6 +6,7 @@ import { validateTeachingDelivery, prepareRevisionBatch, persistRevisionBatch } 
 import { reserveRevisionDelivery, releaseRevisionClaim, type RevisionClaim } from "./idempotency";
 import { queueRevisionAlert } from "./worker";
 import { revisionLog } from "./monitor";
+const receiverEnabled = () => process.env.REVISION_QUESTIONS_ENABLED === "true" || (process.env.AI_V2_ENABLED === "true" && process.env.REVISION_PIPELINE_ENABLED === "true");
 const authFailures = new Map<string, number>();
 const headers = { "Cache-Control": "no-store", "Content-Type": "application/json" };
 export async function handleRevisionWebhook(request: Request) {
@@ -15,7 +16,7 @@ export async function handleRevisionWebhook(request: Request) {
     const authenticated = await authenticateRevisionRequest(request, undefined, undefined, correlationId);
     const payload = parseRevisionPayload(authenticated.raw, authenticated.idempotencyKey);
     revisionLog("received", { correlationId, eventId: payload.event_id, teachingEventId: payload.teaching_event_id, conceptId: payload.context.concept_id });
-    if (process.env.REVISION_QUESTIONS_ENABLED !== "true") throw new RevisionWebhookError(503, "REVISION_DISABLED", "Revision processing has not been enabled for this deployment.", 60);
+    if (!receiverEnabled()) throw new RevisionWebhookError(503, "REVISION_DISABLED", "Revision processing has not been enabled for this deployment.", 60);
     const event = await validateTeachingDelivery(payload);
     const reservation = await reserveRevisionDelivery(authenticated.idempotencyKey, authenticated.bodyHash, payload.teaching_event_id, payload.event_id, authenticated.raw);
     if (reservation.kind === "replay") { revisionLog("replay", { correlationId, teachingEventId: event.id }); return new Response(reservation.response, { status: 200, headers }); }
@@ -31,7 +32,7 @@ export async function handleRevisionWebhook(request: Request) {
     const known = error instanceof RevisionWebhookError;
     const status = known ? error.status : 500, code = known ? error.code : "INTERNAL_ERROR";
     if (claim) await releaseRevisionClaim(claim, code).catch(() => {});
-    if (process.env.REVISION_QUESTIONS_ENABLED === "true") {
+    if (receiverEnabled()) {
       if (claim && claim.attempts >= 3 && status >= 500) await queueRevisionAlert(code, claim.teachingEventId).catch(() => console.warn("[revision-questions] alert persistence unavailable", { correlationId }));
       if (["INVALID_SIGNATURE", "EXPIRED_TIMESTAMP"].includes(code)) {
         const bucket = `${code}:${Math.floor(Date.now() / 900000)}`;
@@ -40,7 +41,7 @@ export async function handleRevisionWebhook(request: Request) {
         if (count === 5) await queueRevisionAlert("REPEATED_AUTHENTICATION_FAILURE", bucket).catch(() => console.warn("[revision-questions] auth alert persistence unavailable", { correlationId }));
       }
     }
-    revisionLog("rejected", { correlationId, failureCode: code, durationMs: Date.now() - start });
+    revisionLog("rejected", { correlationId, failureCode: code, invalidField: known && code === "INVALID_PAYLOAD" ? /^Invalid revision payload field: ([a-zA-Z0-9_.\[\]-]+)\.$/.exec(error.message)?.[1] : undefined, durationMs: Date.now() - start });
     return Response.json({ error: { code, message: known ? error.message : "Revision processing failed. Retry the same delivery after the service recovers.", correlation_id: correlationId } }, { status, headers: { ...headers, ...(known && error.retryAfter ? { "Retry-After": String(error.retryAfter) } : {}) } });
   }
 }

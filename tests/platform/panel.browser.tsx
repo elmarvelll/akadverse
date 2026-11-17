@@ -11,7 +11,7 @@ Object.assign(window, { platformTest: { requests, fail: () => { failed = true; }
 window.fetch = async (_input, init) => {
   if (!init?.method || init.method === "GET") return Response.json({ lesson: { topic: "Newton's laws", week: 3, version: 1, documentId: null }, messages: saved });
   const body = JSON.parse(String(init.body)); requests.push(body);
-  if (failed) { failed = false; return Response.json({ error: "Stuwart is temporarily unavailable. Your class is still live." }, { status: 503 }); }
+  if (failed) { failed = false; return Response.json({ error: "Stuart is temporarily unavailable. Your class is still live." }, { status: 503 }); }
   saved = [...saved, { id: `${body.requestId}-u`, role: "USER", content: body.question }, { id: `${body.requestId}-a`, role: "ASSISTANT", content: "Force equals mass times acceleration." }];
   return Response.json({ answer: "Force equals mass times acceleration.", messageId: `${body.requestId}-a`, sources: [] });
 };

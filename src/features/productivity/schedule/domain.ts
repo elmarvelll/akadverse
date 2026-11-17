@@ -92,6 +92,8 @@ export interface ScheduleRepository {
   save(data: Dataset): Promise<void>;
 }
 export interface AcademicProvider {
+  /** Owner-scoped task intervals already loaded by the transaction; no extra I/O. */
+  getExtraCommitments?(): Conflict[];
   getClassSessions(
     studentId: string,
     date: LocalDate,
@@ -132,7 +134,7 @@ export function scheduleConflicts(events: PersonalEvent[], classes: OfficialClas
   return result;
 }
 
-export function findSmartSlot(date: string, timezone: string, options: Extract<SchedulingOptions, { mode: "smart" }>, events: PersonalEvent[], classes: OfficialClass[], now: { date: string; time: string }, excludeId?: string): Slot | null {
+export function findSmartSlot(date: string, timezone: string, options: Extract<SchedulingOptions, { mode: "smart" }>, events: PersonalEvent[], classes: OfficialClass[], now: { date: string; time: string }, excludeId?: string, extra: Conflict[] = []): Slot | null {
   const validTime = (time: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
   if (!validDate(date) || !validTime(options.earliest) || !validTime(options.latest) || options.earliest >= options.latest || !Number.isInteger(options.durationMinutes) || options.durationMinutes < 1 || options.durationMinutes > 1439)
     throw new ProductivityError("Choose a valid scheduling window and duration between 1 and 1439 minutes.");
@@ -142,7 +144,7 @@ export function findSmartSlot(date: string, timezone: string, options: Extract<S
   const start = Math.max(minutes(options.earliest), date === now.date ? minutes(now.time) + 1 : 0);
   for (let minute = start; minute + options.durationMinutes <= minutes(options.latest); minute++) {
     const candidate = { date, timezone, start: time(minute), end: time(minute + options.durationMinutes) };
-    if (!findConflicts(candidate, events, classes, excludeId).length) return candidate;
+    if (!findConflicts(candidate, events, classes, excludeId, extra).length) return candidate;
   }
   return null;
 }
@@ -213,8 +215,10 @@ export function findConflicts(
   events: PersonalEvent[],
   classes: OfficialClass[],
   excludeId?: string,
+  extra: Conflict[] = [],
 ) {
   return [
+    ...extra.filter(commitment => commitment.id !== excludeId && overlaps(slot, commitment.slot)),
     ...events
       .filter(
         (e) =>
@@ -406,7 +410,7 @@ export class ScheduleService {
     if (scheduling.mode === "smart") {
       if (!validDate(input.slot.date)) throw new ProductivityError("Choose a valid date.");
       const classes = await this.academic.getClassSessions(student.id, input.slot.date);
-      const suggested = findSmartSlot(input.slot.date, student.timezone, scheduling, data.events.filter(e => e.ownerId === student.id), classes, localNow(student.timezone, this.clock()), eventId);
+      const suggested = findSmartSlot(input.slot.date, student.timezone, scheduling, data.events.filter(e => e.ownerId === student.id), classes, localNow(student.timezone, this.clock()), eventId, this.academic.getExtraCommitments?.() || []);
       if (!suggested) throw new ProductivityError("No free slot fits this duration and window on the selected day. Choose another date, widen the window, or use manual scheduling.");
       input = { ...input, slot: suggested };
     }
@@ -429,6 +433,7 @@ export class ScheduleService {
       data.events.filter((e) => e.ownerId === student.id),
       classes,
       eventId,
+      this.academic.getExtraCommitments?.() || [],
     );
     if (conflicts.length && !(scheduling.mode === "manual" && scheduling.allowConflicts))
       throw new SlotConflictError(conflicts);

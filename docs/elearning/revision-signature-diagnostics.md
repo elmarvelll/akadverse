@@ -9,7 +9,7 @@ Checked 16 November 2026. Receiver: `POST /api/webhooks/tutor/questions`.
 - Vercel does not return the sensitive value through `vercel env run`. No production byte length has been verified. Missing CLI output does not mean the deployed receiver lacks its configured secret.
 - The receiver reads `request.body.getReader()`, accumulates `Uint8Array` chunks, and hashes `Buffer.concat(chunks)`. JSON parsing happens only after authentication. It does not reserialize JSON, add spaces, reorder keys, prefix the signature, prepend the timestamp, or decode the secret as hex/base64.
 - The effective receiver key is the UTF-8 text of `AI_WEBHOOK_SECRET.trim()`. Therefore a raw trailing newline alone would not change its HMAC if the trimmed value matches the sender's key. Compare both raw and effective lengths.
-- The header must be bare 64-character hex. Timestamp must be ISO UTC (`Z` or `+00:00`), within the existing five-minute past / 30-second future window. Unix timestamp strings are rejected before body reading.
+- The header must be bare 64-character hex. Timestamp must be ISO UTC (`Z` or `+00:00`), with optional 1–6 fractional-second digits, within the existing five-minute past / 30-second future window. Unix timestamp strings are rejected before body reading.
 - An undefined eventId on a rejected authentication request is expected: unverified JSON is never parsed to obtain its event_id. Use the response's `error.correlation_id` to identify these failures.
 
 ## Added local diagnostics
@@ -54,3 +54,17 @@ For this request, `signatureReceived`, `timestampReceived`, and `idempotencyKeyR
 HMAC verification is in the **Node.js route handler**: `src/app/api/webhooks/tutor/questions/route.ts` → `handleRevisionWebhook` → `authenticateRevisionRequest`. `src/proxy.ts` explicitly passes `/api/webhooks` through before session authentication. The same handler-generated correlation ID is passed to signature diagnostics and returned in the error response. No middleware relocation is needed.
 
 A proposed temporary public diagnostic deployment for secret lengths was rejected by automatic approval review because it would expose secret-derived metadata through a public endpoint. It did not run. The requested receiver logs are the safer diagnostic path; no alternate public metadata endpoint was created.
+
+
+## Microsecond timestamp interoperability fix
+
+Correlation `f6fe7449-2223-43d9-83fd-baa7cc1ce7ea` reports `invalid_auth_headers` with timestamp `2026-11-16T19:03:01.310279+00:00`. The original receiver accepted at most three fractional digits; Python supplied six. Its signature has the required hex format, but authentication rejected the timestamp syntax before reading or hashing the body. This request provides no evidence about whether the signing keys match.
+
+The receiver now accepts 1–6 fractional digits and explicitly truncates sub-millisecond precision for its existing millisecond freshness comparison. UTC-only syntax, calendar validation, freshness limits, and HMAC input remain unchanged. The original header remains available in diagnostics. Regression tests cover Python timestamps with both UTC suffixes, exact body bytes, expiry, future skew, and invalid timestamps.
+
+This fix was deployed and verified on 16 November 2026 in production deployment `dpl_28D5xpiC6K1HgSm8ansqEXb7iGwN`, aliased to `https://akadverse.vercel.app`. Use a fresh timestamp on retry; the recorded timestamp will expire. A sender-side workaround for the original receiver is `datetime.now(timezone.utc).isoformat(timespec="milliseconds")`.
+
+
+### Production verification
+
+All 33 protocol tests and `tsc --noEmit` passed before deployment. A deliberately expired timestamp with six fractional digits and a zero-filled signature was sent before and after deployment; neither request could authenticate or save data. Before deployment, production returned `INVALID_SIGNATURE` (correlation `3a55250a-9a24-4a52-aca7-38c77be948fb`). After deployment, it returned `EXPIRED_TIMESTAMP` (correlation `6443eb13-dfaf-4f9e-9c5d-4a1ef4152b05`), proving that production accepts microsecond syntax and continues to enforce the freshness window. This check does not establish that sender and receiver HMAC keys match; a fresh signed delivery is still required for end-to-end verification.

@@ -1,7 +1,7 @@
 # AkadVerse Productivity Layer: user guide and testing handbook
 
 **Audience:** students, product reviewers, and anyone helping test AkadVerse.  
-**Reviewed:** 15 November 2026, local `productivity-layer-integration` branch.  
+**Reviewed:** 16 November 2026. The current scheduled-task and PIP upgrade is documented in [the implementation report](productivity-upgrade/implementation-report.md) and [acceptance checklist](productivity-upgrade/manual-acceptance.md).
 **Status:** a guide to the current implementation, not a claim that every test below has passed on your deployment.
 
 The Productivity Layer is a student's personal workspace for deciding what to do, organising time, building recurring habits, and reviewing progress. It brings personal plans and eligible official classes into one place while keeping each record connected to the feature that owns it.
@@ -78,7 +78,10 @@ Choose **New task**, enter a title, and save. A task supports:
 | Description | Optional additional details, up to 10,000 characters. |
 | Priority | Low, Medium, or High. |
 | Intended completion date | Optional local calendar date. |
-| Intended completion time | Optional time; requires a date. |
+| Intended completion time | Optional deadline time; requires a date. |
+| Allocated working time | Optional scheduled date, start/end times and timezone. Enable **Allocate time on my schedule**. |
+
+An allocated task appears directly on the Schedule Manager grid, using the same source task and outcome; it does not create another event. Editing, completing, deleting or removing the allocation updates its calendar representation. A deadline alone never assigns a time interval.
 
 A task without a deadline is valid. A task with a date but no time remains active throughout that date. You can edit an unfinished ordinary task. Save feedback should tell you whether the backend confirmed the change.
 
@@ -177,6 +180,10 @@ A personal event has a title, description, category, local date, start/end times
 
 Saving an ordinary personal event is a manual scheduling action. Smart placement is a replanning workflow, not a general AI planner for new events.
 
+### Scheduled tasks
+
+Use **To-do List → New task → Allocate time on my schedule** to select a date, start time and end time. Ordinary tasks appear in the combined schedule in blue; event habits are green, personal events red, and official classes purple. Tasks without an allocated interval remain in To-do List. Click a task card to open its source details. Task completion is recorded in To-do List, and deleted tasks leave the active calendar.
+
 ### Day, week, filters, and focus
 
 Switch between Day and Week, move backward or forward, choose a date, or return to Today. Filters let you inspect the combined schedule, Academics, and available personal categories.
@@ -274,7 +281,7 @@ These should not be mistaken for failing existing buttons:
 
 The [AI assistant audit](productivity-ai-assistant-audit.md) records the pre-implementation findings. The [service README](../akadverse-productivity-ai/README.md) describes the implemented integration and setup.
 
-### 9.1 Using the Productivity Assistant
+### 9.1 Using PIP
 
 After the developer installs the migration, configures both services, and restarts the app, choose **Assistant** in the workspace. Start a new conversation or select an earlier one. You can minimise it and continue navigating without losing the current draft. Conversations and actual tool results are saved to your account.
 

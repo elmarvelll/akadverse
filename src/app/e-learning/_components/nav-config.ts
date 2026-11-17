@@ -16,7 +16,6 @@ import {
   BookOpen,
   FileText,
   ClipboardList,
-  GraduationCap,
   History,
   ListChecks,
   CircleCheckBig,
@@ -92,15 +91,7 @@ export function getStudentNav(): NavSection[] {
     { label: "Study Zone", icon: Library, href: "/e-learning/student/study-zone", activeOnSubpaths: true },
     { label: "Revisions", icon: History, href: "/e-learning/student/revisions", activeOnSubpaths: true },
     { label: "Classroom", icon: Video, href: "/e-learning/student/classroom", activeOnSubpaths: true },
-    {
-      label: "Records & Analytics",
-      icon: GraduationCap,
-      children: [
-        { label: "Results", href: "/e-learning/student/academic-records/results" },
-        { label: "GPA / CGPA", href: "/e-learning/student/academic-records/gpa-cgpa" },
-        { label: "Academic History", href: "/e-learning/student/academic-records/academic-history" },
-      ],
-    },
+
   ];
 }
 

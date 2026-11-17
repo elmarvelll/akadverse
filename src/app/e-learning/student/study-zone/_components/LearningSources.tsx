@@ -17,6 +17,6 @@ export default function LearningSources({ sources = [], id, attachmentFiles }: {
         <span className="ml-2 text-slate-400">{source.kind === "attachment" ? "Attached file" : source.kind === "external" ? "External reference" : "Course material"}</span>
       </div>
     </li>)}</ol>}
-    {generatedExamples && <p className="mt-3">Illustrative examples were created by Stuwart.</p>}
+    {generatedExamples && <p className="mt-3">Illustrative examples were created by Stuart.</p>}
   </details>;
 }

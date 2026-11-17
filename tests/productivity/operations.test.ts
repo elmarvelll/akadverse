@@ -8,7 +8,11 @@ import { memoryPrisma, resetDatabase, rows, failWrite } from "./memory-db";
 mock.module("@/lib/auth", { namedExports: { authOptions: {} } });
 mock.module("@/lib/prisma", { namedExports: { prisma: memoryPrisma } });
 let academicFailure: unknown;
-mock.module("@/services/productivity-layer/academics", { namedExports: { officialClasses: async () => { if (academicFailure) throw academicFailure; return []; } } });
+let requireConflictOnly = false;
+let conflictOnlyCalls = 0;
+mock.module("@/services/productivity-layer/academics", { namedExports: { officialClasses: async (_owner: string, _date: string, _timezone: string, _cache: unknown, options?: { includeLecturerNames?: boolean }) => {
+  if (requireConflictOnly) { assert.equal(options?.includeLecturerNames, false, "must not request another Core connection for lecturer names while saving"); conflictOnlyCalls++; }
+  if (academicFailure) throw academicFailure; return []; } } });
 let execute: typeof import("@/services/productivity-layer/operations").executeProductivity;
 let ServiceError: typeof import("@/lib/service-error").ServiceError;
 let taskViewStatus: typeof import("@/features/productivity/tasks/domain").taskViewStatus;
@@ -31,7 +35,7 @@ const task = (extra = {}) => ({ title: "Read", priority: "medium", ...extra });
 const habit = (extra = {}) => ({ name: "Daily reading", description: "", type: "task", frequency: "daily", weekdays: [], priority: "medium", time: "13:00", startDate: "2030-01-14", ...extra });
 const denied = (error: unknown) => error instanceof ServiceError && [401, 403, 404].includes(error.status);
 beforeEach(() => {
-  academicFailure = undefined;
+  academicFailure = undefined; requireConflictOnly = false; conflictOnlyCalls = 0;
   resetDatabase(); rows("user").push(A, B); signInAs(A);
   mock.timers.reset(); mock.timers.enable({ apis: ["Date"], now: new Date("2030-01-15T12:00:00Z") });
 });
@@ -190,4 +194,14 @@ describe("authenticated productivity operations", () => {
     assert(imported[0].source.kind === "habit"); assert(imported[0].source.habitId.startsWith("import:"));
     assert.equal((await call<Habit[]>("habits.list"))[0].id, imported[0].source.habitId);
   });
+});
+
+
+it("saves an event with conflict checks that do not request lecturer identity connections", async () => {
+  requireConflictOnly = true;
+  const category = (await call<Dataset>("schedule.category", ["Study", "", null, false])).schedules[0];
+  const result = await call<Dataset>("schedule.save", [{ title: "Study without nested connection", description: "Read", priority: "medium", mustComplete: false, subScheduleId: category.id,
+    slot: { date: "2030-01-15", start: "15:00", end: "16:00", timezone: "Africa/Lagos" } }]);
+  assert.equal(result.events.length, 1);
+  assert.ok(conflictOnlyCalls > 0, "saving must still check the timetable");
 });

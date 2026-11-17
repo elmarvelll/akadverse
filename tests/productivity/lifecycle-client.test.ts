@@ -127,8 +127,8 @@ it("invalidates connected views and prevents a stale read from overwriting a com
   resolve(Response.json({ result: fixture().snapshot }));
   const result = await pending; assert.equal(result.data.tasks.tasks[0].title, "Latest saved value");
   assert.equal(calls.filter(operation => operation === "workspace.view").length, 2);
-  const before = calls.length; await loadWorkspaceView({ section: "schedule" }); assert.equal(calls.length, before);
-  await loadWorkspaceView({ section: "today" }); await loadWorkspaceView({ section: "habits" }); assert.equal(calls.length, before + 2);
+  const before = calls.length; await loadWorkspaceView({ section: "schedule" }); assert.equal(calls.length, before + 1);
+  await loadWorkspaceView({ section: "today" }); await loadWorkspaceView({ section: "habits" }); assert.equal(calls.length, before + 3);
 });
 it("does not repeat a failed initial batch automatically and allows a section-local fallback", async () => {
   const calls: string[] = [];
@@ -174,4 +174,21 @@ it("does not extend freshness indefinitely when cached views are read repeatedly
     await prepareWorkspace(); mock.timers.tick(30000); await loadWorkspaceView({ section: "today" }); assert.equal(calls, 1);
     mock.timers.tick(31000); await loadWorkspaceView({ section: "today" }); assert.equal(calls, 2);
   } finally { mock.timers.reset(); }
+});
+
+
+it("adds a confirmed allocation to Today and the cached week despite a future deadline", async () => {
+  globalThis.fetch = async () => Response.json({ result: fixture() }); await prepareWorkspace();
+  const cached = peekWorkspaceView({ section: "schedule" })!;
+  const date = localNow(cached.student.timezone).date;
+  const task: Task = { ...cached.data.tasks.tasks[0], id: "allocated", title: "Study EIE 342", dueDate: addDays(date, 1), scheduledSlot: { date, start: "09:00", end: "10:30", timezone: cached.student.timezone } };
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return Response.json({ result: task }); };
+  await rpc("tasks.create", [task]);
+  const snapshot = await loadWorkspaceView({ section: "schedule" });
+  assert.ok(snapshot.data.tasks.tasks.some(row => row.id === task.id));
+  const today = await loadWorkspaceView({ section: "today" });
+  assert.ok(today.data.tasks.tasks.some(row => row.id === task.id), "a scheduled task belongs in Today even when its deadline is tomorrow");
+  assert.equal(snapshot.data.schedule.events.length, cached.data.schedule.events.length);
+  assert.equal(calls, 1);
 });

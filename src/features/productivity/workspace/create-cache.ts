@@ -1,3 +1,6 @@
+import { slotTouchesDates } from "../schedule/timetable";
+import { inTimezone } from "../schedule/time";
+import { rangeDays } from "../analytics/periods";
 import { localNow } from "../schedule/domain";
 import { taskStatusCounts, queryTasks } from "../tasks/queries";
 import type { Task } from "../tasks/domain";
@@ -12,7 +15,8 @@ export function applyCreatedTask(snapshot: WorkspaceSnapshot, task: Task, scope:
   const counts = snapshot.counts && { ...snapshot.counts };
   if (counts) for (const key of ["active", "pending", "completed", "missed"] as const) counts[key] += delta[key];
   const relevantToday = task.source.kind === "habit" ? task.source.scheduledDate === today : !task.dueDate || task.dueDate <= today;
-  const include = scope.section !== "tasks" ? relevantToday : (scope.page || 0) === 0 && queryTasks([task], { status: scope.status, sort: scope.sort, timezone: snapshot.student.timezone, instant: now }).length > 0;
+  const onSchedule = task.scheduledSlot && (scope.section === "schedule" || scope.section === "today") && slotTouchesDates(inTimezone(task.scheduledSlot, snapshot.student.timezone), rangeDays(scope.section === "today" ? { start: today, end: today } : { start: scope.start || today, end: scope.end || today }));
+  const include = scope.section !== "tasks" ? relevantToday || onSchedule : (scope.page || 0) === 0 && queryTasks([task], { status: scope.status, sort: scope.sort, timezone: snapshot.student.timezone, instant: now }).length > 0;
   let tasks = include ? [...snapshot.data.tasks.tasks, task] : snapshot.data.tasks.tasks;
   if (scope.section === "tasks") tasks = queryTasks(tasks, { status: scope.status, sort: scope.sort, timezone: snapshot.student.timezone, instant: now }).slice(0, 100);
   return { ...snapshot, counts, hasMore: scope.section === "tasks" && counts ? counts[scope.status || "active"] > ((scope.page || 0) + 1) * 100 : snapshot.hasMore,

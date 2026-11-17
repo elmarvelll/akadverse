@@ -22,7 +22,7 @@ export function timezone(value: unknown) {
 }
 export function taskInput(value: unknown): TaskInput {
   const o = object(value);
-  const input = { title: o.title, description: o.description, priority: o.priority, dueDate: o.dueDate, dueTime: o.dueTime } as TaskInput;
+  const input = { title: o.title, description: o.description, priority: o.priority, dueDate: o.dueDate, dueTime: o.dueTime, scheduledSlot: o.scheduledSlot === undefined ? undefined : slot(o.scheduledSlot) } as TaskInput;
   validateTaskInput(input); return input;
 }
 export function habitInput(value: unknown, zone: string): HabitInput {

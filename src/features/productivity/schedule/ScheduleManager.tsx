@@ -4,7 +4,7 @@ import { productivityErrorMessage } from "../errors";
 import { WorkspaceButton, useWorkspaceNavigation } from "../workspace/WorkspaceNavigation";
 import { Icon, ProdButton } from "../workspace/Design";
 import { Timetable } from "./ScheduleTimetable";
-import { scheduleDates, selectTimetableEvents, slotTouchesDates, timetableSourceDates, type TimetableEntry } from "./timetable";
+import { scheduleDates, taskTimetableEntries, selectTimetableEvents, slotTouchesDates, timetableSourceDates, type TimetableEntry } from "./timetable";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useWorkspaceSnapshot, useSectionActive } from "../workspace/queries";
@@ -121,9 +121,15 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
   const schedules = data.schedules.filter((s) => s.ownerId === student.id),
     current = schedules.find((s) => s.id === view),
     own = data.events.filter((e) => e.ownerId === student.id);
+  const sourceTasks = new Map((snapshot?.data.tasks.tasks || []).map(task => [task.id, task]));
+  const calendarData = { ...data, events: data.events.filter(event => {
+    if (event.source.kind !== "task") return true;
+    const task = sourceTasks.get(event.source.taskId);
+    return !!task && !task.deletedAt && !task.habitWithdrawn && !task.scheduledSlot;
+  }) };
   const filteredEvents = history
     ? own.filter((e) => !current || e.subScheduleId === current.id)
-    : selectTimetableEvents(data, student.id, rangeDates, { scheduleId: current?.id, focus });
+    : selectTimetableEvents(calendarData, student.id, rangeDates, { scheduleId: current?.id, focus });
   const events = view === "habits" ? filteredEvents.filter(e => e.source.kind === "habit") : view === "academic" ? filteredEvents.filter(e => schedules.some(s => s.academic && s.id === e.subScheduleId)) : filteredEvents;
   const visibleClasses =
     !history && !focus && (view === "main" || view === "academic" || current?.academic)
@@ -147,8 +153,15 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
       : view === "academic"
         ? "Academics"
         : view === "habits" ? "Habit occurrences" : current?.name || "Main schedule";
-  const conflicts = scheduleConflicts(own.filter(e => rangeDates.includes(e.slot.date)), classes.filter(c => rangeDates.includes(c.slot.date)), student.id);
-  const timelineEntries: TimetableEntry[] = [...events.filter(event => !event.archivedAt).map(event => ({ id: event.id, title: event.title, slot: event.slot, kind: event.source.kind === "habit" ? "habit" as const : "personal" as const, category: schedules.find(schedule => schedule.id === event.subScheduleId)?.name || (event.source.kind === "habit" ? "Habit" : "Personal"), priority: event.priority, outcome: eventOutcome(event) })), ...visibleClasses.map(item => ({ id: item.id, title: item.courseCode + " \u00b7 " + item.courseName, slot: item.slot, kind: "academic" as const, category: "Academics", venue: item.venue }))];
+  const conflicts = scheduleConflicts(calendarData.events.filter(e => rangeDates.includes(e.slot.date)), classes.filter(c => rangeDates.includes(c.slot.date)), student.id);
+  const scheduledTaskEntries = !history && !focus && view === "main" ? taskTimetableEntries(snapshot?.data.tasks.tasks || [], student.id, student.timezone, rangeDates) : [];
+  const timelineEntries: TimetableEntry[] = [...scheduledTaskEntries,...events.filter(event => !event.archivedAt).map(event => {
+    const task = event.source.kind === "task" ? sourceTasks.get(event.source.taskId) : undefined;
+    return { id: task ? `task:${task.id}` : event.id, taskId: task?.id, title: task?.title || event.title, slot: event.slot,
+      kind: event.source.kind === "habit" ? "habit" as const : event.source.kind === "task" ? "task" as const : "personal" as const,
+      category: schedules.find(schedule => schedule.id === event.subScheduleId)?.name || (event.source.kind === "habit" ? "Habit" : task ? "Task" : "Event"),
+      priority: task?.priority || event.priority, outcome: task ? task.status === "pending" ? "unrecorded" : task.status : eventOutcome(event) };
+  }), ...visibleClasses.map(item => ({ id: item.id, title: item.courseCode + " \u00b7 " + item.courseName, slot: item.slot, kind: "academic" as const, category: "Academics", venue: item.venue }))];
   function createEvent() {
     if (!schedules.length) {
       setNotice("Create a sub-category first, then create an event and select it.");
@@ -284,7 +297,8 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
               </p>
             )}
             {!history && !classLoading && !classError && !timelineEntries.length && <p className="timetable-empty-note" role="status">{focus ? "No must-complete activities in this date range." : "No activities scheduled in this view. Choose another date or create an event."}</p>}
-            {!history && <Timetable entries={timelineEntries} dates={rangeDates} today={now.date} currentTime={now.time} selectedDate={date} conflicts={conflicts} onDate={setDate} onOpen={entry => { if (entry.kind === "academic") setOfficial(classes.find(item => item.id === entry.id)); else setDetailId(entry.id); }}/> }
+            {!history && <div className="schedule-legend" aria-label="Schedule activity colours"><span className="legend-task">Tasks</span><span className="legend-habit">Habits</span><span className="legend-event">Events</span><span className="legend-academic">Official classes</span></div>}
+            {!history && <Timetable entries={timelineEntries} dates={rangeDates} today={now.date} currentTime={now.time} selectedDate={date} conflicts={conflicts} onDate={setDate} onOpen={entry => { if (entry.taskId) selectWorkspace({ section: "tasks", taskId: entry.taskId }); else if (entry.kind === "academic") setOfficial(classes.find(item => item.id === entry.id)); else setDetailId(entry.id); }}/> }
             {history && <div className="event-list" aria-busy={saving}>
               {visibleClasses.map((c) => (
                 <article className="event-card official" key={c.id}>

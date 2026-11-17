@@ -12,7 +12,7 @@ export const maxDuration = 90;
 const headers = { "Cache-Control": "private, no-store" };
 async function handle(work: () => Promise<unknown>) {
   try {
-    if (process.env.REVISION_QUESTIONS_ENABLED !== "true") throw new RevisionWebhookError(503, "REVISION_DISABLED", "Practice and revision have not been enabled for this deployment.");
+    if (process.env.REVISION_QUESTIONS_ENABLED !== "true" && !(process.env.AI_V2_ENABLED === "true" && process.env.REVISIONS_UI_ENABLED === "true")) throw new RevisionWebhookError(503, "REVISION_DISABLED", "Practice and revision have not been enabled for this deployment.");
     return Response.json({ result: await work() }, { headers });
   }
   catch (error) { const known = error instanceof RevisionWebhookError || error instanceof ServiceError; return Response.json({ error: known ? error.message : "The learning service is temporarily unavailable.", code: error instanceof RevisionWebhookError ? error.code : "LEARNING_UNAVAILABLE" }, { status: known ? error.status : 503, headers }); }

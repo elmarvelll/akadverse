@@ -2,7 +2,7 @@ import "../helpers/env";
 import { it, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import { createHash, createHmac, randomUUID } from "node:crypto";
-import { authenticateRevisionRequest, MAX_REVISION_BODY_BYTES } from "@/services/e-learning/revision-questions/security";
+import { authenticateRevisionRequest, utcTimestamp, MAX_REVISION_BODY_BYTES } from "@/services/e-learning/revision-questions/security";
 import { parseRevisionPayload, serializeRevisionResponse, type RevisionPayload } from "@/services/e-learning/revision-questions/contract";
 import { RevisionWebhookError } from "@/services/e-learning/revision-questions/errors";
 import { canonicalQuestion } from "@/services/e-learning/revision-questions/policy";
@@ -142,4 +142,27 @@ it("uses the response correlation ID in the receiver's signature diagnostic", as
     assert.equal(diagnostic.correlationId, body.error.correlation_id);
     assert.equal(diagnostic.reason, "hmac_mismatch");
   } finally { logger.mock.restore(); }
+});
+
+
+it("accepts Python microsecond UTC timestamps without changing signed body bytes", async () => {
+  const raw = JSON.stringify(fixture());
+  for (const suffix of ["Z", "+00:00"]) {
+    const timestamp = "2026-11-16T19:03:01.310279" + suffix;
+    const now = Date.parse("2026-11-16T19:03:01.310Z");
+    assert.equal(utcTimestamp(timestamp), now);
+    const authenticated = await authenticateRevisionRequest(request(raw, { "X-Akadverse-Timestamp": timestamp }), SECRET, now);
+    assert.equal(authenticated.raw.toString(), raw);
+    assert.equal(authenticated.bodyHash, createHash("sha256").update(raw).digest("hex"));
+    await assert.rejects(authenticateRevisionRequest(request(raw, { "X-Akadverse-Timestamp": timestamp }), SECRET, now + 300001), isStatus(401));
+    await assert.rejects(authenticateRevisionRequest(request(raw, { "X-Akadverse-Timestamp": timestamp }), SECRET, now - 30001), isStatus(401));
+  }
+});
+
+it("retains strict UTC timestamp syntax and calendar validation with microseconds", () => {
+  for (const timestamp of ["2026-02-30T19:03:01.310279Z", "2026-11-16T24:03:01.310279Z",
+    "2026-11-16T19:03:01.3102791Z", "2026-11-16T19:03:01.310279+01:00",
+    "2026-11-16T19:03:01.310279", "1794855781", "2026-11-16T19:03:01.Z"]) {
+    assert.equal(utcTimestamp(timestamp), undefined, timestamp);
+  }
 });

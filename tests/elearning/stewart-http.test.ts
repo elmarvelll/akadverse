@@ -5,7 +5,7 @@ import { boundedStewartRequest } from "@/app/api/e-learning/stewart/shared";
 import { GET } from "@/app/api/e-learning/pdfjs/[...asset]/route";
 import { ServiceError } from "@/lib/service-error";
 
-describe("Stuwart request boundaries", () => {
+describe("Stuart request boundaries", () => {
   it("reads valid multipart bodies without modifying bytes", async () => {
     const form = new FormData();
     form.set("file", new File(["supporting notes"], "Lecture.txt"));

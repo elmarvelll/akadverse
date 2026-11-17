@@ -501,7 +501,7 @@ it("does not reuse a suspended canonical question or reset its existing card on 
   assert.equal(response.results[0].outcome, "rejected_invalid"); assert.equal(response.results[0].student_card_id, null);
   assert.equal(await elearningDb.revisionStudentCard.count({ where: { studentId: f.studentId } }), 1);
 });
-it("prepares complete bounded Stuwart reference data without raw answers or internal identifiers", async () => {
+it("prepares complete bounded Stuart reference data without raw answers or internal identifiers", async () => {
   const { revisionContextExcerpt } = await import("@/services/e-learning/revision-questions/learning-context");
   const text = revisionContextExcerpt({ studentId: "PRIVATE_STUDENT", concepts: Array.from({ length: 30 }, () => ({ concept: "A".repeat(2000), conceptId: "PRIVATE_CONCEPT", answer: "PRIVATE_ANSWER", reviews: 4, independentCorrect: 3, incorrect: 1, difficultRecall: 1, retrievalEvidence: "consistent_retrieval" })) });
   assert.ok(text.length <= 900); assert.equal(JSON.parse(text).concepts.length, 3); assert.ok(!text.includes("PRIVATE_")); assert.equal(JSON.parse(text).retentionIsNotMastery, true);

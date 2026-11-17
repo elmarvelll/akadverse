@@ -3,9 +3,11 @@ import { productivityErrorMessage } from "../errors";
 import { useRef, useState, type FormEvent } from "react";
 import { saveTiming } from "../save-timing";
 import { Dialog } from "../schedule/Forms";
+import { localNow } from "../schedule/domain";
+import { inTimezone } from "../schedule/time";
 import { taskSnapshot, type Task, type TaskInput } from "./domain";
 export function TaskForm({ task, timezone, onSave, onClose }: { task?: Task; timezone: string; onSave: (input: TaskInput) => Promise<void>; onClose: () => void }) {
-  const [input, setInput] = useState<TaskInput>(() => task ? taskSnapshot(task) : { title: "", description: "", priority: "medium" });
+  const [input, setInput] = useState<TaskInput>(() => task ? { ...taskSnapshot(task), scheduledSlot: task.scheduledSlot ? inTimezone(task.scheduledSlot, timezone) : undefined } : { title: "", description: "", priority: "medium" });
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const saving = useRef(false);
   async function submit(event: FormEvent) {
@@ -26,6 +28,16 @@ export function TaskForm({ task, timezone, onSave, onClose }: { task?: Task; tim
         </div>
         {!input.dueDate && <p className="hint">No deadline. The task stays Active until you complete it or set a deadline.</p>}
         {input.dueDate && !input.dueTime && <p className="hint">Date only: overdue after this local calendar day ends.</p>}
+        <label className="check"><input type="checkbox" checked={!!input.scheduledSlot} onChange={event => setInput({ ...input, scheduledSlot: event.target.checked ? { date: input.dueDate || localNow(timezone).date, start: "09:00", end: "10:00", timezone } : undefined })} />Allocate time on my schedule</label>
+        {input.scheduledSlot && <>
+          <p className="hint">This working interval appears automatically on your schedule. Your deadline above stays separate. Overlaps are shown on the grid.</p>
+          <label>Scheduled date<input type="date" required value={input.scheduledSlot.date} onChange={event => setInput({ ...input, scheduledSlot: { ...input.scheduledSlot!, date: event.target.value } })} /></label>
+          <div className="form-row">
+            <label>Start time<input type="time" required value={input.scheduledSlot.start} onChange={event => setInput({ ...input, scheduledSlot: { ...input.scheduledSlot!, start: event.target.value } })} /></label>
+            <label>End time<input type="time" required value={input.scheduledSlot.end} onChange={event => setInput({ ...input, scheduledSlot: { ...input.scheduledSlot!, end: event.target.value } })} /></label>
+          </div>
+          <p className="hint">Times use {timezone}. An earlier end time continues into the following day; equal times are invalid.</p>
+        </>}
       </fieldset>
       {error && <p role="alert" className="error">{error}</p>}
       <footer className="dialog-footer"><button type="button" disabled={busy} onClick={onClose}>Cancel</button><button className="primary" disabled={busy}>{busy ? "Saving…" : error ? "Retry save" : "Save task"}</button></footer>

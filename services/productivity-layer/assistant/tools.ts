@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { badRequest, conflict, notFound } from "@/lib/service-error";
 import { executeProductivityAs, type ProductivityExecutionHooks } from "../operations";
 import { publicProductivityError } from "../errors";
+import { taskTimetableEntries } from "@/features/productivity/schedule/timetable";
+import type { WorkspaceSnapshot } from "@/features/productivity/workspace/data";
 import { rangeDays } from "@/features/productivity/analytics/periods";
 import { taskViewStatus, type Task } from "@/features/productivity/tasks/domain";
 import { localNow, slotEndDate, type Dataset } from "@/features/productivity/schedule/domain";
@@ -25,7 +27,7 @@ function checkedRange(args: Args, max = 42) {
 }
 const run = (scope: Scope, operation: string, args: unknown[] = []) => executeProductivityAs(scope.sub, { operation, args });
 function bounded<T>(rows: T[], limit = 50) { return { rows: rows.slice(0, limit), total: rows.length, truncated: rows.length > limit }; }
-function compactTask(task: Task) { return { id: task.id, title: task.title, description: task.description?.slice(0, 2000), priority: task.priority, dueDate: task.dueDate, dueTime: task.dueTime, status: task.status, source: task.source, completedAt: task.completedAt, missedAt: task.missedAt }; }
+function compactTask(task: Task) { return { id: task.id, title: task.title, description: task.description?.slice(0, 2000), priority: task.priority, dueDate: task.dueDate, dueTime: task.dueTime, scheduledSlot: task.scheduledSlot, status: task.status, source: task.source, completedAt: task.completedAt, missedAt: task.missedAt }; }
 export async function readTool(scope: Scope, name: string, args: Args): Promise<unknown> {
   if (name === "get_context") {
     const context = await run(scope, "context") as { student: { timezone: string }; serverTime: string };
@@ -49,8 +51,10 @@ export async function readTool(scope: Scope, name: string, args: Args): Promise<
     return bounded(rows.filter(row => row.habitId === args.habit_id));
   }
   if (name === "list_schedule") {
-    const range = checkedRange(args), data = await run(scope, "schedule.load") as Dataset;
-    return { events: bounded(data.events.filter(event => !event.archivedAt && event.slot.date <= range.end && slotEndDate(event.slot) >= range.start).map(e => ({ id: e.id, title: e.title, description: e.description.slice(0, 2000), slot: e.slot, backup: e.backup, priority: e.priority, mustComplete: e.mustComplete, subScheduleId: e.subScheduleId, source: e.source, status: e.status }))), categories: bounded(data.schedules.map(s => ({ id: s.id, name: s.name, description: s.description.slice(0, 500), academic: s.academic }))) };
+    const range = checkedRange(args), snapshot = await run(scope, "workspace.view", [{ section: "schedule", ...range }]) as WorkspaceSnapshot;
+    const data = snapshot.data.schedule;
+    const tasks = taskTimetableEntries(snapshot.data.tasks.tasks, scope.sub, snapshot.student.timezone, rangeDays(range));
+    return { tasks: bounded(tasks.map(task => ({ id: task.taskId!, title: task.title, scheduledSlot: task.slot, outcome: task.outcome, priority: task.priority }))), events: bounded(data.events.filter(event => !event.archivedAt && event.slot.date <= range.end && slotEndDate(event.slot) >= range.start).map(e => ({ id: e.id, title: e.title, description: e.description.slice(0, 2000), slot: e.slot, backup: e.backup, priority: e.priority, mustComplete: e.mustComplete, subScheduleId: e.subScheduleId, source: e.source, status: e.status }))), categories: bounded(data.schedules.map(s => ({ id: s.id, name: s.name, description: s.description.slice(0, 500), academic: s.academic }))) };
   }
   if (name === "official_classes") {
     const result = await run(scope, "official.range", [checkedRange(args)]) as { rows: unknown[]; failedDates: string[]; error: string };
@@ -64,7 +68,7 @@ export async function commandFor(scope: Scope, name: string, a: Args): Promise<C
     case "create_task": return { operation: "tasks.create", args: [a.input] };
     case "update_task": {
       const existing = await run(scope, "tasks.get", [a.task_id]) as Task;
-      return { operation: "tasks.update", args: [a.task_id, { title: existing.title, description: existing.description, priority: existing.priority, dueDate: existing.dueDate, dueTime: existing.dueTime, ...(a.changes as Args) }] };
+      return { operation: "tasks.update", args: [a.task_id, { title: existing.title, description: existing.description, priority: existing.priority, dueDate: existing.dueDate, dueTime: existing.dueTime, scheduledSlot: existing.scheduledSlot, ...(a.changes as Args), ...((a.changes as Args).clearSchedule ? { scheduledSlot: undefined } : {}) }] };
     }
     case "complete_task": case "miss_task": case "delete_task": return { operation: ({ complete_task: "tasks.complete", miss_task: "tasks.miss", delete_task: "tasks.delete" })[name], args: [a.task_id] };
     case "save_habit": return { operation: "habits.save", args: [a.input, a.habit_id] };

@@ -26,7 +26,7 @@ function Check({ question, onAnswer, disabled }: { question: KnowledgeCheck; onA
   const [answer, setAnswer] = useState("");
   const id = useId();
   const options = question.kind === "true_false" ? ["True", "False"] : question.options;
-  return <fieldset className="space-y-2 border-t border-gray-200 pt-3"><legend className="pt-3 font-medium">{question.question}</legend>{question.kind === "short_answer" ? <textarea aria-label="Your answer" value={answer} onChange={e => setAnswer(e.target.value)} className="w-full rounded-lg border bg-white p-2" /> : options?.map((option, i) => <label key={i} className="flex items-start gap-2"><input type="radio" name={id} checked={answer === option} onChange={() => setAnswer(option)} className="mt-1" />{option}</label>)}{onAnswer && <button type="button" disabled={disabled || !answer.trim()} onClick={() => onAnswer(`Knowledge check: ${question.question}\nMy answer: ${answer}`)} className="rounded-lg border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-800 disabled:opacity-40">Discuss answer with Stuwart</button>}</fieldset>;
+  return <fieldset className="space-y-2 border-t border-gray-200 pt-3"><legend className="pt-3 font-medium">{question.question}</legend>{question.kind === "short_answer" ? <textarea aria-label="Your answer" value={answer} onChange={e => setAnswer(e.target.value)} className="w-full rounded-lg border bg-white p-2" /> : options?.map((option, i) => <label key={i} className="flex items-start gap-2"><input type="radio" name={id} checked={answer === option} onChange={() => setAnswer(option)} className="mt-1" />{option}</label>)}{onAnswer && <button type="button" disabled={disabled || !answer.trim()} onClick={() => onAnswer(`Knowledge check: ${question.question}\nMy answer: ${answer}`)} className="rounded-lg border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-800 disabled:opacity-40">Discuss answer with Stuart</button>}</fieldset>;
 }
 function Points({ title, items }: { title: string; items?: string[] }) {
   return items?.length ? <section><h4 className="mb-2 font-semibold text-gray-900">{title}</h4><ul className="list-disc space-y-1 pl-5">{items.map((item, i) => <li key={i}><MessageText text={item} /></li>)}</ul></section> : null;
@@ -49,7 +49,7 @@ export default function StewartResponse({ text, sources, attachmentFiles, educat
   const sourcesId = `learning-sources-${useId().replace(/:/g, "")}`;
   const { references } = groupLearningSources(sources);
   const citations = learningCitations(references);
-  return <article aria-label="Stuwart explanation" className="mx-auto w-full min-w-0 max-w-prose py-2">
+  return <article aria-label="Stuart explanation" className="mx-auto w-full min-w-0 max-w-prose py-2">
     {content && content.type !== "general_response" && content.type !== "quick_answer" ? <LectureBoard content={content} onAnswer={onAnswer} disabled={disabled} /> : <LearningMarkdown text={content?.type === "quick_answer" ? content.text || text : text} citations={citations} sourcesId={sourcesId} />}
     <LearningSources sources={sources} id={sourcesId} attachmentFiles={attachmentFiles} />
   </article>;

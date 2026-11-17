@@ -190,7 +190,7 @@ async function request<T>(operation: string, args: unknown[] = []): Promise<T> {
   if (!readOperations.has(operation)) {
     const cacheStarted = performance.now();
     const email = cache.peek<{ email?: string }>(keyFor("context", []))?.email;
-    const tags = operation.startsWith("tasks.") ? ["tasks", "today", ...((body.result as Task)?.source?.kind === "habit" ? ["habits"] : [])] : operation.startsWith("schedule.") ? ["schedule", "today"] : operation === "preferences.save" ? ["tasks", "habits", "schedule", "today", "context", "official"] : ["tasks", "habits", "schedule", "today"];
+    const tags = operation.startsWith("tasks.") ? ["tasks", "today", "schedule", ...((body.result as Task)?.source?.kind === "habit" ? ["habits"] : [])] : operation.startsWith("schedule.") ? ["schedule", "today"] : operation === "preferences.save" ? ["tasks", "habits", "schedule", "today", "context", "official"] : ["tasks", "habits", "schedule", "today"];
     cache.invalidate(tags);
     if (operation === "tasks.create" || operation === "habits.save" && !args[1]) {
       cache.updateReady(tags, (value, entryKey) => {

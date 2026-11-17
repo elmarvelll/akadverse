@@ -136,6 +136,7 @@ export async function reconcileAiIngestion(limit = 10, deadline = Date.now() + 2
           aiChunkCount: remote.status === "done" ? remote.chunk_count : null,
           aiIngestError: remote.status === "failed" ? "AI processing failed. Administrator review required." : null, aiIngestUpdatedAt: new Date(),
         } });
+        if (changed.count && remote.status === "done" && process.env.AI_V2_ENABLED === "true" && process.env.AI_INGEST_PIPELINE_ENABLED === "true") await (await import("../learning-ai/plans")).queueIngestedLearningPlan(tx, task.materialId!);
       });
     } catch (err) {
       const missing = err instanceof AiServiceError && err.status === 404;

@@ -109,8 +109,11 @@ async function main() {
     console.log("Verified ordinary password sessions and existing student Productivity, e-learning and marketplace routes in production mode; dev login stays disabled.");
 
     const today = localNow("Africa/Lagos").date, tomorrow = addDays(today, 1), yesterday = addDays(today, -1);
-    const key = randomUUID(), taskInput = { title: "Private integration task", priority: "medium", ownerId: studentB.id };
+    const key = randomUUID(), taskInput = { title: "Private integration task", priority: "medium", scheduledSlot: { date: tomorrow, start: "09:00", end: "10:30", timezone: "Africa/Lagos" }, ownerId: studentB.id };
     const task = await a.rpc<Task>("tasks.create", [taskInput], key);
+    const scheduled = await a.rpc<import("@/features/productivity/workspace/data").WorkspaceSnapshot>("workspace.view", [{ section: "schedule", start: tomorrow, end: tomorrow }]);
+    assert.equal(scheduled.data.tasks.tasks.find(row => row.id === task.id)?.scheduledSlot?.start, "09:00");
+    assert.equal(await prisma.productivityEvent.count({ where: { ownerId: studentA.id } }), 0, "task allocation does not create an event copy");
     assert.equal(task.ownerId, studentA.id); assert.equal((await a.rpc<Task>("tasks.create", [taskInput], key)).id, task.id);
     const habit = await a.rpc<Habit>("habits.save", [{ name: "Private integration habit", description: "", type: "task", frequency: "daily", weekdays: [], priority: "medium", time: "", startDate: today }]);
     await Promise.all(Array.from({ length: 4 }, () => a.rpc("habits.synchronize", [{ start: today, end: tomorrow }])));

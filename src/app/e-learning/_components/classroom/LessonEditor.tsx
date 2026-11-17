@@ -24,12 +24,12 @@ export default function LessonEditor({ sessionId, onSaved }: { sessionId: string
       if (!result.ok) { setError(result.error); await load(); } else { await load(); await onSaved(); }
     } catch { setError("Couldn't update the lesson. Your class can continue."); } finally { setBusy(false); }
   }}>
-    <h2 className="font-semibold text-gray-900">Current lesson for Stuwart</h2>
+    <h2 className="font-semibold text-gray-900">Current lesson for Stuart</h2>
     <p className="text-xs text-gray-600">Choose what you are teaching. Saving starts a new lesson conversation for students.</p>
     <label className="block text-sm">Topic<input required maxLength={200} value={topic} onChange={e => setTopic(e.target.value)} className="mt-1 w-full rounded border p-2" /></label>
     <label className="block text-sm">Week<select value={week} onChange={e => { setWeek(Number(e.target.value)); setDocumentId(""); }} className="mt-1 w-full rounded border p-2">{Array.from({ length: options?.totalWeeks ?? 1 }, (_, i) => <option key={i + 1} value={i + 1}>Week {i + 1}</option>)}</select></label>
     <label className="block text-sm">Material (optional)<select value={documentId} onChange={e => setDocumentId(e.target.value)} className="mt-1 w-full rounded border p-2"><option value="">All materials for this week</option>{options?.materials.filter(m => m.startWeek <= week && m.endWeek >= week).map(m => <option key={m.id} value={m.id}>{m.title}</option>)}</select></label>
-    <p className="text-xs text-gray-600">Stuwart retrieves materials for this week. It cannot see the live screen or audio.</p>
+    <p className="text-xs text-gray-600">Stuart retrieves materials for this week. It cannot see the live screen or audio.</p>
     {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
     <button disabled={!options || busy} className="rounded-lg bg-blue-800 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : "Set current lesson"}</button>
   </form>;

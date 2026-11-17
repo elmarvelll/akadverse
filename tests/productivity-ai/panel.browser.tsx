@@ -26,8 +26,8 @@ window.fetch = async (url, options = {}) => {
       fixture!.pending = [{ id: "pending-0001", expiresAt: new Date(Date.now() + 600000).toISOString(), expired: false, preview: { tool: "delete_task", arguments: { task_id: "task-0001" }, current: { data: { title: "Test reading" } } } }];
       fixture!.messages.push({ id: `reply-${count}`, sequence: count + 1, role: "assistant", content: "Review the proposed deletion.", status: "awaiting_confirmation" });
     } else {
-      fixture!.messages.push({ id: `reply-${count}`, sequence: count + 1, role: "assistant", content: `Saved for ${owner}: ${data.message}`, status: "completed" });
-      fixture!.executions = [{ id: "execution-1", messageId: `user-${count}`, toolName: "create_task", status: "completed", result: { task: { id: "task-0001", title: "Test reading" } }, error: null }];
+      fixture!.messages.push({ id: `reply-${count}`, sequence: count + 1, role: "assistant", content: `Saved for ${owner}: ${data.message}\n\n## Your plan\n\n- **Study** at 09:00\n- Review notes\n\n[Unsafe](javascript:alert)\n\n<script>alert(1)</script>`, status: "completed" });
+      fixture!.executions = [{ id: "execution-1", messageId: `user-${count}`, toolName: "create_task", status: "completed", result: { saved: true, task: { id: "task-0001", title: "Test reading" } }, error: null }];
     }
   }
   if (data.action === "decide") { fixture!.pending = []; fixture!.messages.push({ id: "decision-1", sequence: fixture!.messages.length, role: "assistant", content: data.confirm ? "Confirmed action saved." : "Proposal cancelled.", status: "completed" }); }

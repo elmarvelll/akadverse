@@ -1,13 +1,14 @@
 import "katex/dist/katex.min.css";
 // src/app/e-learning/student/study-zone/[courseId]/page.tsx
 //
-// One course's study workspace (week tabs · document viewer · Stuwart). Authorization: the course must be in THIS
+// One course's study workspace (week tabs · document viewer · Stuart). Authorization: the course must be in THIS
 // student's APPROVED registration for the current session/semester — otherwise the page doesn't exist for them.
 
 import { notFound } from "next/navigation";
 import { requireElearningRole, requireStudentProfile } from "@/services/e-learning/shared/auth";
 import { getCurrentAcademicContext } from "@/services/e-learning/shared/academic-calendar";
 import { getStudyWorkspace } from "@/services/e-learning/student/study-zone";
+import { learningAiFlags } from "@/services/e-learning/learning-ai/flags";
 import StudyWorkspace from "../_components/StudyWorkspace";
 import BackToStudyZone from "../_components/BackToStudyZone";
 
@@ -39,5 +40,5 @@ export default async function StudyWorkspacePage({ params }: { params: Promise<{
     );
   }
 
-  return <StudyWorkspace course={course} weeks={weeks} />;
+  return <StudyWorkspace course={course} weeks={weeks} learningEnabled={learningAiFlags().AI_V2_ENABLED} />;
 }

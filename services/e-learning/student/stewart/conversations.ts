@@ -82,7 +82,7 @@ export async function reserveMessage(userId: string, id: string, requestId: stri
     if (existing && messageMetadata(existing.metadata).grounded !== undefined && messageMetadata(existing.metadata).grounded !== metadata.grounded) throw conflict("Retry this message using its original explanation mode.");
     const assistant = await tx.chatMessage.findUnique({ where: { conversationId_requestId_role: { conversationId: id, requestId, role: "ASSISTANT" } } });
     if (assistant) return { cached: true as const, user: existing!, assistant, conversation: c };
-    if (c.pendingUntil && c.pendingUntil > new Date()) throw conflict("Stuwart is still answering a message in this conversation. Please wait.");
+    if (c.pendingUntil && c.pendingUntil > new Date()) throw conflict("Stuart is still answering a message in this conversation. Please wait.");
     const user = existing ? await tx.chatMessage.update({ where: { id: existing.id }, data: { status: "PENDING", metadata: jsonMetadata(metadata) } }) : await tx.chatMessage.create({ data: { conversationId: id, requestId, role: "USER", status: "PENDING", content, metadata: jsonMetadata(metadata) } });
     const token = randomUUID();
     await tx.chatConversation.update({ where: { id }, data: { pendingRequestId: requestId, pendingToken: token, pendingUntil: new Date(Date.now() + 210000), updatedAt: new Date(), ...(!c.titleGenerated ? { title: temporaryConversationTitle(content) } : {}) } });
@@ -111,7 +111,7 @@ export async function failMessage(userId: string, id: string, requestId: string,
 export async function deleteConversation(userId: string, id: string) {
   await ownedConversation(userId, id);
   const remoteIds = await locked(userId, id, async (tx, c) => {
-    if (c.pendingUntil && c.pendingUntil > new Date()) throw conflict("Wait for Stuwart's answer before deleting this conversation.");
+    if (c.pendingUntil && c.pendingUntil > new Date()) throw conflict("Wait for Stuart's answer before deleting this conversation.");
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${c.sessionId}))::text`;
     const attachments = await tx.stewartAttachment.findMany({ where: { sessionId: c.sessionId, userId } });
     if (attachments.some((a) => (a.status === "uploading" && a.expiresAt > new Date()) || (a.inUseUntil && a.inUseUntil > new Date()))) throw conflict("Wait for the attachment operation to finish before deleting this conversation.");
