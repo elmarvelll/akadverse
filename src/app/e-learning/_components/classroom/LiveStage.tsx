@@ -200,7 +200,8 @@ function Stage({ isTeacher }: { isTeacher: boolean }) {
   if (!screen) {
     return (
       <>
-        <VideoTrack trackRef={camera!} className={`absolute inset-0 h-full w-full object-contain ${isMine(camera!) ? "-scale-x-100" : ""}`} />
+        {/* Keep the camera in its captured orientation for both the lecturer and students. */}
+        <VideoTrack trackRef={camera!} className="absolute inset-0 h-full w-full object-contain" />
         <NameLabel className="bottom-3 left-3">{cameraLabel}</NameLabel>
       </>
     );
@@ -229,7 +230,7 @@ function Stage({ isTeacher }: { isTeacher: boolean }) {
           <NameLabel className="left-3 top-3">{screen.participant.name || "Lecturer"} is presenting</NameLabel>
         </>
       )}
-      {camera && <FloatingCamera trackRef={camera} label={cameraLabel} mirror={isMine(camera)} />}
+      {camera && <FloatingCamera trackRef={camera} label={cameraLabel} />}
     </>
   );
 }
@@ -291,7 +292,7 @@ function readCorner(): Corner {
 // The camera while a screen is being shared: a small floating card, like Meet's. Drag it anywhere and it snaps to the
 // nearest corner on release; arrow keys move it between corners too. The chosen corner is this viewer's own preference
 // (remembered on this device), so a student moving the lecturer's card changes nothing for anyone else.
-function FloatingCamera({ trackRef, label, mirror }: { trackRef: TrackReference; label: string; mirror: boolean }) {
+function FloatingCamera({ trackRef, label }: { trackRef: TrackReference; label: string }) {
   const [corner, setCorner] = useState<Corner>(readCorner);
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
   const grab = useRef<{ dx: number; dy: number } | null>(null);
@@ -355,7 +356,7 @@ function FloatingCamera({ trackRef, label, mirror }: { trackRef: TrackReference;
         drag ? "cursor-grabbing" : `cursor-grab ${CORNER_CLASS[corner]}`
       }`}
     >
-      <VideoTrack trackRef={trackRef} className={`pointer-events-none h-full w-full object-cover ${mirror ? "-scale-x-100" : ""}`} />
+      <VideoTrack trackRef={trackRef} className="pointer-events-none h-full w-full object-cover" />
       <NameLabel className="bottom-1.5 left-1.5">{label}</NameLabel>
     </div>
   );
