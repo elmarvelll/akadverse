@@ -70,9 +70,11 @@ export async function getConversation(userId: string, id: string, before?: strin
   const conversation = await ownedConversation(userId, id);
   const cursor = before ? await elearningDb.chatMessage.findFirst({ where: { id: before, conversationId: id } }) : null;
   if (before && !cursor) throw badRequest("Invalid message page.");
-  const rows = await elearningDb.chatMessage.findMany({ where: { conversationId: id, ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 51 });
+  const [rows, attachments] = await Promise.all([
+    elearningDb.chatMessage.findMany({ where: { conversationId: id, ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 51 }),
+    elearningDb.stewartAttachment.findMany({ where: { userId, sessionId: conversation.sessionId, status: { in: ["uploaded", "failed"] }, attachmentId: { not: null } }, orderBy: { createdAt: "asc" } }),
+  ]);
   const messages = rows.slice(0, 50).reverse().map((m) => ({ ...m, status: m.status === "PENDING" && (!conversation.pendingUntil || conversation.pendingUntil <= new Date()) ? "FAILED" : m.status }));
-  const attachments = await elearningDb.stewartAttachment.findMany({ where: { userId, sessionId: conversation.sessionId, status: { in: ["uploaded", "failed"] }, attachmentId: { not: null } }, orderBy: { createdAt: "asc" } });
   return { conversation: conversationSummary(conversation), messages, nextCursor: rows.length > 50 ? rows[49].id : null, attachments: attachments.map((a) => ({ ...publicAttachment(a), ...(a.status === "failed" ? { requires_reattach: true } : {}) })) };
 }
 export async function reserveMessage(userId: string, id: string, requestId: string, content: string, metadata: Record<string, unknown>) {

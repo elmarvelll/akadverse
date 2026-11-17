@@ -7,7 +7,7 @@ from google.genai import types
 from ..tools.registry import validate_call
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error").getChild("assistant")
 
 
 @asynccontextmanager
@@ -40,8 +40,13 @@ def initial_contents(context: dict) -> list:
     }, ensure_ascii=False))])]
 
 
-async def orchestrate(backend, provider, max_calls: int = 10) -> dict:
-    reference = str(uuid.uuid4())
+async def orchestrate(backend, provider, max_calls: int = 10, reference: str | None = None) -> dict:
+    reference = reference or str(uuid.uuid4())
+    async with phase_timing(reference, 'turn.total', 0):
+        return await _orchestrate(backend, provider, max_calls, reference)
+
+
+async def _orchestrate(backend, provider, max_calls, reference):
     async with phase_timing(reference, 'backend.context', 0):
         context = await backend.context()
     contents = initial_contents(context)

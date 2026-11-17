@@ -153,9 +153,9 @@ export function ScheduleManager({ initialEventId, initialDate }: { initialEventI
       : view === "academic"
         ? "Academics"
         : view === "habits" ? "Habit occurrences" : current?.name || "Main schedule";
-  const conflicts = scheduleConflicts(calendarData.events.filter(e => rangeDates.includes(e.slot.date)), classes.filter(c => rangeDates.includes(c.slot.date)), student.id);
+  const conflicts = history || analytics ? new Map() as ReturnType<typeof scheduleConflicts> : scheduleConflicts(calendarData.events.filter(e => rangeDates.includes(e.slot.date)), classes.filter(c => rangeDates.includes(c.slot.date)), student.id);
   const scheduledTaskEntries = !history && !focus && view === "main" ? taskTimetableEntries(snapshot?.data.tasks.tasks || [], student.id, student.timezone, rangeDates) : [];
-  const timelineEntries: TimetableEntry[] = [...scheduledTaskEntries,...events.filter(event => !event.archivedAt).map(event => {
+  const timelineEntries: TimetableEntry[] = history || analytics ? [] : [...scheduledTaskEntries,...events.filter(event => !event.archivedAt).map(event => {
     const task = event.source.kind === "task" ? sourceTasks.get(event.source.taskId) : undefined;
     return { id: task ? `task:${task.id}` : event.id, taskId: task?.id, title: task?.title || event.title, slot: event.slot,
       kind: event.source.kind === "habit" ? "habit" as const : event.source.kind === "task" ? "task" as const : "personal" as const,

@@ -24,7 +24,12 @@ def answer(text):
     return types.Content(role='model', parts=[types.Part.from_text(text=text)])
 
 
-class Provider:
+class ManagedStub:
+    async def __aenter__(self): return self
+    async def __aexit__(self, *exc): pass
+
+
+class Provider(ManagedStub):
     def __init__(self, responses):
         self.responses = iter(responses)
         self.requests = []
@@ -34,7 +39,7 @@ class Provider:
         return next(self.responses)
 
 
-class Backend:
+class Backend(ManagedStub):
     def __init__(self, results=None):
         self.calls = []
         self.results = iter(results or [{'status': 'completed', 'result': {'saved': True}}] * 20)
@@ -169,7 +174,7 @@ async def test_api_authentication_binding_and_sanitised_provider_failure(setting
     import app.security as security
     monkeypatch.setattr(security, 'get_settings', lambda: settings)
     monkeypatch.setattr(main, 'AkadverseClient', lambda *_: Backend())
-    class Broken:
+    class Broken(ManagedStub):
         async def generate(self, _):
             from google.genai.errors import ServerError, ClientError
             if failure == 'provider503': raise ServerError(503, {'error': {'message': 'private provider credential'}})
@@ -266,7 +271,7 @@ async def test_chat_reports_backend_database_reference_without_calling_gemini(se
     monkeypatch.setattr(main, 'get_settings', lambda: settings)
     monkeypatch.setattr(security, 'get_settings', lambda: settings)
     monkeypatch.setattr(main, 'AkadverseClient', lambda _, token: AkadverseClient(settings, token, httpx.MockTransport(handler)))
-    monkeypatch.setattr(main, 'GeminiClient', lambda _: object())  # Would fail if generate() were called.
+    monkeypatch.setattr(main, 'GeminiClient', lambda _: Provider([]))  # Would fail if generate() were called.
     headers = {'Authorization': 'Bearer ' + signing[1](), 'X-Productivity-Service-Token': settings.productivity_ai_service_token.get_secret_value()}
     payload = {'conversation_id': 'conversation-A', 'turn_id': 'turn-0001', 'callback_token': signing[1]('akadverse-productivity-backend')}
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='https://service.test') as client:
@@ -283,7 +288,7 @@ async def test_chat_reports_backend_database_reference_without_calling_gemini(se
 async def test_timeout_cancellation_identifies_active_phase_without_private_data(caplog):
     import asyncio
     import logging
-    caplog.set_level(logging.INFO, logger='app.agent.orchestrator')
+    caplog.set_level(logging.INFO, logger='uvicorn.error.assistant')
 
     class SlowProvider:
         async def generate(self, contents):
@@ -322,3 +327,113 @@ async def test_empty_final_reply_after_tool_requests_durable_backend_summary():
     assert 'saved operation results' in result['message']
     assert 'clarify' not in result['message']
     assert len(backend.calls) == 1
+
+
+@pytest.mark.parametrize('name,args', [
+    ('list_buddies', {'view': 'groups', 'search': 'Biology', 'page': 1}),
+    ('get_buddy', {'listing_id': 'listing-1'}),
+    ('create_buddy_group', {'title': 'Biology', 'description': 'Weekly study', 'invitation_url': 'https://t.me/+abcdef123', 'max_members': 5}),
+    ('create_buddy_request', {'title': 'Biology buddy', 'description': 'Study together', 'contact_details': 'Contact supplied by student'}),
+    ('apply_buddy', {'listing_id': 'listing-1'}),
+    ('accept_buddy_application', {'listing_id': 'listing-1', 'application_id': 'application-1'}),
+    ('decline_buddy_application', {'listing_id': 'listing-1', 'application_id': 'application-1'}),
+    ('close_buddy_listing', {'listing_id': 'listing-1'}),
+])
+def test_buddy_tools_reject_identity_injection(name, args):
+    assert validate_call(name, args) == args
+    with pytest.raises(ValueError):
+        validate_call(name, {**args, 'userId': 'someone-else'})
+
+
+@pytest.mark.parametrize('name,args', [
+    ('create_buddy_group', {'title': 'Group', 'description': 'Study'}),
+    ('create_buddy_request', {'title': 'Request', 'description': 'Study'}),
+    ('list_buddies', {'view': 'all-private-data'}),
+    ('list_buddies', {'page': 0}),
+    ('accept_buddy_application', {'listing_id': 'listing-1'}),
+])
+def test_buddy_tools_require_explicit_fields(name, args):
+    with pytest.raises(ValueError):
+        validate_call(name, args)
+
+
+async def test_buddy_reads_can_repeat_and_confirmation_stops_followup_changes():
+    backend = Backend(results=[{'status': 'completed', 'result': {'items': []}}] * 2 + [{'status': 'awaiting_confirmation'}])
+    provider = Provider([
+        call('list_buddies', {'view': 'groups'}),
+        call('list_buddies', {'view': 'groups'}),
+        types.Content(role='model', parts=[
+            types.Part.from_function_call(name='apply_buddy', args={'listing_id': 'listing-1'}),
+            types.Part.from_function_call(name='close_buddy_listing', args={'listing_id': 'listing-2'}),
+        ]),
+    ])
+    result = await orchestrate(backend, provider)
+    assert result['status'] == 'awaiting_confirmation'
+    assert [name for _, name, _ in backend.calls] == ['list_buddies', 'list_buddies', 'apply_buddy']
+
+
+async def test_backend_reuses_one_client_per_turn_and_releases_it(settings, monkeypatch):
+    import app.integrations.akadverse as integration
+    original = httpx.AsyncClient
+    clients = []
+    def factory(*args, **kwargs):
+        client = original(*args, **kwargs)
+        clients.append(client)
+        return client
+    monkeypatch.setattr(integration.httpx, 'AsyncClient', factory)
+    seen_tokens = []
+    def handler(request):
+        seen_tokens.append(request.headers['Authorization'])
+        return httpx.Response(200, json={'result': {'status': 'completed'}})
+    async with AkadverseClient(settings, 'turn-A', httpx.MockTransport(handler)) as backend:
+        await backend.context()
+        await backend.tool(0, 'list_tasks', {})
+        await backend.tool(1, 'get_task', {'task_id': 'task-1'})
+        assert len(clients) == 1 and not clients[0].is_closed
+    assert clients[0].is_closed
+    async with AkadverseClient(settings, 'turn-B', httpx.MockTransport(handler)) as backend:
+        await backend.context()
+    assert len(clients) == 2 and clients[1].is_closed
+    assert seen_tokens == ['Bearer turn-A'] * 3 + ['Bearer turn-B']
+
+
+async def test_backend_closes_connection_on_cancelled_turn(settings):
+    import asyncio
+    async def handler(request):
+        await asyncio.Event().wait()
+    backend = AkadverseClient(settings, 'token', httpx.MockTransport(handler))
+    with pytest.raises(TimeoutError):
+        async with asyncio.timeout(0.02), backend:
+            await backend.context()
+    assert backend._client is None
+
+
+async def test_gemini_reuses_session_without_changing_model_tools_or_quality(settings, monkeypatch):
+    from types import SimpleNamespace
+    import app.integrations.gemini as integration
+    from app.integrations.gemini import GeminiClient
+    sessions = []
+    requests = []
+    class Session:
+        def __init__(self): self.models = self; self.closed = False
+        async def __aenter__(self): return self
+        async def __aexit__(self, *exc): self.closed = True
+        async def generate_content(self, **kwargs):
+            requests.append(kwargs)
+            return SimpleNamespace(candidates=[SimpleNamespace(content=answer('Done'))])
+    def factory(**kwargs):
+        session = Session(); sessions.append(session)
+        return SimpleNamespace(aio=session)
+    monkeypatch.setattr(integration.genai, 'Client', factory)
+    async with GeminiClient(settings) as provider:
+        await provider.generate([answer('First')])
+        await provider.generate([answer('Second')])
+        assert len(sessions) == 1 and not sessions[0].closed
+    assert sessions[0].closed
+    assert len(requests) == 2
+    for request in requests:
+        assert request['model'] == settings.gemini_model
+        assert request['config'].max_output_tokens == 2048
+        assert request['config'].thinking_config.thinking_level.value.lower() == 'low'
+        assert len(request['config'].tools[0].function_declarations) == len(DEFINITIONS)
+        assert request['config'].automatic_function_calling.disable is True

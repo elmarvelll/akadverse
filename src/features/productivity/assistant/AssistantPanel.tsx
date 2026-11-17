@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Minus, Plus, Send, RefreshCw, Trash2, Maximize2, Minimize2 } from "lucide-react";
+import { PipWorking } from "./PipWorking";
+import { workspaceChanged } from "./workspace-changed";
 import { PipAvatar } from "./PipAvatar";
 import { PipMarkdown } from "./PipMarkdown";
 import { invalidateWorkspace } from "../client";
@@ -14,7 +16,8 @@ type Pending = { id: string; preview: { tool: string; arguments: Record<string, 
 type View = { conversation: Conversation; messages: { id: string; sequence: number; role: string; content: string; status: string }[]; executions: Execution[]; pending: Pending[]; hasOlder: boolean };
 const root = "/api/productivity/assistant";
 const labels: Record<string, string> = { awaiting_confirmation: "Awaiting your confirmation", completed: "Confirmed", failed: "Not completed", unknown: "Outcome unconfirmed", pending: "Not yet confirmed", cancelled: "Cancelled", processing: "Processing", interrupted: "Interrupted", awaiting_clarification: "More information needed" };
-function refreshWorkspace() {
+function refreshWorkspace(previous: View | undefined, next: View) {
+  if (!workspaceChanged(previous?.executions || [], next.executions)) return;
   const tags = ["initial", "context", "today", "tasks", "schedule", "habits", "official", "buddy"];
   invalidateWorkspace(tags);
   window.dispatchEvent(new CustomEvent("productivity:invalidated", { detail: tags }));
@@ -88,7 +91,16 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
     await act(async () => { const rows = await request<Conversation[]>(`${root}?cursor=${encodeURIComponent(last.id)}`); setConversations(previous => [...previous, ...rows.filter(row => !previous.some(old => old.id === row.id))]); setMoreConversations(rows.length === 30); });
   }
   async function newConversation() {
-    await act(async () => { const conversation = await request<Conversation>(root, { action: "create" }); await select(conversation.id); await loadList(); });
+    await act(async () => {
+      const conversation = await request<Conversation>(root, { action: "create" });
+      // A newly committed conversation has no messages or operations. Its create
+      // response is authoritative; two follow-up history/list reads add no data.
+      if (current.current) drafts.current.set(current.current, draft);
+      current.current = conversation.id;
+      setView({ conversation, messages: [], executions: [], pending: [], hasOlder: false });
+      setConversations(rows => [conversation, ...rows.filter(row => row.id !== conversation.id)]);
+      setDraft(""); setDeleteReview(false); requestIdentity.current = null;
+    });
     input.current?.focus();
   }
   async function send() {
@@ -97,8 +109,8 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
       const id = view.conversation.id;
       if (!requestIdentity.current || requestIdentity.current.content !== draft || requestIdentity.current.conversation !== id) requestIdentity.current = { content: draft, conversation: id, id: crypto.randomUUID() };
       const next = await request<View>(root, { action: "chat", conversation_id: id, request_id: requestIdentity.current.id, message: draft });
-      if (alive.current) { setView(next); setDraft(""); drafts.current.delete(id); requestIdentity.current = null; refreshWorkspace(); }
-      await loadList();
+      if (alive.current) { setView(next); setDraft(""); drafts.current.delete(id); requestIdentity.current = null; refreshWorkspace(view, next); }
+      setConversations(rows => rows.map(row => row.id === next.conversation.id ? next.conversation : row));
     });
   }
   async function decide(pending: Pending, confirm: boolean) {
@@ -107,7 +119,7 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
       const key = `${pending.id}:${confirm}`;
       if (!decisionIdentity.current.has(key)) decisionIdentity.current.set(key, crypto.randomUUID());
       const next = await request<View>(root, { action: "decide", conversation_id: view.conversation.id, request_id: decisionIdentity.current.get(key), pending_id: pending.id, confirm });
-      setView(next); refreshWorkspace();
+      setView(next); refreshWorkspace(view, next);
     });
   }
   async function removeConversation() {
@@ -120,7 +132,7 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
   }
   async function reload() {
     await act(async () => {
-      if (view) { const next = await request<View>(`${root}?conversation=${encodeURIComponent(view.conversation.id)}`); setView(next); refreshWorkspace(); }
+      if (view) { const next = await request<View>(`${root}?conversation=${encodeURIComponent(view.conversation.id)}`); setView(next); refreshWorkspace(view, next); }
       await loadList();
     });
   }
@@ -133,13 +145,23 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
   }
   async function recheck(execution: Execution) {
     if (!view) return;
-    await act(async () => { const next = await request<View>(root, { action: "reconcile", conversation_id: view.conversation.id, execution_id: execution.id, request_id: crypto.randomUUID() }); setView(next); refreshWorkspace(); });
+    await act(async () => { const next = await request<View>(root, { action: "reconcile", conversation_id: view.conversation.id, execution_id: execution.id, request_id: crypto.randomUUID() }); setView(next); refreshWorkspace(view, next); });
   }
   const hasProcessing = view?.messages.some(message => message.role === "user" && message.status === "processing");
   useEffect(() => {
     if (!open || !hasProcessing || busy || !view) return;
-    const timer = window.setInterval(() => { void request<View>(`${root}?conversation=${encodeURIComponent(view.conversation.id)}`).then(next => { if (alive.current) { setView(next); refreshWorkspace(); } }).catch(failure => { if (alive.current) setError(failure instanceof Error ? failure.message : "Could not refresh PIP. Use Reload to retry."); }); }, 4000);
-    return () => window.clearInterval(timer);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const next = await request<View>(`${root}?conversation=${encodeURIComponent(view.conversation.id)}`);
+        if (!cancelled && alive.current) { setView(next); refreshWorkspace(view, next); }
+      } catch (failure) {
+        if (!cancelled && alive.current) setError(failure instanceof Error ? failure.message : "Could not refresh PIP. Use Reload to retry.");
+      } finally { if (!cancelled) timer = setTimeout(() => void poll(), 4000); }
+    };
+    timer = setTimeout(() => void poll(), 4000);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [open, hasProcessing, busy, view, request]);
   return <div className="productivity-assistant" hidden={dialogOpen}>
     <button type="button" className="assistant-launcher" ref={trigger} aria-expanded={open} aria-controls="productivity-assistant-panel" onClick={open ? minimise : show}><PipAvatar/><span>Ask PIP</span></button>
@@ -154,7 +176,7 @@ export function AssistantPanel({ ownerId, studentName }: { ownerId: string; stud
         {view?.messages.map(message => <article key={message.id} className={`assistant-message assistant-message-${message.role}`}><strong>{message.role === "user" ? "You" : <><PipAvatar/> PIP</>}</strong>{message.role === "user" ? <p>{message.content}</p> : <PipMarkdown text={message.content}/>}{message.status !== "completed" && <small>{labels[message.status] || message.status}</small>}</article>)}
         {view?.pending.map(pending => <article className="assistant-proposal" key={pending.id}><strong>Review proposed action</strong><p>{proposalLabel(pending.preview.tool, pending.preview.arguments)}</p><Proposal args={pending.preview.arguments} current={pending.preview.current}/><p><small>{pending.expired ? "This proposal expired. Cancel it and request a new one." : `Expires ${new Date(pending.expiresAt).toLocaleTimeString()}`}</small></p><div className="assistant-actions"><button type="button" disabled={busy || pending.expired || hasProcessing} onClick={() => void decide(pending, true)}>Confirm</button><button type="button" disabled={busy || hasProcessing} onClick={() => void decide(pending, false)}>Cancel</button></div></article>)}
         {!!view?.executions.length && <details className="assistant-executions" key={view.conversation.id}><summary><span className="pip-show-activity">Show</span><span className="pip-hide-activity">Hide</span> activity ({view.executions.length})</summary>{[...view.executions].reverse().map(execution => <article key={execution.id}><strong>{execution.toolName.replaceAll("_", " ")}</strong><p>{labels[execution.status] || execution.status}</p>{execution.error?.error && <p>{execution.error.error}</p>}<RecordLink result={execution.result}/>{["unknown", "pending"].includes(execution.status) && <button type="button" disabled={busy || hasProcessing} onClick={() => void recheck(execution)}>Recheck outcome</button>}</article>)}</details>}
-        {busy && <p role="status" className="pip-working"><span aria-hidden>•••</span> PIP is working on your request…</p>}
+        {(busy || hasProcessing) && <PipWorking/>}
         {hasProcessing && !busy && <p role="status">This message is still processing. Reload to check its result; interrupted turns are recovered after their time limit.</p>}
       </div>
       {scrollPaused && <button type="button" className="assistant-latest" onClick={() => scrollLatest(true)}>Jump to latest</button>}

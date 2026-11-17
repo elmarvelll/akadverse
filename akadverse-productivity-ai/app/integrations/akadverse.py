@@ -42,32 +42,45 @@ class AkadverseClient:
         self.settings = settings
         self.callback_token = callback_token
         self.transport = transport
+        self._client = None
+
+    async def __aenter__(self):
+        self._client = httpx.AsyncClient(timeout=35, follow_redirects=False, transport=self.transport)
+        await self._client.__aenter__()
+        return self
+
+    async def __aexit__(self, *exc):
+        client, self._client = self._client, None
+        if client is not None:
+            await client.__aexit__(*exc)
 
     async def call(self, payload: dict) -> dict:
+        if self._client is None:
+            async with self:
+                return await self.call(payload)
         action = payload.get('action') if payload.get('action') in ('context', 'tool') else 'unknown'
         try:
-            async with httpx.AsyncClient(timeout=35, follow_redirects=False, transport=self.transport) as client:
-                async with client.stream('POST', self.settings.akadverse_api_base_url + '/api/productivity/assistant/service',
-                                         headers={'Authorization': 'Bearer ' + self.callback_token,
-                                                  'X-Productivity-Service-Token': self.settings.productivity_ai_service_token.get_secret_value()}, json=payload) as response:
-                    raw = bytearray()
-                    async for chunk in response.aiter_bytes():
-                        raw.extend(chunk)
-                        if len(raw) > 512_000:
-                            raise BackendError(code='BACKEND_RESPONSE_TOO_LARGE', status=response.status_code, action=action)
-                    try:
-                        value = json.loads(raw)
-                    except ValueError:
-                        value = None
-                    if response.status_code != 200:
-                        failure = value if isinstance(value, dict) else {}
-                        code = failure.get('code')
-                        reference = failure.get('referenceId')
-                        reference = reference if isinstance(reference, str) and re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', reference) else None
-                        raise BackendError(status=response.status_code, code=code if isinstance(code, str) and code in BACKEND_CODES else 'BACKEND_HTTP_ERROR', reference_id=reference, action=action)
-                    if not isinstance(value, dict) or not isinstance(value.get('result'), dict):
-                        raise BackendError(code='BACKEND_INVALID_RESPONSE', status=response.status_code, action=action)
-                    return value['result']
+            async with self._client.stream('POST', self.settings.akadverse_api_base_url + '/api/productivity/assistant/service',
+                                     headers={'Authorization': 'Bearer ' + self.callback_token,
+                                              'X-Productivity-Service-Token': self.settings.productivity_ai_service_token.get_secret_value()}, json=payload) as response:
+                raw = bytearray()
+                async for chunk in response.aiter_bytes():
+                    raw.extend(chunk)
+                    if len(raw) > 512_000:
+                        raise BackendError(code='BACKEND_RESPONSE_TOO_LARGE', status=response.status_code, action=action)
+                try:
+                    value = json.loads(raw)
+                except ValueError:
+                    value = None
+                if response.status_code != 200:
+                    failure = value if isinstance(value, dict) else {}
+                    code = failure.get('code')
+                    reference = failure.get('referenceId')
+                    reference = reference if isinstance(reference, str) and re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', reference) else None
+                    raise BackendError(status=response.status_code, code=code if isinstance(code, str) and code in BACKEND_CODES else 'BACKEND_HTTP_ERROR', reference_id=reference, action=action)
+                if not isinstance(value, dict) or not isinstance(value.get('result'), dict):
+                    raise BackendError(code='BACKEND_INVALID_RESPONSE', status=response.status_code, action=action)
+                return value['result']
         except httpx.TimeoutException:
             raise BackendError(code='BACKEND_TIMEOUT', action=action) from None
         except httpx.HTTPError:

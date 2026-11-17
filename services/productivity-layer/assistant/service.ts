@@ -1,48 +1,51 @@
 import { prisma } from "@/lib/prisma";
 import { ServiceError, badRequest, notFound, conflict } from "@/lib/service-error";
 import { requireProductivityActor } from "../auth";
-import { executeProductivityAs } from "../operations";
 import { signDelegation, assistantServiceUrl, serviceSecret, type Delegation } from "./security";
 import { beginTurn, conversationView, finishTurn, assertTurn, lockOwner, type Scope } from "./store";
 import { body } from "./http";
 import { executeTool, performMutation, resultProjection } from "./tools";
 
+import { assistantContext } from "./context";
+import { assistantTiming } from "./timing";
+
 export async function serviceCallback(scope: Delegation, input: Record<string, unknown>) {
-  await requireProductivityActor(scope.sub);
-  // Read-only admission check: no locks or writes need a pinned transaction.
-  // Every tool mutation still rechecks/fences its turn inside its own write transaction.
-  await assertTurn(prisma, scope);
-  if (input.action === "context") {
-    const [view, account] = await Promise.all([conversationView(scope.sub, scope.cid), executeProductivityAs(scope.sub, { operation: "context", args: [] })]);
-    return { account, conversation_id: scope.cid, turn_id: scope.turn, messages: view.messages.slice(-24), pending: view.pending.filter(row => !row.expired).map(row => ({ id: row.id, preview: { tool: (row.preview as { tool?: string }).tool, arguments: (row.preview as { arguments?: unknown }).arguments }, expiresAt: row.expiresAt })), executions: view.executions.slice(0, 10).map(row => ({ ...row, result: boundedMemory(row.result) })) };
+  const [actor] = await assistantTiming("callback.authorize", scope.turn, () => Promise.all([
+    requireProductivityActor(scope.sub), assertTurn(prisma, scope),
+  ]));
+  if (input.action === "context") return assistantTiming("callback.context", scope.turn, () => assistantContext(scope, actor));
+  if (input.action === "tool" && typeof input.name === "string" && typeof input.step === "number") {
+    const { step, name, arguments: args } = input;
+    return assistantTiming("callback.tool", scope.turn, () => executeTool(scope, step, name, args));
   }
-  if (input.action === "tool" && typeof input.name === "string" && typeof input.step === "number") return executeTool(scope, input.step, input.name, input.arguments);
   throw badRequest("Unsupported assistant service action.");
 }
 export async function chat(ownerId: string, conversationId: string, clientKey: string, content: string) {
   // Configuration is checked before accepting a user turn, so setup errors are actionable.
   const url = assistantServiceUrl(), secret = serviceSecret();
-  const started = await beginTurn(ownerId, conversationId, clientKey, content);
+  const reference = crypto.randomUUID();
+  const started = await assistantTiming("chat.begin", reference, () => beginTurn(ownerId, conversationId, clientKey, content));
   if (!started.started) return conversationView(ownerId, conversationId);
   const scope: Scope = { sub: ownerId, cid: conversationId, turn: started.turn };
   try {
-    const response = await fetch(new URL("/api/v1/assistant/chat", url), {
+    const response = await assistantTiming("chat.service", started.turn, () => fetch(new URL("/api/v1/assistant/chat", url), {
       method: "POST", redirect: "error", cache: "no-store", signal: AbortSignal.timeout(65000),
       headers: { "Content-Type": "application/json", "X-Productivity-Service-Token": secret, Authorization: `Bearer ${signDelegation(ownerId, conversationId, started.turn, "akadverse-productivity-ai")}` },
       body: JSON.stringify({ conversation_id: conversationId, turn_id: started.turn, callback_token: signDelegation(ownerId, conversationId, started.turn, "akadverse-productivity-backend") }),
-    });
+    }));
     if (!response.ok) throw new ServiceError(503, "The assistant service could not finish this message.");
     const value: unknown = await body(response);
     if (!value || typeof value !== "object" || !("message" in value) || typeof value.message !== "string" || value.message.length > 8000) throw new Error("invalid response");
+    const message = value.message;
     const rawStatus = "status" in value ? value.status : "completed";
     const status = typeof rawStatus === "string" && ["completed", "awaiting_clarification", "awaiting_confirmation", "failed"].includes(rawStatus) ? rawStatus : "completed";
     // Tool records are authoritative; provider output cannot remove a pending confirmation.
     const pending = await prisma.productivityAIPendingAction.count({ where: { ownerId, conversationId, status: "pending", expiresAt: { gt: new Date() } } });
-    await finishTurn(scope, value.message, pending ? "awaiting_confirmation" : status);
+    await assistantTiming("chat.finish", started.turn, () => finishTurn(scope, message, pending ? "awaiting_confirmation" : status));
   } catch {
     await finishTurn(scope, "The assistant could not finish this message. Any confirmed changes are listed in the operation results. Review them before repeating a request.", "failed");
   }
-  return conversationView(ownerId, conversationId);
+  return assistantTiming("chat.view", started.turn, () => conversationView(ownerId, conversationId));
 }
 export async function decide(ownerId: string, conversationId: string, clientKey: string, pendingId: string, confirm: boolean) {
   const pending = await prisma.productivityAIPendingAction.findFirst({ where: { id: pendingId, ownerId, conversationId }, include: { execution: true } });
@@ -95,7 +98,3 @@ export async function reconcile(ownerId: string, conversationId: string, clientK
   return conversationView(ownerId, conversationId);
 }
 
-function boundedMemory(value: unknown) {
-  const serialized = JSON.stringify(value);
-  return serialized && serialized.length > 6000 ? { omitted: true, reason: "Previous result was large. Re-read relevant current records before acting." } : value;
-}

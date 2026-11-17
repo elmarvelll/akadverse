@@ -1,5 +1,6 @@
 "use client";
 
+import { sequentialPoll } from "@/lib/sequential-poll";
 import RevisionPracticePanel from "./RevisionPracticePanel";
 import StewartResponse from "./LectureBoard";
 import FilePreview from "./AttachmentPreview";
@@ -183,11 +184,12 @@ export default function StuwartPanel({ context, threadKey, studyingLabel, classN
   useEffect(() => {
     if (!activeConversation || !hasPendingMessage || pendingKeys.has(key)) return;
     let cancelled = false;
-    const timer = window.setInterval(() => { readChat(activeConversation.id).then((page) => {
+    const stop = sequentialPoll(async () => {
+      const page = await readChat(activeConversation.id);
       if (cancelled) return;
       setThreads((all) => ({ ...all, [key]: page.messages.map(storedMessage) })); remember(key, page.conversation);
-    }).catch(() => {}); }, 2500);
-    return () => { cancelled = true; window.clearInterval(timer); };
+    }, 2500);
+    return () => { cancelled = true; stop(); };
   }, [activeConversation, hasPendingMessage, key, pendingKeys]);
 
   async function send(text: string, retryId?: string, retryGrounded?: boolean) {

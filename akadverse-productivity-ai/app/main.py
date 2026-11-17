@@ -8,7 +8,7 @@ from .config import get_settings
 from .security import authenticated, verify_context
 from .integrations.akadverse import AkadverseClient, BackendError
 from .integrations.gemini import GeminiClient
-from .agent.orchestrator import orchestrate
+from .agent.orchestrator import orchestrate, phase_timing
 
 from .middleware import BoundedBodyMiddleware
 
@@ -39,8 +39,8 @@ async def chat(payload: ChatRequest, claims: Annotated[dict, Depends(authenticat
         raise HTTPException(403, 'Callback does not match delegation')
     backend = AkadverseClient(settings, payload.callback_token)
     try:
-        async with asyncio.timeout(settings.turn_timeout_seconds):
-            return await orchestrate(backend, GeminiClient(settings), settings.max_tool_calls)
+        async with phase_timing(payload.turn_id, 'request.total', 0), asyncio.timeout(settings.turn_timeout_seconds), backend, GeminiClient(settings) as provider:
+            return await orchestrate(backend, provider, settings.max_tool_calls, reference=payload.turn_id)
     except BackendError as error:
         logger.warning('Assistant request failed: category=backend action=%s status=%s code=%s reference_id=%s',
                        error.action, error.status, error.code, error.reference_id)
