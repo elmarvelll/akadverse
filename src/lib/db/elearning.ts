@@ -36,6 +36,7 @@
 
 import { createRequire } from "node:module";
 import path from "node:path";
+import { elearningRuntimeUrl } from "./elearning-url";
 import type * as ElearningClient from "@/generated/prisma-elearning";
 
 const requireFromProjectRoot = createRequire(path.join(process.cwd(), "package.json"));
@@ -48,7 +49,7 @@ const globalForElearningPrisma = globalThis as unknown as {
   elearningPrismaUrl: string | undefined;
 };
 
-const databaseUrl = process.env.ELEARNING_DATABASE_URL;
+const databaseUrl = elearningRuntimeUrl(process.env.ELEARNING_DATABASE_URL);
 const cachedClient = globalForElearningPrisma.elearningPrisma;
 const reuseClient = cachedClient && globalForElearningPrisma.elearningPrismaUrl === databaseUrl;
 
