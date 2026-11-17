@@ -28,9 +28,13 @@ export async function lockOwner(tx: Prisma.TransactionClient, ownerId: string) {
   if (user?.role !== "student") throw notFound("This student workspace is unavailable.");
 }
 export async function assertTurn(tx: Prisma.TransactionClient, scope: Scope) {
-  const conversation = await tx.productivityAIConversation.findFirst({ where: { id: scope.cid, ownerId: scope.sub } });
+  // Both reads are fully scoped and independent. Outside a write transaction this
+  // removes one database round trip from every delegated context/tool admission.
+  const [conversation, message] = await Promise.all([
+    tx.productivityAIConversation.findFirst({ where: { id: scope.cid, ownerId: scope.sub } }),
+    tx.productivityAIMessage.findFirst({ where: { id: scope.turn, conversationId: scope.cid, ownerId: scope.sub, role: "user", status: "processing" } }),
+  ]);
   if (!conversation || conversation.activeTurnId !== scope.turn || !conversation.leaseExpiresAt || conversation.leaseExpiresAt.getTime() <= Date.now()) throw conflict("This assistant turn has ended. Reload the conversation before continuing.");
-  const message = await tx.productivityAIMessage.findFirst({ where: { id: scope.turn, conversationId: scope.cid, ownerId: scope.sub, role: "user", status: "processing" } });
   if (!message) throw conflict("This assistant turn is no longer active.");
   return { conversation, message };
 }

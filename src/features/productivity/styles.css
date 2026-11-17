@@ -1604,7 +1604,14 @@
 .productivity-host .assistant-composer { background: #fff; border-color: #e9ecf6; padding: 14px; }.productivity-host .assistant-composer textarea { background: #f9faff; border-color: #e0e6f4; border-radius: 14px; color: #1a294b; font-size: 13px; min-height: 60px; }
 .productivity-host .assistant-composer button[type=submit], .productivity-host .assistant-actions button:first-child { background: #1555ed; border-color: #1555ed; color: white; border-radius: 12px; }
 .productivity-host .assistant-proposal { background: #fffbf0; border-color: #eee0bb; }.productivity-host .assistant-error { color: #a13643; }.productivity-host .assistant-latest { background: #edf2ff; color: #2652be; }
-.productivity-host .pip-working { color: #68799a; font-size: 12px; }.productivity-host .pip-working span { color: #4778e6; letter-spacing: 3px; }
+.productivity-host .pip-working { display: flex; align-items: center; gap: 10px; color: #68799a; font-size: 12px; padding: 12px 4px; }
+.productivity-host .pip-working .pip-avatar { width: 30px; height: 30px; flex: 0 0 30px; }
+.productivity-host .pip-working-dots { display: inline-flex; align-items: center; gap: 4px; }
+.productivity-host .pip-working-dots i { display: block; width: 5px; height: 5px; border-radius: 50%; background: #4778e6; animation: pip-working-bounce 1.2s ease-in-out infinite; }
+.productivity-host .pip-working-dots i:nth-child(2) { animation-delay: .15s; }
+.productivity-host .pip-working-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes pip-working-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .productivity-host .pip-working-dots i { animation: none; opacity: .7; } }
 @media (max-width: 760px) { .productivity-host .assistant-panel.is-expanded { width: calc(100vw - 24px); height: calc(100dvh - 100px); }.productivity-host .assistant-heading { padding: 12px; }.productivity-host .assistant-messages { padding: 16px 12px; } }
 @media (prefers-reduced-motion: reduce) { .productivity-host .assistant-launcher::before { animation: none; opacity: .25; } }
 

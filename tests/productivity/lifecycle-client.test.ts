@@ -192,3 +192,18 @@ it("adds a confirmed allocation to Today and the cached week despite a future de
   assert.equal(snapshot.data.schedule.events.length, cached.data.schedule.events.length);
   assert.equal(calls, 1);
 });
+
+it("reuses fresh all-dates event history across calendar ranges but separates categories/pages and invalidates writes", async () => {
+  globalThis.fetch = async () => Response.json({ result: fixture() }); await prepareWorkspace();
+  let reads = 0;
+  globalThis.fetch = async () => { reads++; return Response.json({ result: fixture().snapshot }); };
+  await loadWorkspaceView({ section: "schedule", history: true, start: "2030-01-01", end: "2030-01-07" });
+  await loadWorkspaceView({ section: "schedule", history: true, start: "2030-02-01", end: "2030-02-07" });
+  assert.equal(reads, 1, "unused dates must not cause a second database request");
+  await loadWorkspaceView({ section: "schedule", history: true, page: 1 });
+  await loadWorkspaceView({ section: "schedule", history: true, categoryId: "other" });
+  assert.equal(reads, 3);
+  invalidateWorkspace(["schedule"]);
+  await loadWorkspaceView({ section: "schedule", history: true });
+  assert.equal(reads, 4);
+});

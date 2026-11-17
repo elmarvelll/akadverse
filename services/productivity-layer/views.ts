@@ -128,18 +128,22 @@ export async function workspaceInitial(user: User): Promise<WorkspaceInitial> {
   }
 }
 export async function workspaceView(user: User, value: unknown): Promise<WorkspaceSnapshot> {
-  const scope = options(value), context = await workspaceContext(user), range = visibleRange(scope, context.student.timezone);
+  const scope = options(value);
   if (scope.history) {
-    const [events, categories, habits] = await Promise.all([
+    // History is read-only: preferences and owner-scoped records are independent.
+    const [context, events, categories, habits] = await Promise.all([
+      workspaceContext(user),
       prisma.productivityEvent.findMany({ where: { ownerId: user.id, ...(scope.categoryId ? { categoryId: scope.categoryId } : {}) }, select: { data: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: pageSize + 1, skip: (scope.page || 0) * pageSize }),
       prisma.productivityCategory.findMany({ where: { ownerId: user.id }, select: { data: true } }),
       prisma.productivityHabit.findMany({ where: { ownerId: user.id }, select: { data: true } }),
     ]);
+    visibleRange(scope, context.student.timezone);
     const hasMore = events.length > pageSize;
     const data = parseDataset(JSON.stringify({ version: 1, events: events.slice(0, pageSize).map(row => row.data), schedules: categories.map(row => row.data) }));
     data.events = data.events.map(event => ({ ...event, slot: inTimezone(event.slot, context.student.timezone), backup: event.backup ? inTimezone(event.backup, context.student.timezone) : undefined }));
     return { ...context, data: { schedule: data, tasks: { version: 2, tasks: [] }, habits: parseHabits(JSON.stringify({ version: 1, habits: habits.map(row => row.data) })) }, occurrences: [], hasMore };
   }
+  const context = await workspaceContext(user), range = visibleRange(scope, context.student.timezone);
   const closed = scope.section === "tasks" && (scope.status === "completed" || scope.status === "missed");
   const snapshot = closed ? { ...context, data: { tasks: { version: 2 as const, tasks: [] as Task[] }, habits: parseHabits(JSON.stringify({ version: 1, habits: (await prisma.productivityHabit.findMany({ where: { ownerId: user.id }, select: { data: true } })).map(row => row.data) })), schedule: { version: 1 as const, schedules: [], events: [] } }, occurrences: [], hasMore: false } : await loadRange(user, context, scope, range);
   if (scope.section === "tasks" || scope.section === "today") {
