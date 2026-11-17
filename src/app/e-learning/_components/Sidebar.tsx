@@ -23,7 +23,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowLeft, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { ElearningRole } from "@/services/e-learning/shared/auth";
 import type { NavLeaf } from "./nav-config";
 import { getStudentNav, getFacultyNav, getHodNav, getDapuNav, getDeanNav, getVcNav } from "./nav-config";
@@ -121,6 +121,7 @@ export default function Sidebar({
       <button type="button" onClick={onToggleCollapsed} aria-label="Expand sidebar" title="Expand sidebar" aria-expanded={false} className={`${toggleClass} mb-2`}>
         <PanelLeftOpen size={18} aria-hidden />
       </button>
+      {role === "student" && <Link href="/studashboard" aria-label="Back to Home" title="Back to Home" className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><ArrowLeft size={18} aria-hidden /></Link>}
       {sections.map((section) => {
         const Icon = section.icon;
         const cls = `flex h-10 w-10 items-center justify-center rounded-xl transition focus-visible:outline-2 focus-visible:outline-blue-600 ${
@@ -160,6 +161,7 @@ export default function Sidebar({
             </button>
           </div>
         )}
+        {role === "student" && <Link href="/studashboard" className="mb-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3.5 py-3 text-sm font-semibold text-blue-700"><ArrowLeft size={16} aria-hidden />Back to Home</Link>}
         {sections.map((section) => {
           const Icon = section.icon;
 

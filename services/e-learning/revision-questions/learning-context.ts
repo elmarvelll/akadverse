@@ -9,7 +9,7 @@ export async function signalRevisionContext(tx: Prisma.TransactionClient, studen
 export async function preparedRevisionContext(studentId: string) {
   if (!workspaceEnabled()) return null;
   try { const row = await elearningDb.revisionLearningContext.findUnique({ where: { studentId } }); return row?.snapshot ? { evidence: row.snapshot, refreshing: row.dirty, preparedAt: row.preparedAt?.toISOString() || null } : null; }
-  catch { return null; } // Learning context cannot make Stuwart or Revisions unavailable.
+  catch { return null; } // Learning context cannot make Stuart or Revisions unavailable.
 }
 export async function refreshRevisionContexts() {
   if (!workspaceEnabled()) return 0;

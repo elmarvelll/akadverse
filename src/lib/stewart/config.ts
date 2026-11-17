@@ -1,6 +1,6 @@
 // src/lib/stewart/config.ts
 //
-// Limits and supported formats for Stuwart (the Study Zone AI assistant), shared by the browser (fast feedback) and
+// Limits and supported formats for Stuart (the Study Zone AI assistant), shared by the browser (fast feedback) and
 // the server (the actual enforcement — every limit here is re-checked in services/e-learning/student/stewart/*).
 
 // Concept Explainer accepts these formats, up to eight references per explanation.

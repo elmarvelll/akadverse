@@ -10,7 +10,7 @@ export function VoiceInputControls({speech,disabled}:{speech:SpeechInput;disable
 }
 export function VoiceInputStatus({speech,recipient="the assistant"}:{speech:SpeechInput;recipient?:string}){
  return <div className="mt-1 text-[11px] text-gray-600" aria-live="polite">
- {speech.phase==="recording"?<span className="text-red-700">● Listening · {speech.seconds}s · Stop to review and send.</span>:speech.phase==="connecting"?"Connecting microphone…":speech.phase==="transcribing"?"Finalizing your words…":speech.error?<span role="alert" className="text-red-800">{speech.error} Press the microphone to retry.</span>:speech.notice||`Voice input sends audio to AssemblyAI for transcription. Nothing is sent to ${recipient} until you press Send.`}
+ {speech.phase==="recording"?<span className="text-red-700">● Listening · {speech.seconds}s · Stop to review and send.</span>:speech.phase==="connecting"?"Connecting microphone…":speech.phase==="transcribing"?"Finalizing your words…":speech.error?<span role="alert" className="text-red-800">{speech.error} Press the microphone to retry.</span>:speech.notice||`Review your words before sending to ${recipient}.`}
  {speech.active&&<button type="button" onClick={speech.cancel} className="ml-2 font-semibold underline" aria-label="Cancel voice input">Cancel</button>}
  </div>;
 }

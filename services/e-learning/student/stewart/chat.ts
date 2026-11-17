@@ -4,7 +4,7 @@ import { STEWART_MAX_HISTORY_MESSAGES, STEWART_MAX_MESSAGE_CHARS } from "@/lib/s
 export interface StewartTurn { role: "student" | "stewart"; text: string }
 
 export function normalizeHistory(raw: unknown): StewartTurn[] {
-  if (!Array.isArray(raw) || raw.length === 0) throw badRequest("Ask Stuwart a question.");
+  if (!Array.isArray(raw) || raw.length === 0) throw badRequest("Ask Stuart a question.");
   const turns: StewartTurn[] = [];
   for (const item of raw) {
     const role = (item as { role?: unknown })?.role;
@@ -15,10 +15,10 @@ export function normalizeHistory(raw: unknown): StewartTurn[] {
     if (role === "student" && trimmed.length > STEWART_MAX_MESSAGE_CHARS) {
       throw badRequest(`That message is too long. Please keep it under ${STEWART_MAX_MESSAGE_CHARS.toLocaleString("en")} characters.`);
     }
-    // Stuwart's own earlier answers are capped defensively (they originated here, but come back via the browser).
+    // Stuart's own earlier answers are capped defensively (they originated here, but come back via the browser).
     turns.push({ role, text: role === "stewart" ? trimmed.slice(0, 20_000) : trimmed });
   }
-  if (turns.length === 0 || turns[turns.length - 1].role !== "student") throw badRequest("Ask Stuwart a question.");
+  if (turns.length === 0 || turns[turns.length - 1].role !== "student") throw badRequest("Ask Stuart a question.");
   const recent = turns.slice(-STEWART_MAX_HISTORY_MESSAGES);
   const firstStudent = recent.findIndex((t) => t.role === "student");
   return recent.slice(firstStudent);
@@ -33,7 +33,7 @@ export function contextualQuestion(question: string, history: StewartTurn[] = []
   if (remaining < 120 || !history.length) return question;
   const lines: string[] = [];
   for (const turn of history.slice(-10).reverse()) {
-    const label = turn.role === "student" ? "Student: " : "Stuwart: ";
+    const label = turn.role === "student" ? "Student: " : "Stuart: ";
     if (remaining < label.length + 20) break;
     const text = turn.text.trim().slice(0, Math.min(500, remaining - label.length - 1));
     const line = label + text;

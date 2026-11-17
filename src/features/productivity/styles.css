@@ -1526,7 +1526,12 @@
 .productivity-host .assistant-actions button, .productivity-host .assistant-welcome button, .productivity-host .assistant-composer button[type=submit] { border: 1px solid #b0c3b8; border-radius: 9px; padding: 8px 13px; background: #edf4ef; }
 .productivity-host .assistant-actions button:first-child, .productivity-host .assistant-composer button[type=submit] { background: #274c3a; color: white; }
 .productivity-host .assistant-executions { font-size: 12px; margin-top: 12px; }
-.productivity-host .assistant-executions summary { cursor: pointer; font-weight: 650; }
+.productivity-host .assistant-executions summary { cursor: pointer; font-weight: 650; width: fit-content; padding: 8px 12px; border: 1px solid #dce9e1; border-radius: 9px; background: #f6f9f7; }
+.productivity-host .assistant-executions summary:hover { background: #edf4ef; }
+.productivity-host .assistant-executions summary:focus-visible { outline: 2px solid #274c3a; outline-offset: 3px; }
+.productivity-host .assistant-executions .pip-hide-activity { display: none; }
+.productivity-host .assistant-executions[open] .pip-show-activity { display: none; }
+.productivity-host .assistant-executions[open] .pip-hide-activity { display: inline; }
 .productivity-host .assistant-executions article { border-bottom: 1px solid #e0e7e2; padding: 8px 0; }
 .productivity-host .assistant-executions p { margin: 3px 0; }
 .productivity-host .assistant-executions a { text-decoration: underline; }
@@ -1541,3 +1546,67 @@
 .productivity-host .assistant-latest { padding: 5px; font-size: 12px; background: #edf4ef; }
 .productivity-host .assistant-panel :focus-visible, .productivity-host .assistant-launcher:focus-visible { outline: 3px solid #4a78a4; outline-offset: 2px; }
 @media (max-width: 760px) { .productivity-host .productivity-assistant { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); } .productivity-host .assistant-launcher { padding: 11px 14px; } .productivity-host .assistant-panel { bottom: 56px; height: min(700px, calc(100dvh - 100px)); width: calc(100vw - 24px); } }
+
+/* Semantic activity colours, reinforced by labels and status text. */
+.productivity-host .productivity-workspace .time-task { background: #e0edff; color: #174a9c; border-left: 3px solid #4d87e8; }
+.productivity-host .productivity-workspace .time-personal { background: #fff0f0; color: #9b303d; border-left: 3px solid #e47b86; }
+.productivity-host .productivity-workspace .time-personal:hover { background: #ffe2e5; }
+.productivity-host .schedule-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; padding: 12px 18px; color: #536179; font-size: 12px; }
+.productivity-host .schedule-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.productivity-host .schedule-legend span::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: #dceaff; border: 1px solid #72a1ee; }
+.productivity-host .schedule-legend .legend-habit::before { background: #d1fae5; border-color: #52ad86; }
+.productivity-host .schedule-legend .legend-event::before { background: #ffe2e5; border-color: #db8793; }
+.productivity-host .schedule-legend .legend-academic::before { background: #eee7ff; border-color: #9873dd; }
+.productivity-host .productivity-workspace .time-academic { background: #eee7ff; color: #5c3699; border-left: 3px solid #9873dd; }
+
+/* PIP: a light companion surface shared with the productivity workspace. */
+.productivity-host .pip-avatar { width: 36px; height: 36px; flex: 0 0 auto; display: inline-block; vertical-align: middle; }
+.productivity-host .assistant-launcher { position: relative; isolation: isolate; background: #1555ed; color: #fff; box-shadow: 0 6px 24px #2455dc33; }
+.productivity-host .assistant-launcher::before { content: ""; position: absolute; inset: -3px; border: 1px solid #6289ff; border-radius: inherit; pointer-events: none; animation: pip-ripple 2s ease-out infinite; z-index: -1; }
+@keyframes pip-ripple { 0% { transform: scale(1); opacity: .65; } 100% { transform: scale(1.13,1.35); opacity: 0; } }
+.productivity-host .assistant-panel { width: min(450px, calc(100vw - 32px)); background: #fafbff; color: #17223c; border: 1px solid #dfe5f3; border-radius: 26px; box-shadow: 0 18px 65px #172b572b; }
+.productivity-host .assistant-panel.is-expanded { width: min(850px, calc(100vw - 48px)); height: min(850px, calc(100dvh - 118px)); }
+.productivity-host .assistant-heading { gap: 10px; padding: 16px 18px; background: #fff; border-bottom: 1px solid #e9ecf6; }
+.productivity-host .assistant-heading > div { flex: 1; }
+.productivity-host .assistant-heading strong { font-size: 18px; color: #18213a; }
+.productivity-host .assistant-heading small { color: #6b7590; font-size: 12px; }
+.productivity-host .pip-ai-badge { font-size: 10px; vertical-align: middle; border-radius: 6px; padding: 3px 6px; margin-left: 6px; background: #e9edff; color: #4c50b4; }
+.productivity-host .assistant-heading button, .productivity-host .assistant-toolbar button { border-color: #e3e7f0; background: #fff; color: #56617c; }
+.productivity-host .assistant-toolbar { border-color: #e9ecf6; background: #fff; padding: 10px 14px; }
+.productivity-host .assistant-toolbar select { background: #f8f9fd; border-color: #e1e6f1; font-size: 12px; color: #34415d; }
+.productivity-host .assistant-messages { padding: 20px 18px; line-height: 1.65; }
+.productivity-host .assistant-welcome { text-align: center; max-width: 340px; margin: 12px auto 28px; color: #5f6b85; }
+.productivity-host .assistant-welcome > .pip-avatar { width: 100px; height: 100px; margin: 6px auto 14px; filter: drop-shadow(0 10px 14px #5478df22); }
+.productivity-host .assistant-welcome h2 { font-size: 23px; color: #18213a; margin: 0 0 12px; letter-spacing: -.5px; }
+.productivity-host .assistant-welcome p { font-size: 14px; }
+.productivity-host .assistant-welcome small { display: block; font-size: 11px; margin: 12px 0 20px; }
+.productivity-host .assistant-welcome button { color: #174bd5; background: #edf2ff; border-color: #d9e3ff; }
+.productivity-host .assistant-message { background: #fff; border: 1px solid #e6eaf4; box-shadow: 0 2px 4px #182e5703; padding: 14px 16px; border-radius: 18px; }
+.productivity-host .assistant-message-user { background: #eef0ff; border-color: #e7e9ff; margin-left: 36px; border-bottom-right-radius: 5px; }
+.productivity-host .assistant-message-assistant { margin-right: 12px; border-bottom-left-radius: 5px; }
+.productivity-host .assistant-message > strong { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #62708c; }
+.productivity-host .assistant-message > strong .pip-avatar { width: 22px; height: 22px; }
+.productivity-host .assistant-message small { color: #69758c; }
+.productivity-host .assistant-message .pip-markdown p { white-space: normal; }
+.productivity-host .pip-markdown { overflow-wrap: anywhere; }
+.productivity-host .pip-markdown > :first-child { margin-top: 6px; }
+.productivity-host .pip-markdown p { margin: 9px 0; }
+.productivity-host .pip-markdown h1, .productivity-host .pip-markdown h2, .productivity-host .pip-markdown h3 { font-weight: 700; line-height: 1.35; margin: 18px 0 8px; color: #1a294b; }
+.productivity-host .pip-markdown h1 { font-size: 20px; }.productivity-host .pip-markdown h2 { font-size: 18px; }.productivity-host .pip-markdown h3 { font-size: 16px; }
+.productivity-host .pip-markdown ul { list-style: disc; padding-left: 21px; margin: 10px 0; }.productivity-host .pip-markdown ol { list-style: decimal; padding-left: 21px; margin: 10px 0; }
+.productivity-host .pip-markdown li { margin: 5px 0; }.productivity-host .pip-markdown li > p { margin: 3px 0; }
+.productivity-host .pip-markdown a { color: #2358d9; text-decoration: underline; text-underline-offset: 3px; }
+.productivity-host .pip-markdown blockquote { margin: 12px 0; padding: 3px 12px; border-left: 3px solid #94adf0; color: #566580; background: #f4f7ff; }
+.productivity-host .pip-markdown pre { max-width: 100%; overflow: auto; background: #17233f; color: #ecf1ff; border-radius: 10px; padding: 12px; font-size: 12px; white-space: pre; }
+.productivity-host .pip-markdown code { font-size: .9em; background: #edf0fa; border-radius: 4px; padding: 2px 4px; }.productivity-host .pip-markdown pre code { background: transparent; padding: 0; }
+.productivity-host .pip-table { max-width: 100%; overflow-x: auto; }.productivity-host .pip-table table { width: 100%; border-collapse: collapse; font-size: 12px; }.productivity-host .pip-table th, .productivity-host .pip-table td { padding: 8px; border-bottom: 1px solid #dfe5f2; text-align: left; }
+.productivity-host .pip-saved-card { display: grid; gap: 7px; padding: 14px; background: #fff; border: 1px solid #dce9e1; border-radius: 15px; margin: 12px 0; font-size: 13px; }.productivity-host .pip-saved-label { color: #22704a; font-size: 11px; }.productivity-host .pip-saved-card a { color: #2358d9; text-decoration: underline; }
+.productivity-host .assistant-composer { background: #fff; border-color: #e9ecf6; padding: 14px; }.productivity-host .assistant-composer textarea { background: #f9faff; border-color: #e0e6f4; border-radius: 14px; color: #1a294b; font-size: 13px; min-height: 60px; }
+.productivity-host .assistant-composer button[type=submit], .productivity-host .assistant-actions button:first-child { background: #1555ed; border-color: #1555ed; color: white; border-radius: 12px; }
+.productivity-host .assistant-proposal { background: #fffbf0; border-color: #eee0bb; }.productivity-host .assistant-error { color: #a13643; }.productivity-host .assistant-latest { background: #edf2ff; color: #2652be; }
+.productivity-host .pip-working { color: #68799a; font-size: 12px; }.productivity-host .pip-working span { color: #4778e6; letter-spacing: 3px; }
+@media (max-width: 760px) { .productivity-host .assistant-panel.is-expanded { width: calc(100vw - 24px); height: calc(100dvh - 100px); }.productivity-host .assistant-heading { padding: 12px; }.productivity-host .assistant-messages { padding: 16px 12px; } }
+@media (prefers-reduced-motion: reduce) { .productivity-host .assistant-launcher::before { animation: none; opacity: .25; } }
+
+.productivity-host .productivity-workspace .time-task:hover { background: #cfe2ff; }
+.productivity-host .productivity-workspace .time-academic:hover { background: #e4d8fa; }

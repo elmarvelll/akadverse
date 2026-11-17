@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MessageCircle, Minus, Plus, Send, RefreshCw, Trash2 } from "lucide-react";
+import { Minus, Plus, Send, RefreshCw, Trash2, Maximize2, Minimize2 } from "lucide-react";
+import { PipAvatar } from "./PipAvatar";
+import { PipMarkdown } from "./PipMarkdown";
 import { invalidateWorkspace } from "../client";
 import { useSpeechToText } from "@/app/components/voice/useSpeechToText";
 import { VoiceInputControls, VoiceInputStatus } from "@/app/components/voice/VoiceInputControls";
@@ -17,10 +19,12 @@ function refreshWorkspace() {
   invalidateWorkspace(tags);
   window.dispatchEvent(new CustomEvent("productivity:invalidated", { detail: tags }));
 }
-export function AssistantPanel({ ownerId }: { ownerId: string }) {
+export function AssistantPanel({ ownerId, studentName }: { ownerId: string; studentName?: string }) {
+  const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(false), [dialogOpen, setDialogOpen] = useState(false), [deleteReview, setDeleteReview] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]), [moreConversations, setMoreConversations] = useState(false), [view, setView] = useState<View>();
   const [draft, setDraft] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const focusOnOpen = useRef(false);
   const alive = useRef(true), busyRef = useRef(false), controllers = useRef(new Set<AbortController>());
   const drafts = useRef(new Map<string, string>()), current = useRef("");
   const requestIdentity = useRef<{ content: string; conversation: string; id: string } | null>(null);
@@ -71,8 +75,14 @@ export function AssistantPanel({ ownerId }: { ownerId: string }) {
       if (!view && rows[0]) await select(rows[0].id);
     });
   }
-  function show() { setOpen(true); void initialise(); window.setTimeout(() => input.current?.focus(), 100); }
-  function minimise() { speech.cancel(); setOpen(false); trigger.current?.focus(); }
+  useEffect(() => {
+    if (focusOnOpen.current && open && view && !busy && !dialogOpen) {
+      input.current?.focus();
+      focusOnOpen.current = false;
+    }
+  }, [open, view, busy, dialogOpen]);
+  function show() { focusOnOpen.current = true; setOpen(true); void initialise(); }
+  function minimise() { focusOnOpen.current = false; speech.cancel(); setOpen(false); trigger.current?.focus(); }
   async function olderConversations() {
     const last = conversations.at(-1); if (!last) return;
     await act(async () => { const rows = await request<Conversation[]>(`${root}?cursor=${encodeURIComponent(last.id)}`); setConversations(previous => [...previous, ...rows.filter(row => !previous.some(old => old.id === row.id))]); setMoreConversations(rows.length === 30); });
@@ -128,38 +138,38 @@ export function AssistantPanel({ ownerId }: { ownerId: string }) {
   const hasProcessing = view?.messages.some(message => message.role === "user" && message.status === "processing");
   useEffect(() => {
     if (!open || !hasProcessing || busy || !view) return;
-    const timer = window.setInterval(() => { void request<View>(`${root}?conversation=${encodeURIComponent(view.conversation.id)}`).then(next => { if (alive.current) { setView(next); refreshWorkspace(); } }).catch(() => {}); }, 4000);
+    const timer = window.setInterval(() => { void request<View>(`${root}?conversation=${encodeURIComponent(view.conversation.id)}`).then(next => { if (alive.current) { setView(next); refreshWorkspace(); } }).catch(failure => { if (alive.current) setError(failure instanceof Error ? failure.message : "Could not refresh PIP. Use Reload to retry."); }); }, 4000);
     return () => window.clearInterval(timer);
   }, [open, hasProcessing, busy, view, request]);
   return <div className="productivity-assistant" hidden={dialogOpen}>
-    <button type="button" className="assistant-launcher" ref={trigger} aria-expanded={open} aria-controls="productivity-assistant-panel" onClick={open ? minimise : show}><MessageCircle size={20} aria-hidden/><span>Assistant</span></button>
-    {open && <section id="productivity-assistant-panel" role="region" aria-label="Productivity Assistant" className="assistant-panel" onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); minimise(); } }}>
-      <header className="assistant-heading"><div><strong>Productivity Assistant</strong><small>Plan and manage your workspace</small></div><button type="button" aria-label="Minimise assistant" onClick={minimise}><Minus size={18}/></button></header>
+    <button type="button" className="assistant-launcher" ref={trigger} aria-expanded={open} aria-controls="productivity-assistant-panel" onClick={open ? minimise : show}><PipAvatar/><span>Ask PIP</span></button>
+    {open && <section id="productivity-assistant-panel" role="region" aria-label="PIP productivity assistant" className={`assistant-panel ${expanded ? "is-expanded" : ""}`} onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); minimise(); } }}>
+      <header className="assistant-heading"><PipAvatar/><div><strong>PIP <span className="pip-ai-badge">AI</span></strong><small>Your productivity companion</small></div><button type="button" aria-label="Close PIP" onClick={minimise}><Minus size={18}/></button><button type="button" aria-label={expanded ? "Restore PIP size" : "Expand PIP"} aria-pressed={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}</button></header>
       <div className="assistant-toolbar"><label className="sr-only" htmlFor="assistant-conversation">Conversation</label><select id="assistant-conversation" value={view?.conversation.id || ""} disabled={busy} onChange={event => void act(() => select(event.target.value))}><option value="" disabled>Choose a conversation</option>{conversations.map(row => <option key={row.id} value={row.id}>{row.title}</option>)}</select><button type="button" disabled={busy} onClick={() => void newConversation()} aria-label="New conversation"><Plus size={18}/></button><button type="button" disabled={busy} onClick={() => void reload()} aria-label="Reload conversation"><RefreshCw size={16}/></button><button type="button" disabled={busy || !view || hasProcessing} onClick={() => setDeleteReview(true)} aria-label="Delete conversation"><Trash2 size={16}/></button></div>
       {deleteReview && <div className="assistant-proposal" role="group" aria-label="Confirm conversation deletion"><strong>Delete this conversation and its messages?</strong><p>Saved tasks, habits, and events will stay in your workspace. Unconfirmed proposals in this chat will be removed.</p><div className="assistant-actions"><button type="button" disabled={busy} onClick={() => void removeConversation()}>Delete conversation</button><button type="button" disabled={busy} onClick={() => setDeleteReview(false)}>Keep conversation</button></div></div>}
       {moreConversations && <button type="button" disabled={busy} onClick={() => void olderConversations()}>Load older conversations</button>}
       <div className="assistant-messages" ref={messageLogRef} tabIndex={0} aria-label="Conversation messages" aria-busy={busy}>
-        {!view && <div className="assistant-welcome"><p>Ask me to organise tasks, habits, or your schedule.</p><p>For example: “Show my pending tasks” or “Create a high-priority task to revise chemistry tomorrow.”</p><button type="button" disabled={busy} onClick={() => void newConversation()}>Start a conversation</button></div>}
+        {(!view || !view.messages.length) && <div className="assistant-welcome"><PipAvatar/><h2>Hi{studentName ? `, ${studentName.split(" ")[0]}` : " there"}! <span aria-hidden>👋</span></h2><p>I’m PIP. Tell me what you’d like to get done. I can help with your tasks, habits and schedule.</p><small>Plans become changes only when your workspace confirms they’re saved.</small>{!view && <button type="button" disabled={busy} onClick={() => void newConversation()}>Start a conversation</button>}</div>}
         {view?.hasOlder && <button type="button" disabled={busy} onClick={() => void older()}>Load earlier messages</button>}
-        {view?.messages.map(message => <article key={message.id} className={`assistant-message assistant-message-${message.role}`}><strong>{message.role === "user" ? "You" : "Assistant"}</strong><p>{message.content}</p>{message.status !== "completed" && <small>{labels[message.status] || message.status}</small>}</article>)}
+        {view?.messages.map(message => <article key={message.id} className={`assistant-message assistant-message-${message.role}`}><strong>{message.role === "user" ? "You" : <><PipAvatar/> PIP</>}</strong>{message.role === "user" ? <p>{message.content}</p> : <PipMarkdown text={message.content}/>}{message.status !== "completed" && <small>{labels[message.status] || message.status}</small>}</article>)}
         {view?.pending.map(pending => <article className="assistant-proposal" key={pending.id}><strong>Review proposed action</strong><p>{proposalLabel(pending.preview.tool, pending.preview.arguments)}</p><Proposal args={pending.preview.arguments} current={pending.preview.current}/><p><small>{pending.expired ? "This proposal expired. Cancel it and request a new one." : `Expires ${new Date(pending.expiresAt).toLocaleTimeString()}`}</small></p><div className="assistant-actions"><button type="button" disabled={busy || pending.expired || hasProcessing} onClick={() => void decide(pending, true)}>Confirm</button><button type="button" disabled={busy || hasProcessing} onClick={() => void decide(pending, false)}>Cancel</button></div></article>)}
-        {!!view?.executions.length && <details className="assistant-executions"><summary>Operation results</summary>{[...view.executions].reverse().map(execution => <article key={execution.id}><strong>{execution.toolName.replaceAll("_", " ")}</strong><p>{labels[execution.status] || execution.status}</p>{execution.error?.error && <p>{execution.error.error}</p>}<RecordLink result={execution.result}/>{["unknown", "pending"].includes(execution.status) && <button type="button" disabled={busy || hasProcessing} onClick={() => void recheck(execution)}>Recheck outcome</button>}</article>)}</details>}
-        {busy && <p role="status">Working… confirmed changes will appear in the operation results.</p>}
+        {!!view?.executions.length && <details className="assistant-executions" key={view.conversation.id}><summary><span className="pip-show-activity">Show</span><span className="pip-hide-activity">Hide</span> activity ({view.executions.length})</summary>{[...view.executions].reverse().map(execution => <article key={execution.id}><strong>{execution.toolName.replaceAll("_", " ")}</strong><p>{labels[execution.status] || execution.status}</p>{execution.error?.error && <p>{execution.error.error}</p>}<RecordLink result={execution.result}/>{["unknown", "pending"].includes(execution.status) && <button type="button" disabled={busy || hasProcessing} onClick={() => void recheck(execution)}>Recheck outcome</button>}</article>)}</details>}
+        {busy && <p role="status" className="pip-working"><span aria-hidden>•••</span> PIP is working on your request…</p>}
         {hasProcessing && !busy && <p role="status">This message is still processing. Reload to check its result; interrupted turns are recovered after their time limit.</p>}
       </div>
       {scrollPaused && <button type="button" className="assistant-latest" onClick={() => scrollLatest(true)}>Jump to latest</button>}
       <div aria-live="polite" className="assistant-error">{error && <p role="alert">{error} <button type="button" disabled={busy} onClick={() => void reload()}>Reload</button></p>}</div>
       <form className="assistant-composer" onSubmit={event => { event.preventDefault(); void send(); }}>
-        <label className="sr-only" htmlFor="assistant-draft">Message the Productivity Assistant</label><textarea id="assistant-draft" ref={input} rows={3} maxLength={4000} disabled={busy || !view || hasProcessing} value={draft} onChange={event => speech.edit(event.target.value)} placeholder={view ? "What would you like to plan?" : "Start or choose a conversation"}/>
-        <div className="assistant-composer-actions"><VoiceInputControls speech={speech} disabled={busy || !view || !!hasProcessing}/><small>{draft.length}/4,000</small><button type="submit" disabled={busy || !view || !draft.trim() || speech.active || hasProcessing}><Send size={16} aria-hidden/> Send</button></div><VoiceInputStatus speech={speech} recipient="the Productivity Assistant"/>
+        <label className="sr-only" htmlFor="assistant-draft">Message PIP</label><textarea id="assistant-draft" ref={input} rows={3} maxLength={4000} disabled={busy || !view || hasProcessing} value={draft} onChange={event => speech.edit(event.target.value)} placeholder={view ? "Ask PIP about your tasks, habits or schedule…" : "Start or choose a conversation"}/>
+        <div className="assistant-composer-actions"><VoiceInputControls speech={speech} disabled={busy || !view || !!hasProcessing}/><small>{draft.length}/4,000</small><button type="submit" disabled={busy || !view || !draft.trim() || speech.active || hasProcessing}><Send size={16} aria-hidden/> Send</button></div><VoiceInputStatus speech={speech} recipient="PIP"/>
       </form>
     </section>}
   </div>;
 }
 function Proposal({ args, current }: { args: Record<string, unknown>; current?: unknown }) {
   const input = args.input && typeof args.input === "object" ? args.input as Record<string, unknown> : args.changes && typeof args.changes === "object" ? args.changes as Record<string, unknown> : args;
-  const names: Record<string, string> = { title: "Title", name: "Name", description: "Description", priority: "Priority", dueDate: "Deadline date", dueTime: "Deadline time", type: "Habit type", frequency: "Frequency", weekdays: "Weekdays (0 = Sunday)", time: "Time", end: "End time", startDate: "Starts", endDate: "Ends", mustComplete: "Must complete", archived: "Archive", restore: "Restore", outcome: "Outcome", original_date: "Original date", timezone: "Timezone", academic: "Academic category" };
-  const slot = (input.slot || args.slot) as { date?: string; start?: string; end?: string; timezone?: string } | undefined;
+  const names: Record<string, string> = { title: "Title", name: "Name", description: "Description", priority: "Priority", dueDate: "Deadline date", dueTime: "Deadline time", type: "Habit type", frequency: "Frequency", weekdays: "Weekdays (0 = Sunday)", time: "Time", end: "End time", startDate: "Starts", endDate: "Ends", mustComplete: "Must complete", archived: "Archive", restore: "Restore", outcome: "Outcome", original_date: "Original date", timezone: "Timezone", academic: "Academic category", clearSchedule: "Remove allocated working time" };
+  const slot = (input.scheduledSlot || input.slot || args.slot) as { date?: string; start?: string; end?: string; timezone?: string } | undefined;
   const target = current && typeof current === "object" ? current as Record<string, unknown> : {};
   const record = (target.record || target) as Record<string, unknown>;
   const data = record.data as { title?: string; name?: string; revisions?: { name?: string }[] } | undefined;

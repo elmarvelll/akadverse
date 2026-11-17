@@ -63,7 +63,7 @@ async function main() {
     await delay(500);
     assert.equal(await evaluate(`(()=>{const t=document.querySelector(${JSON.stringify(transcript)});return t.scrollHeight-t.clientHeight-t.scrollTop<35})()`),true);
     record('transcription growth preserves manual scroll; compact arrow resumes follow');
-    await evaluate('document.querySelector("button[aria-label=\\\"Open Stuwart lesson assistant\\\"]").click()');
+    await evaluate('document.querySelector("button[aria-label=\\\"Open Stuart lesson assistant\\\"]").click()');
     await waitFor(() => evaluate('!!document.querySelector("#classroom-stuwart-question") && !document.querySelector("#classroom-stuwart-question").disabled'), 'assistant ready');
     await delay(300);
     assert.equal(await evaluate('document.querySelector("#classroom-stuwart").getBoundingClientRect().right<=innerWidth'),true);
@@ -74,8 +74,8 @@ async function main() {
     await fill('Please explain force');await delay(100);
     await evaluate('document.querySelector("#classroom-stuwart form").requestSubmit()');
     await waitFor(() => evaluate('document.body.textContent.includes("Force equals mass")'), 'answer');
-    await evaluate('document.querySelector("button[aria-label=\\\"Close Stuwart\\\"]").click()');await delay(300);
-    await evaluate('document.querySelector("button[aria-label=\\\"Open Stuwart lesson assistant\\\"]").click()');
+    await evaluate('document.querySelector("button[aria-label=\\\"Close Stuart\\\"]").click()');await delay(300);
+    await evaluate('document.querySelector("button[aria-label=\\\"Open Stuart lesson assistant\\\"]").click()');
     await waitFor(() => evaluate('document.body.textContent.includes("Force equals mass")'), 'restored');
     assert.equal(await evaluate('platformTest.requests.length'),1);
     record('question answered and persisted history restored after close/reopen');
@@ -93,7 +93,7 @@ async function main() {
     await send('Page.reload');
     await waitFor(() => evaluate('!!document.querySelector("#append")'), 'reduced motion mount');
     await delay(100);
-    await evaluate('document.querySelector("button[aria-label=\\\"Open Stuwart lesson assistant\\\"]").click()');
+    await evaluate('document.querySelector("button[aria-label=\\\"Open Stuart lesson assistant\\\"]").click()');
     await waitFor(() => evaluate('!!document.querySelector("#classroom-stuwart")'), 'reduced motion open');
     await delay(100);
     assert.equal(await evaluate('document.querySelector("#classroom-stuwart").getBoundingClientRect().width<innerWidth/2'),true);

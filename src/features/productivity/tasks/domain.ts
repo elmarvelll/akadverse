@@ -1,5 +1,6 @@
+import { slotInterval } from "../schedule/time";
 import { ProductivityError } from "../errors";
-import { validDate, localNow, type Priority } from "../schedule/domain";
+import { validDate, validSlot, localNow, type Slot, type Priority } from "../schedule/domain";
 
 export type TaskSource =
   | { kind: "ordinary" }
@@ -14,6 +15,7 @@ export interface TaskInput {
   priority: Priority;
   dueDate?: string;
   dueTime?: string;
+  scheduledSlot?: Slot;
 }
 export interface TaskAudit {
   id: string;
@@ -48,12 +50,16 @@ export function validateTaskInput(input: TaskInput) {
   if (typeof input.title !== "string" || !input.title.trim() || input.title.trim().length > 200) throw new ProductivityError("Enter a title between 1 and 200 characters.");
   if (input.description !== undefined && (typeof input.description !== "string" || input.description.length > 10000)) throw new ProductivityError("Description must be at most 10,000 characters.");
   if (!["low", "medium", "high"].includes(input.priority)) throw new ProductivityError("Task priority must be Low, Medium, or High.");
+  if (input.scheduledSlot !== undefined) {
+    if (!input.scheduledSlot || typeof input.scheduledSlot.timezone !== "string" || !input.scheduledSlot.timezone || !validSlot(input.scheduledSlot)) throw new ProductivityError("Choose a valid scheduled date, start time, end time and timezone.");
+    slotInterval(input.scheduledSlot);
+  }
   if (input.dueDate !== undefined && !validDate(input.dueDate)) throw new ProductivityError("Choose a valid intended completion date.");
   if (input.dueTime !== undefined && !input.dueDate) throw new ProductivityError("Choose an intended completion date before setting a completion time.");
   if (input.dueTime !== undefined && !validTime(input.dueTime)) throw new ProductivityError("The intended completion time must be a valid time between 00:00 and 23:59.");
 }
 export function taskSnapshot(task: TaskInput): TaskInput {
-  return { title: task.title, description: task.description, priority: task.priority, dueDate: task.dueDate, dueTime: task.dueTime };
+  return { title: task.title, description: task.description, priority: task.priority, dueDate: task.dueDate, dueTime: task.dueTime, scheduledSlot: task.scheduledSlot ? { ...task.scheduledSlot } : undefined };
 }
 export function taskViewStatus(task: Task, timezone: string, instant = new Date()): TaskViewStatus {
   if (task.status !== "pending") return task.status;

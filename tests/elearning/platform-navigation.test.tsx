@@ -27,3 +27,14 @@ it("retires direct Main Menu and AI Studio pages for every account", async () =>
     assert.throws((await page).default, /NOT_FOUND/);
   }
 });
+
+
+it("hides student results and CGPA navigation while exposing the portal return link in full and rail modes", () => {
+  const tree = JSON.stringify(getStudentNav());
+  assert.doesNotMatch(tree, /academic-records|CGPA|Results/);
+  for (const collapsed of [true, false]) {
+    const html = renderToStaticMarkup(<Sidebar role="student" isLevelAdviser={false} collapsed={collapsed} />);
+    assert.match(html, /href="\/studashboard"/);
+    assert.match(html, /Back to Home/);
+  }
+});

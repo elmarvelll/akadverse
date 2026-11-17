@@ -113,3 +113,9 @@ body {
 .elearning-shell .text-gray-600 {
   color: #1f2937;
 }
+
+/* Navigation feedback follows the App Router transition, never a fixed timer. */
+.workspace-entry-icon { position: relative; }
+.workspace-entry-icon.is-pending::after { content: ""; position: absolute; inset: 0; border: 2px solid currentColor; border-radius: inherit; animation: workspace-entry-pulse 1.5s ease-out infinite; pointer-events: none; }
+@keyframes workspace-entry-pulse { 0% { transform: scale(1); opacity: .65; box-shadow: 0 0 0 0 currentColor; } 100% { transform: scale(1.45); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .workspace-entry-icon.is-pending::after { animation: none; opacity: .65; } }

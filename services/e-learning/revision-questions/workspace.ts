@@ -1,3 +1,5 @@
+import { isObject } from "../learning-ai/capabilities";
+import { misconceptionCode } from "../learning-ai/policy";
 import { randomInt, randomUUID } from "node:crypto";
 import { elearningDb } from "@/lib/db/elearning";
 import type { Prisma } from "@/generated/prisma-elearning";
@@ -104,7 +106,19 @@ export async function answerRevisionItem(studentId: string, input: Record<string
   if (!claimed.count) throw new RevisionWebhookError(409, "EVALUATION_PROCESSING", "This answer is being evaluated. Reload shortly.");
   try {
     const q = eligible.question, expected = q.type === "mcq" ? (q.options as { key: string; text: string }[]).find(o => o.key === q.correctAnswer)?.text || String(q.correctAnswer) : String(q.correctAnswer);
-    const result = validateEvaluation(await learningRequest("/evaluate-practice", { concept_id: eligible.coverage.concept.externalId, concept_description: eligible.coverage.concept.description, question: q.stem + (q.type === "mcq" ? `\nOptions: ${JSON.stringify(q.options)}` : ""), expected_answer: expected, student_answer: answer, student_reasoning: reasoning, response_type: q.type === "mcq" ? "multiple_choice" : "text" }), eligible.coverage.concept.externalId);
+    const context = eligible.coverage.context as Record<string, unknown>;
+    const personalized = typeof context._learningPlanId === "string";
+    const conceptId = personalized ? eligible.coverage.concept.id : eligible.coverage.concept.externalId;
+    const payload = { concept_id: conceptId, concept_description: eligible.coverage.concept.description, question: q.stem + (q.type === "mcq" ? `\nOptions: ${JSON.stringify(q.options)}` : ""), expected_answer: expected, student_answer: answer, student_reasoning: reasoning, response_type: q.type === "mcq" ? "multiple_choice" : "text" };
+    let raw: unknown;
+    if (personalized && process.env.AI_V2_ENABLED === "true") {
+      const response = await (await import("../learning-ai/client")).callAi("EVALUATE_PRACTICE", payload, { requestId: item.id, studentId, courseId: eligible.course.id });
+      if (response.metadata.status === "degraded") throw new RevisionWebhookError(502, "REVISION_EVALUATION_REVIEW", "This evaluation needs review. Your answer was saved; no review was scheduled.");
+      raw = response.body;
+    } else raw = await learningRequest("/evaluate-practice", payload);
+    const evaluated = validateEvaluation(raw, conceptId);
+    // Explicit DTO for the new workflow: future provider fields must not expose answer keys.
+    const result = personalized ? { concept_id: evaluated.concept_id, answer_correct: evaluated.answer_correct, answer_feedback: evaluated.answer_feedback, reasoning_quality: evaluated.reasoning_quality, reasoning_feedback: evaluated.reasoning_feedback, evidence_strength: evaluated.evidence_strength, needs_review: evaluated.needs_review, recommended_next_step: evaluated.recommended_next_step, misconceptions: isObject(raw) && Array.isArray(raw.misconceptions) ? raw.misconceptions.filter(isObject).flatMap(m => typeof m.label === "string" ? [{ code: typeof m.code === "string" ? m.code.slice(0, 60) : misconceptionCode(m.label), label: m.label.slice(0, 500) }] : []).slice(0, 20) : [] } : evaluated;
     await eligibleBankQuestion(studentId, item.questionId, item.session.offeringId || undefined);
     const saved = await elearningDb.revisionSessionItem.updateMany({ where: { id, evaluationToken: token, status: "PENDING", evaluatedAt: null, evaluationLease: { gt: new Date() }, card: { version: item.cardVersion } }, data: { evaluation: json(result), evaluatedAt: new Date(), status: "EVALUATED", evaluationToken: null, evaluationLease: null } });
     if (!saved.count) throw new RevisionWebhookError(409, "ANSWER_CHANGED", "The session changed during evaluation. Reload it.");

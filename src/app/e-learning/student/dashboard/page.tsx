@@ -1,7 +1,7 @@
 // src/app/e-learning/student/dashboard/page.tsx
 //
 // Student dashboard (AGENTS.md §12): current session/semester/level,
-// registered courses, registration status, and GPA/CGPA — all read from
+// registered courses and registration status — all read from
 // the database (Phase 1's academic calendar, Phase 2's registration/
 // results modules), never hard-coded. Deadlines and announcements are
 // still later-phase pieces (they need AcademicTimeFrame surfaced generally
@@ -14,7 +14,6 @@ import { getCurrentAcademicContext } from "@/services/e-learning/shared/academic
 import { elearningDb } from "@/lib/db/elearning";
 import { findRegistration } from "@/services/e-learning/student/registration";
 import { getRegisteredCourses } from "@/services/e-learning/student/registered-courses";
-import { getGpaCgpaSummary } from "@/services/e-learning/student/results";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING_LEVEL_ADVISOR: "Pending Level Advisor Approval",
@@ -33,13 +32,12 @@ export default async function StudentDashboardPage() {
     }),
   ]);
 
-  const [registration, registeredCourses, gpaSummary] = profile
+  const [registration, registeredCourses] = profile
     ? await Promise.all([
         findRegistration(session.user.id, academicContext),
         academicContext ? getRegisteredCourses(session.user.id, academicContext, { includeLecturerNames: false }) : Promise.resolve([]),
-        getGpaCgpaSummary(session.user.id),
       ])
-    : [null, [], null];
+    : [null, []];
 
   return (
     <div className="space-y-6">
@@ -79,7 +77,6 @@ export default async function StudentDashboardPage() {
             href="/e-learning/student/course-control/registration-status"
           />
           <SummaryCard label="Registered Courses" value={String(registeredCourses.length)} href="/e-learning/student/my-learning" />
-          <SummaryCard label="CGPA" value={gpaSummary?.cgpa?.toFixed(2) ?? "—"} href="/e-learning/student/academic-records/gpa-cgpa" />
         </div>
       )}
 

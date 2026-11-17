@@ -8,10 +8,10 @@ import { badRequest } from "@/lib/service-error";
 import { OfficialTimetableError } from "./errors";
 import { timed } from "./diagnostics";
 
-async function loadTimetable(ownerId: string) {
+async function loadTimetable(ownerId: string, includeLecturerNames = true) {
   try {
   const context = await timed("academic.context", () => getCurrentAcademicContext());
-  const courses = context?.session && context.semester ? await timed("academic.registrations", () => getRegisteredCourses(ownerId, context)) : [];
+  const courses = context?.session && context.semester ? await timed("academic.registrations", () => getRegisteredCourses(ownerId, context, { includeLecturerNames })) : [];
   const sessionId = context?.session?.id, semesterId = context?.semester?.id;
   const entries = courses.length && sessionId && semesterId ? await timed("academic.timetable", () => elearningDb.timetableEntry.findMany({ where: {
     courseId: { in: courses.map(c => c.id) }, academicSessionId: sessionId, semesterId, isApproved: true,
@@ -19,13 +19,15 @@ async function loadTimetable(ownerId: string) {
   return { context, courses, entries };
   } catch (error) { throw new OfficialTimetableError(error); }
 }
-export interface AcademicRequestCache { source?: ReturnType<typeof loadTimetable> }
+export interface AcademicRequestCache { source?: ReturnType<typeof loadTimetable>; conflictSource?: ReturnType<typeof loadTimetable> }
 
 // Uses the host's APPROVED registration resolver and current academic context.
 // User/programme/department scope is resolved server-side, never from request IDs.
-export async function officialClasses(ownerId: string, date: string, timezone: string, cache: AcademicRequestCache = {}): Promise<OfficialClass[]> {
+export async function officialClasses(ownerId: string, date: string, timezone: string, cache: AcademicRequestCache = {}, options: { includeLecturerNames?: boolean } = {}): Promise<OfficialClass[]> {
   if (!validDate(date)) throw badRequest("Choose a valid timetable date.");
-  const { context, courses, entries } = await (cache.source ||= loadTimetable(ownerId));
+  const { context, courses, entries } = await (options.includeLecturerNames === false
+    ? cache.conflictSource ||= loadTimetable(ownerId, false)
+    : cache.source ||= loadTimetable(ownerId));
   if (!context?.session || !context.semester) return [];
   // The current host timetable has campus wall times but no timezone column.
   // Its Nigeria campus convention is Africa/Lagos; convert projected instants

@@ -21,6 +21,6 @@ export async function POST(req: Request, context: Context) {
     if (!body || typeof body !== "object" || Array.isArray(body)) throw badRequest("Invalid question.");
     return NextResponse.json(await askClassroomStuwart(id, (await context.params).sessionId, body), { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
-    return stewartErrorResponse("classroom-chat", e instanceof AiServiceError ? new ServiceError(503, "Stuwart is temporarily unavailable. Your class is still live. Try this question again shortly.") : e);
+    return stewartErrorResponse("classroom-chat", e instanceof AiServiceError ? new ServiceError(503, "Stuart is temporarily unavailable. Your class is still live. Try this question again shortly.") : e);
   }
 }

@@ -15,7 +15,8 @@ const fail = (field: string): never => { throw new RevisionWebhookError(400, "IN
 function object(value: unknown, field: string, allowed: string[]): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return fail(field);
   const result = value as Record<string, unknown>;
-  if (Object.keys(result).some(key => !allowed.includes(key))) return fail(field);
+  const unknown = Object.keys(result).find(key => !allowed.includes(key));
+  if (unknown !== undefined) return fail(`${field}.${unknown.slice(0, 80)}`);
   return result;
 }
 function text(value: unknown, field: string, max: number, allowEmpty = false): asserts value is string {

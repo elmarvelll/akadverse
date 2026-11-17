@@ -93,6 +93,37 @@
               "type": "string",
               "description": "Local 24-hour HH:mm",
               "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "scheduledSlot": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "Local calendar date YYYY-MM-DD",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "start": {
+                  "type": "string",
+                  "description": "Local 24-hour HH:mm",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "end": {
+                  "type": "string",
+                  "description": "Local 24-hour HH:mm",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "timezone": {
+                  "type": "string",
+                  "description": "Verified account IANA timezone"
+                }
+              },
+              "required": [
+                "date",
+                "start",
+                "end",
+                "timezone"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -149,6 +180,41 @@
               "type": "string",
               "description": "Local 24-hour HH:mm",
               "pattern": "^\\d{2}:\\d{2}$"
+            },
+            "scheduledSlot": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "Local calendar date YYYY-MM-DD",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "start": {
+                  "type": "string",
+                  "description": "Local 24-hour HH:mm",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "end": {
+                  "type": "string",
+                  "description": "Local 24-hour HH:mm",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "timezone": {
+                  "type": "string",
+                  "description": "Verified account IANA timezone"
+                }
+              },
+              "required": [
+                "date",
+                "start",
+                "end",
+                "timezone"
+              ],
+              "additionalProperties": false
+            },
+            "clearSchedule": {
+              "type": "boolean",
+              "description": "Remove the allocated working interval; keep the task and deadline."
             }
           },
           "required": [],

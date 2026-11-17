@@ -4,8 +4,10 @@ export const MAX_REVISION_BODY_BYTES = 256 * 1024;
 export const MAX_AGE_MS = 5 * 60 * 1000;
 export const FUTURE_SKEW_MS = 30 * 1000;
 export function utcTimestamp(value: unknown): number | undefined {
-  if (typeof value !== "string" || value.length > 40 || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|\+00:00)$/.test(value)) return;
-  const parsed = Date.parse(value);
+  if (typeof value !== "string" || value.length > 40 || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)$/.test(value)) return;
+  // Python datetime.isoformat() emits microseconds. Normalize only for
+  // millisecond clock comparison; preserve the original header for diagnostics.
+  const parsed = Date.parse(value.replace(/(\.\d{3})\d+/, "$1"));
   if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 19) !== value.slice(0, 19)) return;
   return parsed;
 }

@@ -1230,6 +1230,7 @@ model RevisionConcept {
 model RevisionConceptAnalysisJob {
   id            String @id @default(uuid())
   materialId    String @unique
+  learningV2    Boolean @default(false)
   status        String @default("PENDING")
   attempts      Int @default(0)
   claimToken    String?
@@ -1281,6 +1282,7 @@ model RevisionTeachingEvent {
 model RevisionGenerationJob {
   id                String @id @default(uuid())
   teachingEventId   String @unique
+  learningV2    Boolean @default(false)
   status            String @default("PENDING")
   attempts          Int @default(0)
   claimToken        String?
@@ -1478,4 +1480,196 @@ model RevisionLearningContext {
   nextAttemptAt  DateTime @default(now())
   updatedAt      DateTime @updatedAt
   @@index([dirty, nextAttemptAt])
+}
+
+// Backend-only AI trace/replay state. No raw request payloads or credentials.
+// Application-level references avoid cross-database identity FKs.
+model AiCallLog {
+  id               String   @id @default(uuid())
+  requestId        String   @unique
+  operation        String
+  studentId        String?
+  courseId         String?
+  status           String   @default("PENDING")
+  requestHash      String
+  httpStatus       Int?
+  latencyMs        Int?
+  usageReported    Boolean  @default(false)
+  model            String?
+  inputTokens      Int?
+  outputTokens     Int?
+  embeddingTokens  Int?
+  modelCalls       Int?
+  cached           Boolean  @default(false)
+  creditsCharged   Float    @default(0)
+  errorCode        String?
+  responseRef      Json?
+  capabilities     Json?
+  schemaVersion    String?
+  promptVersion    String?
+  modelVersion     String?
+  createdAt        DateTime @default(now())
+  completedAt      DateTime?
+
+  @@index([studentId, createdAt])
+  @@index([operation, status, createdAt])
+}
+
+// Additive personalized learning. Identity references are application-owned;
+// all durable learning/evidence rows are backend-only and never cascade deleted.
+model LearningMaterialVersion {
+  id          String @id @default(uuid())
+  materialId  String
+  offeringId  String
+  fingerprint String
+  source      Json
+  createdAt   DateTime @default(now())
+  plans       LearningPlan[]
+  @@unique([materialId, fingerprint])
+}
+model LearningPlan {
+  id                String @id @default(uuid())
+  materialVersionId String @unique
+  status            String @default("READY")
+  sections          Json
+  missingPrerequisites Json
+  createdAt         DateTime @default(now())
+  version           LearningMaterialVersion @relation(fields: [materialVersionId], references: [id], onDelete: Restrict)
+  concepts          LearningPlanConcept[]
+  runs              LearningLessonRun[]
+}
+model LearningPlanConcept {
+  id            String @id @default(uuid())
+  planId        String
+  conceptId     String
+  sourceLocalId String
+  position      Int
+  prerequisites Json
+  sourceChunks  Json
+  plan          LearningPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  @@unique([planId, conceptId])
+  @@unique([planId, position])
+}
+model LearningLessonRun {
+  id              String @id @default(uuid())
+  studentId       String
+  courseId        String
+  offeringId      String
+  materialId      String
+  week            Int
+  planId          String
+  currentConceptId String
+  status          String @default("ACTIVE")
+  version         Int @default(0)
+  busy            Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  plan            LearningPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  actions         LearningLessonAction[]
+  @@unique([studentId, planId])
+  @@index([studentId, courseId, updatedAt])
+}
+model LearningLessonAction {
+  id           String @id @default(uuid())
+  requestId    String @unique
+  requestHash  String
+  runId        String
+  runVersion   Int
+  conceptId    String
+  command      String
+  trigger      String
+  action       String?
+  status       String @default("PENDING")
+  input        Json
+  result       Json?
+  privateResult Json?
+  attemptId    String?
+  leaseToken   String?
+  leaseUntil   DateTime?
+  errorCode    String?
+  deliveredAt  DateTime?
+  createdAt    DateTime @default(now())
+  completedAt  DateTime?
+  run          LearningLessonRun @relation(fields: [runId], references: [id], onDelete: Restrict)
+  @@unique([runId, runVersion])
+  @@index([status, createdAt])
+}
+model LearningCoverage {
+  id          String @id @default(uuid())
+  studentId   String
+  offeringId  String
+  conceptId   String
+  planId      String
+  actionId    String
+  sources     Json
+  deliveredAt DateTime @default(now())
+  @@unique([studentId, planId, conceptId])
+  @@index([offeringId, conceptId])
+}
+model LearningMastery {
+  id          String @id @default(uuid())
+  studentId   String
+  planId      String
+  conceptId   String
+  status      String @default("UNKNOWN")
+  policyVersion String @default("1")
+  pendingReview Boolean @default(false)
+  consecutiveReinforce Int @default(0)
+  updatedAt   DateTime @updatedAt
+  @@unique([studentId, planId, conceptId])
+}
+model LearningEvaluation {
+  id          String @id @default(uuid())
+  actionId    String? @unique
+  reviewLogId String? @unique
+  studentId   String
+  planId      String
+  conceptId   String
+  attemptId   String
+  answer      String
+  reasoning   String
+  evidence    Json
+  evaluation  Json
+  createdAt   DateTime @default(now())
+  @@index([studentId, planId, conceptId, createdAt])
+}
+model LearningHintEvent {
+  id          String @id @default(uuid())
+  actionId    String @unique
+  studentId   String
+  attemptId   String
+  level       Int
+  content     String
+  rationale   String
+  attemptDraft String
+  createdAt   DateTime @default(now())
+  @@index([studentId, attemptId, createdAt])
+}
+model LearningSnapshot {
+  id          String @id @default(uuid())
+  studentId   String
+  offeringId  String
+  snapshot    Json
+  version     Int @default(0)
+  preparedVersion Int @default(0)
+  dirty       Boolean @default(true)
+  preparedAt  DateTime?
+  updatedAt   DateTime @updatedAt
+  @@unique([studentId, offeringId])
+  @@index([dirty, updatedAt])
+}
+model OrchestratorDecision {
+  id          String @id @default(uuid())
+  actionId    String @unique
+  requestId   String
+  mode        String
+  trigger     String
+  allowed     Json
+  decision    Json?
+  signals     Json
+  status      String
+  guardReason String?
+  fallbackUsed Boolean @default(false)
+  executedAction String?
+  createdAt   DateTime @default(now())
 }

@@ -17,7 +17,7 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Zap, BookOpen, ShoppingBag, ShieldCheck, Loader2 } from "lucide-react";
@@ -27,7 +27,7 @@ const workspaces = [
   {
     id: 1,
     title: "Productivity Layer",
-    description: "Tools to create, organize, and manage academic work. This workspace includes tools such as Docs and Drive.",
+    description: "Plan your day, allocate time to tasks, manage your schedule, and build habits.",
     icon: Zap,
     color: "text-blue-500",
     bgColor: "bg-blue-50",
@@ -85,6 +85,10 @@ const getTimeOfDayGreeting = () => {
 
 const Page = () => {
   const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [destination, setDestination] = useState("");
+  const navigationInFlight = useRef(false);
+  useEffect(() => { navigationInFlight.current = pending; }, [pending]);
   // A plain per-render value: this page shows a spinner until the session has loaded on the client, so the greeting is never part
   // of the server HTML and can't mismatch (facultydashboard does the same).
   const timeOfDay = getTimeOfDayGreeting();
@@ -132,22 +136,26 @@ const Page = () => {
             .map((workspace) => {
             const Icon = workspace.icon;
             return (
-              <div
+              <button
+                type="button"
                 key={workspace.id}
-                onClick={() => router.push(workspace.path)}
-                className="relative overflow-hidden p-6 sm:p-8 min-h-[240px] sm:min-h-[260px] border border-transparent rounded-[20px] shadow-[0_2px_8px_rgba(16,24,40,0.07)] hover:border-transparent hover:shadow-[0_6px_14px_rgba(16,24,40,0.10)] transition-all cursor-pointer group"
+                disabled={pending}
+                aria-busy={pending && destination === workspace.path}
+                onClick={() => { if (pending || navigationInFlight.current) return; navigationInFlight.current = true; setDestination(workspace.path); startTransition(() => router.push(workspace.path)); }}
+                className="workspace-entry text-left focus-visible:outline-2 focus-visible:outline-blue-600 relative overflow-hidden p-6 sm:p-8 min-h-[240px] sm:min-h-[260px] border border-transparent rounded-[20px] shadow-[0_2px_8px_rgba(16,24,40,0.07)] hover:border-transparent hover:shadow-[0_6px_14px_rgba(16,24,40,0.10)] transition-all cursor-pointer group"
               >
                 <div className="pointer-events-none absolute top-3 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-2">
                   <Icon size={120} className="text-gray-200" />
                 </div>
-                <div className={`w-14 h-14 ${workspace.bgColor} rounded-xl flex items-center justify-center mb-6 shadow-[0_2px_6px_rgba(16,24,40,0.04)]`}>
+                <div className={`w-14 h-14 ${workspace.bgColor} ${workspace.color} workspace-entry-icon ${pending && destination === workspace.path ? "is-pending" : ""} rounded-xl flex items-center justify-center mb-6 shadow-[0_2px_6px_rgba(16,24,40,0.04)]`}>
                   <Icon size={31} className={workspace.color} />
                 </div>
                 <h3 className="text-2xl font-semibold text-gray-900 mb-3 group-hover:text-blue-600 transition">
                   {workspace.title}
                 </h3>
                 <p className="text-md text-gray-500 leading-relaxed">{workspace.description}</p>
-              </div>
+                {pending && destination === workspace.path && <span role="status" className="sr-only">Opening {workspace.title}…</span>}
+              </button>
             );
           })}
         </div>

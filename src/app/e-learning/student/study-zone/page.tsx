@@ -25,7 +25,7 @@ export default async function StudyZonePage() {
         </span>
         <div>
           <h1 className="text-[28px] leading-tight tracking-tight font-bold text-[#0F172A]">Welcome to Study Zone</h1>
-          <p className="mt-1 text-[14.5px] leading-relaxed text-[#475569]">What would you like to study? Pick a course to read its weekly materials <span className="inline-flex rounded-md border border-[#DBEAFE]/80 bg-gradient-to-r from-[#EEF4FF] via-[#F3E8FF]/80 to-[#EEF4FF] px-2 py-0.5"><span className="bg-gradient-to-r from-[#185CFF] via-[#4F46E5] to-[#7C3AED] bg-clip-text text-transparent font-semibold">with Stuwart, your AI study assistant.</span></span></p>
+          <p className="mt-1 text-[14.5px] leading-relaxed text-[#475569]">What would you like to study? Pick a course to read its weekly materials <span className="inline-flex rounded-md border border-[#DBEAFE]/80 bg-gradient-to-r from-[#EEF4FF] via-[#F3E8FF]/80 to-[#EEF4FF] px-2 py-0.5"><span className="bg-gradient-to-r from-[#185CFF] via-[#4F46E5] to-[#7C3AED] bg-clip-text text-transparent font-semibold">with Stuart, your AI study assistant.</span></span></p>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { hash, scopeKey, teachingPassed, type Evaluation } from "./policy";
 import type { RevisionPayload } from "./contract";
 import { RevisionWebhookError } from "./errors";
 export const bankQuestionInclude = { governance: true, concept: { include: { material: { include: { courseOffering: { select: { curriculumCourse: { select: { courseId: true } } } } } } } } } as const;
-export const workspaceEnabled = () => process.env.REVISION_WORKSPACE_ENABLED === "true";
+export const workspaceEnabled = () => process.env.REVISION_WORKSPACE_ENABLED === "true" || (process.env.AI_V2_ENABLED === "true" && process.env.REVISIONS_UI_ENABLED === "true");
 export function sourceSnapshot(m: { id: string; courseOfferingId: string; storagePath: string; storageBucket: string; fileSize: number; mimeType: string; startWeek: number; endWeek: number }) {
   return { materialId: m.id, offeringId: m.courseOfferingId, storagePath: m.storagePath, storageBucket: m.storageBucket, fileSize: m.fileSize, mimeType: m.mimeType, startWeek: m.startWeek, endWeek: m.endWeek };
 }
