@@ -31,6 +31,11 @@ function keyFor(operation: string, args: unknown[]) { return JSON.stringify([acc
 function freshness(serverTime?: string) { const at = serverTime ? Date.parse(serverTime) : Date.now(); return Number.isFinite(at) ? Math.max(0, Math.min(60000, at + 60000 - Date.now())) : 0; }
 function readTags(operation: string, args: unknown[]) { return operation === "workspace.initial" ? ["initial"] : operation === "workspace.view" ? [String((args[0] as ViewOptions).section)] : operation === "context" ? ["context"] : operation.startsWith("official.") ? ["official"] : (operation.startsWith("tasks.") || operation === "analytics.tasks") ? ["tasks"] : operation.startsWith("habits.") ? ["habits"] : ["schedule"]; }
 function normalizeView(options: ViewOptions): ViewOptions {
+  // Calendar dates do not affect all-dates history. Share its existing scoped
+  // cache entry across calendar navigation, without extending freshness.
+  if (options.section === "schedule" && options.history) {
+    return { status: "active", sort: "newest", period: "all", page: 0, ...options, start: undefined, end: undefined };
+  }
   const today = contextStudent && localNow(contextStudent.timezone).date;
   const range = !options.start && today && options.section === "habits" ? monthRange(today) : !options.start && today && options.section === "schedule" ? (() => { const days = scheduleDates(today, "week"); return { start: days[0], end: days.at(-1)! }; })() : {};
   return { status: "active", sort: "newest", period: "all", page: 0, history: false, ...range, ...options };

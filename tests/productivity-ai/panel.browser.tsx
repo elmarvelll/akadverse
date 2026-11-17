@@ -19,7 +19,7 @@ window.fetch = async (url, options = {}) => {
     const row = { id: `conversation-${++next}`, title: "New conversation", messages: [], executions: [], pending: [] }; rows.push(row); return Response.json({ result: row });
   }
   if (data.action === "chat") {
-    await new Promise<void>((resolve, reject) => { const timer = setTimeout(resolve, 450); options.signal?.addEventListener("abort", () => { clearTimeout(timer); reject(new DOMException("aborted", "AbortError")); }); });
+    await new Promise<void>((resolve, reject) => { const timer = setTimeout(resolve, 1200); options.signal?.addEventListener("abort", () => { clearTimeout(timer); reject(new DOMException("aborted", "AbortError")); }); });
     const count = fixture!.messages.length;
     fixture!.messages.push({ id: `user-${count}`, sequence: count, role: "user", content: data.message, status: "completed" });
     if (data.message.includes("delete")) {

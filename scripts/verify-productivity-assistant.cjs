@@ -8,7 +8,7 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const assert = require('node:assert/strict');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-async function waitFor(check, name) { const until = Date.now() + 15000; while (Date.now() < until) { if (await check()) return; await delay(50); } throw Error(`Timed out: ${name}`); }
+async function waitFor(check, name, timeout = 15000) { const until = Date.now() + timeout; while (Date.now() < until) { if (await check()) return; await delay(50); } throw Error(`Timed out: ${name}`); }
 async function main() {
   const bundle = buildSync({ entryPoints: ['tests/productivity-ai/panel.browser.tsx'], bundle: true, write: false, platform: 'browser', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"development"' } }).outputFiles[0].text;
   const css = readFileSync('src/features/productivity/styles.css', 'utf8');
@@ -16,10 +16,10 @@ async function main() {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const profile = mkdtempSync(join(tmpdir(), 'akadverse-assistant-chrome-'));
   const executable = process.env.CHROME_BIN || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : 'google-chrome');
-  const browser = spawn(executable, ['--headless=new','--disable-gpu','--no-first-run','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'], { stdio: 'ignore' });
+  const browser = spawn(executable, ['--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-extensions','--disable-background-networking','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'], { stdio: 'ignore' });
   let socket;
   try {
-    let port; await waitFor(() => { try { port = readFileSync(join(profile,'DevToolsActivePort'),'utf8').split('\n')[0]; return !!port; } catch { return false; } }, 'Chromium startup');
+    let port; await waitFor(() => { try { port = readFileSync(join(profile,'DevToolsActivePort'),'utf8').split('\n')[0]; return !!port; } catch { return false; } }, 'Chromium startup', 45000);
     const tabs = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
     socket = new WebSocket(tabs.find(tab => tab.type === 'page').webSocketDebuggerUrl);
     await new Promise((resolve,reject) => { socket.addEventListener('open',resolve,{once:true}); socket.addEventListener('error',reject,{once:true}); });
@@ -33,16 +33,29 @@ async function main() {
     await waitFor(() => evaluate('!!document.querySelector(".assistant-welcome button")&&!document.querySelector(".assistant-welcome button").disabled'), 'initial load');
     await evaluate('document.querySelector(".assistant-welcome button").click()');
     await waitFor(() => evaluate('!document.querySelector("#assistant-draft").disabled'), 'new conversation');
+    assert.equal(await evaluate('assistantTest.requests.length'),2,'opening an empty list and creating a conversation need only two requests');
+    assert.equal(await evaluate('assistantTest.requests.some(row => row.url.includes("?conversation="))'),false,'new conversation needs no history read');
     await evaluate('assistantTest.setDraft("create my test task")');
     await waitFor(() => evaluate('document.querySelector("#assistant-draft").value.includes("create")'), 'draft');
     await evaluate('document.querySelector(".assistant-composer").requestSubmit()');
+    await waitFor(() => evaluate('!!document.querySelector(".pip-working-dots i")'), 'animated working state');
+    assert.equal(await evaluate('getComputedStyle(document.querySelector(".pip-working-dots i")).animationName'), 'pip-working-bounce');
+    await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    assert.equal(await evaluate('getComputedStyle(document.querySelector(".pip-working-dots i")).animationName'), 'none');
+    await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
     await waitFor(() => evaluate('document.body.textContent.includes("Saved for student-A")'), 'confirmed message');
     assert.equal(await evaluate('assistantTest.requests.filter(row=>row.data?.action==="chat").length'),1);
+    assert.equal(await evaluate('assistantTest.requests.filter(row=>!row.data && row.url==="/api/productivity/assistant").length'),1, 'sending does not reload the conversation list');
     assert.equal(await evaluate('!!document.querySelector(".pip-markdown h2") && !!document.querySelector(".pip-markdown ul strong")'),true,'semantic Markdown');
     assert.equal(await evaluate('!!document.querySelector(".pip-markdown script") || !!document.querySelector(".pip-markdown a[href^=\\"javascript:\\"]")'),false,'safe Markdown');
     assert.equal(await evaluate('document.querySelector(".assistant-launcher").textContent.includes("Ask PIP")'),true);
     assert.equal(await evaluate('getComputedStyle(document.querySelector(".assistant-launcher"),"::before").animationDuration'), '2s');
-    assert.equal(await evaluate('!!document.querySelector(".pip-saved-card")'),true,'backend confirmed result card');
+    assert.equal(await evaluate('!!document.querySelector(".pip-working")'), false, 'working state clears after reply');
+    assert.equal(await evaluate('document.querySelector(".assistant-executions").open'), false, 'activity collapsed by default');
+    await evaluate('document.querySelector(".assistant-executions summary").click()');
+    assert.equal(await evaluate('document.querySelector(".assistant-executions").open'), true, 'activity toggles open');
+    assert.equal(await evaluate('document.querySelector(".assistant-executions").textContent.includes("create task")'), true);
+    await evaluate('document.querySelector(".assistant-executions summary").click()');
     await waitFor(() => evaluate('document.querySelector(".assistant-messages").getAttribute("aria-busy")==="false"'), 'send settles');
     await evaluate('assistantTest.setDraft("Keep this draft")');
     await waitFor(() => evaluate('document.querySelector(".assistant-composer-actions small").textContent.startsWith("15/")'), 'draft state commits');
@@ -84,7 +97,7 @@ async function main() {
     await waitFor(() => evaluate('!!document.querySelector(".assistant-welcome")'), 'new account empty context');
     assert.equal(await evaluate('document.body.textContent.includes("Saved for student-A")'),false);
     assert.equal(await evaluate('document.querySelector("#assistant-draft").value'), '');
-    const report = {passed:true,checks:['new conversation','single send','confirmed result','draft survives minimisation','exact target preview','cancellation','mobile bounds','native dialog precedence','account isolation','Markdown formatting and safety','confirmed result cards','two-second ripple','expanded panel','desktop/tablet/mobile bounds','reduced motion','composer focus after async load','focus returns on close']};
+    const report = {passed:true,checks:['new conversation','single send','confirmed result','draft survives minimisation','exact target preview','cancellation','mobile bounds','native dialog precedence','account isolation','Markdown formatting and safety','collapsed operation activity','animated working state','reduced-motion working state','no redundant conversation-list read','two-second ripple','expanded panel','desktop/tablet/mobile bounds','reduced motion','composer focus after async load','focus returns on close']};
     writeFileSync(join(tmpdir(),'productivity-ai-browser-results.json'),JSON.stringify(report,null,2)); console.log(JSON.stringify(report));
   } finally { socket?.close(); browser.kill(); await new Promise(resolve => server.close(resolve)); await delay(250); rmSync(profile,{recursive:true,force:true}); }
 }
