@@ -73,3 +73,13 @@ it("preserves normal replies and failure guidance when there is no confirmed cha
   await finishTurn(scope, "Your task was created.", "completed");
   assert.equal(created[1].content, "Your task was created.");
 });
+
+it("reports completed Buddy writes after an interrupted reply without claiming pending writes succeeded", () => {
+  const text = interruptedOutcome([
+    { toolName: "create_buddy_group", status: "completed", result: { saved: true, buddy: { id: "listing-1" } } },
+    { toolName: "accept_buddy_application", status: "awaiting_confirmation", result: null },
+  ])!;
+  assert.match(text, /Created buddy group listing/);
+  assert.doesNotMatch(text, /Accepted buddy applicant/);
+  assert.match(text, /has not been saved/);
+});

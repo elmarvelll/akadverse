@@ -49,6 +49,9 @@ export async function buddyDetail(userId: string, id: string) {
 }
 const field = (value: unknown, maximum: number, label: string) => text(value, maximum, label).trim();
 export async function createBuddy(userId: string, input: unknown) {
+  return prisma.$transaction(tx => createBuddyInTransaction(tx, userId, input));
+}
+export async function createBuddyInTransaction(tx: Prisma.TransactionClient, userId: string, input: unknown) {
   const o = object(input);
   if (o.kind !== "GROUP" && o.kind !== "REQUEST") throw badRequest("Choose a group or buddy request.");
   const title = field(o.title, 160, "Title"), description = field(o.description, 4000, "Description");
@@ -57,49 +60,56 @@ export async function createBuddy(userId: string, input: unknown) {
     const url = inviteUrl(privateDetails); if (!url) throw badRequest("Use a valid HTTPS WhatsApp or Telegram invitation link."); privateDetails = url;
     try { maximum = capacity(o.maxMembers); } catch (e) { throw badRequest((e as Error).message); }
   }
-  return prisma.buddyListing.create({ data: { creatorId: userId, kind: o.kind, title, description, privateDetails, maxMembers: maximum,
+  return tx.buddyListing.create({ data: { creatorId: userId, kind: o.kind, title, description, privateDetails, maxMembers: maximum,
     status: maximum === 1 ? "FULL" : "OPEN",
     ...(o.kind === "GROUP" ? { applications: { create: { userId, status: "ACCEPTED" } } } : {}) }, select: { id: true } });
 }
 export async function mutateBuddy(userId: string, input: unknown) {
+  const result = await prisma.$transaction(tx => mutateBuddyInTransaction(tx, userId, input),
+    { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 10000 });
+  await notifyBuddyMutation(result, String(object(input).id));
+  return { message: buddyMutationMessage(String(object(input).action), result.message) };
+}
+export async function mutateBuddyInTransaction(tx: Prisma.TransactionClient, userId: string, input: unknown) {
   const o = object(input), id = field(o.id, 200, "Listing"), action = o.action;
   if (!["apply", "accept", "decline", "close"].includes(String(action))) throw badRequest("Invalid action.");
-  const result = await prisma.$transaction(async tx => {
-    // One lock domain for apply, approve, decline and close. Under READ COMMITTED
-    // a waiter sees the preceding commit before checking capacity or matching.
-    await tx.$queryRaw`SELECT "id" FROM "public"."BuddyListing" WHERE "id" = ${id} FOR UPDATE`;
-    const row = await tx.buddyListing.findUnique({ where: { id }, select: cardSelect });
-    if (!row) throw notFound("This listing is unavailable.");
-    if (action !== "apply" && row.creatorId !== userId) throw forbidden("Only the creator can manage this listing.");
-    if (action === "close") { await tx.buddyListing.update({ where: { id }, data: { status: "CLOSED" } }); return { recipient: "", message: "Listing closed." }; }
-    if (action === "apply") {
-      if (row.creatorId === userId) throw conflict("You cannot apply to your own listing.");
-      const existing = row.applications.find(a => a.userId === userId);
-      if (existing) throw conflict(`Your application is already ${existing.status.toLowerCase()}.`);
-      if (!canAccept(row.status, row.applications.filter(a => a.status === "ACCEPTED").length, row.maxMembers)) throw conflict("This listing is full, matched or closed.");
-      const contactDetails = row.kind === "REQUEST" ? field(o.contactDetails, 2000, "Your contact details") : null;
-      await tx.buddyApplication.create({ data: { listingId: id, userId, contactDetails } });
-      return { recipient: row.creatorId, message: "A new application is pending review." };
-    }
-    const applicationId = field(o.applicationId, 200, "Application");
-    const applicant = await tx.buddyApplication.findFirst({ where: { id: applicationId, listingId: id } });
-    if (!applicant || applicant.userId === row.creatorId || applicant.status !== "PENDING") throw conflict("This application is no longer pending.");
-    if (action === "accept") {
-      const count = await tx.buddyApplication.count({ where: { listingId: id, status: "ACCEPTED" } });
-      if (!canAccept(row.status, count, row.maxMembers)) throw conflict("This listing is full, matched or closed.");
-      if (row.kind === "REQUEST" && count > 0) throw conflict("This request is already matched.");
-      await tx.buddyApplication.update({ where: { id: applicant.id }, data: { status: "ACCEPTED" } });
-      if (row.kind === "REQUEST") {
-        await tx.buddyListing.update({ where: { id }, data: { status: "MATCHED" } });
-        await tx.buddyApplication.updateMany({ where: { listingId: id, status: "PENDING" }, data: { status: "DECLINED" } });
-      } else if (row.maxMembers !== null && count + 1 >= row.maxMembers) await tx.buddyListing.update({ where: { id }, data: { status: "FULL" } });
-    } else await tx.buddyApplication.update({ where: { id: applicant.id }, data: { status: "DECLINED" } });
-    return { recipient: applicant.userId, message: action === "accept" ? "Your application was accepted. Open the listing to access the shared details." : "Your application was declined." };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 10000 });
+  // One lock domain for apply, approve, decline and close. Under READ COMMITTED
+  // a waiter sees the preceding commit before checking capacity or matching.
+  await tx.$queryRaw`SELECT "id" FROM "public"."BuddyListing" WHERE "id" = ${id} FOR UPDATE`;
+  const row = await tx.buddyListing.findUnique({ where: { id }, select: cardSelect });
+  if (!row) throw notFound("This listing is unavailable.");
+  if (action !== "apply" && row.creatorId !== userId) throw forbidden("Only the creator can manage this listing.");
+  if (action === "close") { await tx.buddyListing.update({ where: { id }, data: { status: "CLOSED" } }); return { recipient: "", message: "Listing closed." }; }
+  if (action === "apply") {
+    if (row.creatorId === userId) throw conflict("You cannot apply to your own listing.");
+    const existing = row.applications.find(a => a.userId === userId);
+    if (existing) throw conflict(`Your application is already ${existing.status.toLowerCase()}.`);
+    if (!canAccept(row.status, row.applications.filter(a => a.status === "ACCEPTED").length, row.maxMembers)) throw conflict("This listing is full, matched or closed.");
+    const contactDetails = row.kind === "REQUEST" ? field(o.contactDetails, 2000, "Your contact details") : null;
+    await tx.buddyApplication.create({ data: { listingId: id, userId, contactDetails } });
+    return { recipient: row.creatorId, message: "A new application is pending review." };
+  }
+  const applicationId = field(o.applicationId, 200, "Application");
+  const applicant = await tx.buddyApplication.findFirst({ where: { id: applicationId, listingId: id } });
+  if (!applicant || applicant.userId === row.creatorId || applicant.status !== "PENDING") throw conflict("This application is no longer pending.");
+  if (action === "accept") {
+    const count = await tx.buddyApplication.count({ where: { listingId: id, status: "ACCEPTED" } });
+    if (!canAccept(row.status, count, row.maxMembers)) throw conflict("This listing is full, matched or closed.");
+    if (row.kind === "REQUEST" && count > 0) throw conflict("This request is already matched.");
+    await tx.buddyApplication.update({ where: { id: applicant.id }, data: { status: "ACCEPTED" } });
+    if (row.kind === "REQUEST") {
+      await tx.buddyListing.update({ where: { id }, data: { status: "MATCHED" } });
+      await tx.buddyApplication.updateMany({ where: { listingId: id, status: "PENDING" }, data: { status: "DECLINED" } });
+    } else if (row.maxMembers !== null && count + 1 >= row.maxMembers) await tx.buddyListing.update({ where: { id }, data: { status: "FULL" } });
+  } else await tx.buddyApplication.update({ where: { id: applicant.id }, data: { status: "DECLINED" } });
+  return { recipient: applicant.userId, message: action === "accept" ? "Your application was accepted. Open the listing to access the shared details." : "Your application was declined." };
+}
+export function buddyMutationMessage(action: string, message: string) {
+  return action === "apply" ? "Request submitted." : action === "accept" ? "Application accepted." : action === "decline" ? "Application declined." : message;
+}
+export async function notifyBuddyMutation(result: { recipient: string; message: string }, id: string) {
   if (result.recipient) {
-    // Delivery failure cannot turn an already committed approval into a failed UI action.
     try { await createNotification({ recipientId: result.recipient, type: "BUDDY_APPLICATION", title: "Buddy System", message: result.message, targetUrl: `/studashboard/productivity-layer#buddy?listing=${encodeURIComponent(id)}` }); }
     catch { console.error("Buddy notification delivery failed"); }
   }
-  return { message: action === "apply" ? "Request submitted." : action === "accept" ? "Application accepted." : action === "decline" ? "Application declined." : result.message };
 }
