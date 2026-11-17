@@ -83,8 +83,7 @@ export default async function StudentDashboardPage() {
       <div className="rounded-2xl border border-gray-100 bg-white p-6">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">Deadlines & announcements</h2>
         <p className="text-sm text-gray-500">
-          Academic deadlines are DAPU-controlled (AGENTS.md §27) and results/registration already check them — a
-          dedicated deadlines/announcements widget here is still a later phase.
+          Academic deadlines are DAPU-controlled.
         </p>
       </div>
     </div>
